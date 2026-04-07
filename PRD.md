@@ -11,6 +11,7 @@ The goal is to build a commercial SaaS course platform where instructors sign up
 A multi-tenant course platform built with TanStack Start + VitePlus, PostgreSQL, Stripe Connect, and Bunny/Cloudflare Stream. Each instructor gets a subdomain (`school.platform.com`) with their own storefront, course builder, and student base. Students create accounts per-tenant and purchase courses via Stripe (instructor is merchant of record). The platform monetizes through Stripe Connect application fees and tiered subscription plans for instructors.
 
 Key technology choices:
+
 - **TanStack Start** as application framework, **VitePlus** as build toolchain
 - **PostgreSQL + Drizzle ORM** with shared-database multi-tenancy (`tenant_id` column)
 - **Better Auth** for authentication (per-tenant user pools)
@@ -70,6 +71,7 @@ Key technology choices:
 ## Implementation Decisions
 
 ### Module 1: Tenant Management
+
 - Shared PostgreSQL database with `tenant_id` column on all tenant-scoped tables (not schema-per-tenant or database-per-tenant).
 - Subdomain resolution middleware that extracts tenant from the request host and injects tenant context into every request.
 - Tenants table stores: subdomain, name, settings, plan tier, Stripe Connect account ID.
@@ -77,6 +79,7 @@ Key technology choices:
 - Custom domain support is NOT in MVP — planned as a paid tier feature for later.
 
 ### Module 2: Auth (Better Auth)
+
 - Better Auth configured with Drizzle adapter and PostgreSQL.
 - Per-tenant user isolation: users are scoped to a tenant. Same email can exist on different tenants.
 - Roles: platform_admin (global), tenant_owner, tenant_admin, student (all tenant-scoped).
@@ -84,6 +87,7 @@ Key technology choices:
 - Session management scoped to tenant subdomain.
 
 ### Module 3: Course Builder (Admin Dashboard)
+
 - Course → Module → Lesson three-level hierarchy.
 - Courses have: title, description, slug, thumbnail, price, pricing_model (one_time | subscription | both), status (draft | published), tenant_id.
 - Modules have: title, position (for ordering), course_id.
@@ -94,6 +98,7 @@ Key technology choices:
 - Reordering via drag-and-drop or up/down controls.
 
 ### Module 4: Storefront (Student-Facing)
+
 - Tenant storefront: server-rendered page at tenant subdomain root, lists published courses.
 - Course detail page: server-rendered, public, shows description, curriculum outline (module/lesson titles only), instructor info, price, and purchase CTA.
 - Student dashboard: enrolled courses with progress bars, continue-where-you-left-off.
@@ -101,6 +106,7 @@ Key technology choices:
 - Progress tracking: mark lessons complete (explicit button), auto-derive module and course completion from lesson progress.
 
 ### Module 5: Payments (Stripe Connect)
+
 - Stripe Connect Standard accounts — instructor completes OAuth onboarding flow.
 - Checkout: Stripe Checkout Sessions with application fee amount.
 - One-time purchases: single Checkout Session, enrollment record created on `checkout.session.completed` webhook.
@@ -109,27 +115,32 @@ Key technology choices:
 - Refund handling: on `charge.refunded`, revoke enrollment.
 
 ### Module 6: Notifications (Resend)
+
 - Thin email service wrapping Resend API.
 - React Email templates for: welcome, password reset, purchase confirmation, enrollment confirmation, certificate delivery.
 - Emails dispatched via background job queue (not sent synchronously in request handlers).
 
 ### Module 7: Background Jobs (Postgres Queue)
+
 - pgboss or Graphile Worker running in the same Node process (or as a separate worker process).
 - Job types: send_email, process_stripe_webhook, generate_certificate, process_video_callback.
 - Failed jobs retry with exponential backoff.
 
 ### Module 8: Database Schema (Drizzle + PostgreSQL)
+
 - Core tables: tenants, users, sessions, accounts (Better Auth), roles, courses, modules, lessons, enrollments, lesson_progress, payments, subscriptions, certificates, plans.
 - All tenant-scoped tables include `tenant_id` with a foreign key to tenants.
 - Drizzle ORM with migration files managed via `drizzle-kit`.
 - Indexes on: `tenant_id` (all tables), `user_id + course_id` (enrollments), `user_id + lesson_id` (progress).
 
 ### API Layer
+
 - TanStack Start server functions for all frontend ↔ backend communication (type-safe, colocated).
 - REST endpoints only for: Stripe webhooks, video provider webhooks.
 - No tRPC — server functions already provide end-to-end type safety.
 
 ### Video Protection
+
 - Signed URLs with short expiry windows (e.g., 4 hours).
 - URLs generated server-side per lesson view request.
 - No DRM (Widevine) — signed URLs prevent casual sharing, accepted trade-off.
@@ -138,6 +149,7 @@ Key technology choices:
 ## Testing Decisions
 
 Good tests for this project should:
+
 - Test external behavior through public interfaces, not implementation details.
 - Use a real PostgreSQL database (not mocks) for integration tests — mock/prod divergence has caused issues in similar projects.
 - Test the critical money and access paths end-to-end.
@@ -145,17 +157,20 @@ Good tests for this project should:
 ### Modules to test:
 
 **Auth module:**
+
 - Registration and login flows (per-tenant isolation).
 - Role-based access control (instructor can't access another tenant, student can't access admin routes).
 - Session scoping to tenant.
 
 **Payments module:**
+
 - Stripe Connect onboarding flow (mock Stripe API at the HTTP boundary).
 - Checkout session creation with correct application fee.
 - Webhook processing: enrollment created on payment success, revoked on refund.
 - Subscription lifecycle: creation, renewal, cancellation, access gating.
 
 **Course Builder module:**
+
 - Course/module/lesson CRUD operations.
 - Ordering/reordering logic.
 - Draft vs published visibility (students can't see draft courses).
