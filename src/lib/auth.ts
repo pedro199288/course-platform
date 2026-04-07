@@ -4,6 +4,7 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { and, eq } from "drizzle-orm";
 import { db } from "#/db/index.ts";
 import * as schema from "#/db/schema/index.ts";
+import { auditLogs } from "#/db/schema/audit-logs.ts";
 import { tenantIdStore } from "./tenant-context.ts";
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -37,6 +38,49 @@ export const auth = betterAuth({
               },
             };
           }
+        },
+      },
+      update: {
+        after: async (user) => {
+          if (!user) return;
+          const tenantId = tenantIdStore.getStore();
+          await db.insert(auditLogs).values({
+            event: "user.updated",
+            actorId: (user as any).id,
+            tenantId: tenantId ?? (user as any).tenantId ?? null,
+            metadata: { email: (user as any).email },
+          });
+        },
+      },
+    },
+    session: {
+      create: {
+        after: async (session) => {
+          const tenantId = tenantIdStore.getStore();
+          await db.insert(auditLogs).values({
+            event: "session.created",
+            actorId: session.userId as string,
+            tenantId,
+            metadata: {
+              ipAddress: (session as any).ipAddress ?? null,
+              userAgent: (session as any).userAgent ?? null,
+            },
+          });
+        },
+      },
+    },
+    account: {
+      create: {
+        after: async (account) => {
+          const tenantId = tenantIdStore.getStore();
+          await db.insert(auditLogs).values({
+            event: "account.linked",
+            actorId: account.userId as string,
+            tenantId,
+            metadata: {
+              providerId: account.providerId,
+            },
+          });
         },
       },
     },
