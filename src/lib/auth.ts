@@ -6,6 +6,8 @@ import { db } from "#/db/index.ts";
 import * as schema from "#/db/schema/index.ts";
 import { auditLogs } from "#/db/schema/audit-logs.ts";
 import { tenantIdStore } from "./tenant-context.ts";
+import { sendEmail } from "./email.ts";
+import { renderVerifyEmail } from "./email-templates/index.ts";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -89,6 +91,19 @@ export const auth = betterAuth({
     enabled: true,
     minPasswordLength: 8,
     maxPasswordLength: 128,
+    requireEmailVerification: true,
+  },
+  emailVerification: {
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
+    sendVerificationEmail: async ({ user, url }) => {
+      const html = await renderVerifyEmail({ verificationUrl: url });
+      await sendEmail({
+        to: user.email,
+        subject: "Verify your email",
+        html,
+      });
+    },
   },
   socialProviders: {
     google: {

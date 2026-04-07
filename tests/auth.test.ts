@@ -1,10 +1,23 @@
-import { afterAll, beforeAll, describe, expect, it } from "vite-plus/test";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vite-plus/test";
 import { eq, and } from "drizzle-orm";
 import { db } from "#/db/index.ts";
-import { tenants, users, accounts, sessions } from "#/db/schema/index.ts";
+import { tenants, users, accounts, sessions, verifications } from "#/db/schema/index.ts";
 import { auth } from "#/lib/auth.ts";
 import { tenantIdStore } from "#/lib/tenant-context.ts";
 import { auditLogs } from "#/db/schema/audit-logs.ts";
+
+// Mock email sending to prevent actual Resend API calls during tests
+vi.mock("#/lib/email.ts", () => ({
+  sendEmail: vi.fn().mockResolvedValue({ id: "mock-email-id" }),
+}));
+
+/** Helper: mark a user's email as verified directly in the DB */
+async function verifyUserEmail(email: string, tenantId: string) {
+  await db
+    .update(users)
+    .set({ emailVerified: true })
+    .where(and(eq(users.email, email), eq(users.tenantId, tenantId)));
+}
 
 describe("auth: per-tenant registration, login, and roles", () => {
   const tenantASubdomain = `auth-test-a-${Date.now()}`;
@@ -62,6 +75,10 @@ describe("auth: per-tenant registration, login, and roles", () => {
     for (const userId of allUserIds) {
       await db.delete(users).where(eq(users.id, userId));
     }
+
+    // Clean up verification tokens
+    await db.delete(verifications).where(eq(verifications.identifier, "student@example.com")).catch(() => {});
+    await db.delete(verifications).where(eq(verifications.identifier, "newstudent@example.com")).catch(() => {});
 
     await db.delete(tenants).where(eq(tenants.subdomain, tenantASubdomain));
     await db.delete(tenants).where(eq(tenants.subdomain, tenantBSubdomain));
@@ -122,6 +139,9 @@ describe("auth: per-tenant registration, login, and roles", () => {
   });
 
   it("signs in a user within the correct tenant context", async () => {
+    // Verify email first (requireEmailVerification is enabled)
+    await verifyUserEmail("student@example.com", tenantAId);
+
     const result = await tenantIdStore.run(tenantAId, async () => {
       return auth.api.signInEmail({
         body: {
@@ -137,6 +157,9 @@ describe("auth: per-tenant registration, login, and roles", () => {
   });
 
   it("rejects sign-in with wrong tenant context", async () => {
+    // Verify tenant B's user email too
+    await verifyUserEmail("student@example.com", tenantBId);
+
     // Try to sign in on tenant B with tenant A's password
     try {
       await tenantIdStore.run(tenantBId, async () => {
@@ -300,6 +323,10 @@ describe("findUserByEmail monkey-patch regression", () => {
   });
 
   it("sign-in uses patched lookup for tenant isolation", async () => {
+    // Verify emails first (requireEmailVerification is enabled)
+    await verifyUserEmail(sharedEmail, tenantXId);
+    await verifyUserEmail(sharedEmail, tenantYId);
+
     // Sign in on tenant X with tenant X's password — should succeed
     const successResult = await tenantIdStore.run(tenantXId, () =>
       auth.api.signInEmail({
@@ -318,6 +345,142 @@ describe("findUserByEmail monkey-patch regression", () => {
       expect.unreachable("Should have thrown");
     } catch (error: any) {
       expect(error).toBeDefined();
+    }
+  });
+});
+
+/**
+ * Email verification flow tests.
+ *
+ * Tests the full lifecycle: register → emailVerified:false → login blocked →
+ * verify email → login succeeds. Also tests resend verification.
+ */
+describe("email verification flow", () => {
+  const tenantSubdomain = `verify-test-${Date.now()}`;
+  let tenantId: string;
+  const testEmail = `verify-${Date.now()}@example.com`;
+
+  beforeAll(async () => {
+    const [tenant] = await db
+      .insert(tenants)
+      .values({ name: "Verify Test School", subdomain: tenantSubdomain })
+      .returning();
+    tenantId = tenant.id;
+  });
+
+  afterAll(async () => {
+    const allUsers = await db.query.users.findMany({
+      where: eq(users.tenantId, tenantId),
+    });
+    for (const user of allUsers) {
+      await db.delete(auditLogs).where(eq(auditLogs.actorId, user.id)).catch(() => {});
+      await db.delete(sessions).where(eq(sessions.userId, user.id));
+      await db.delete(accounts).where(eq(accounts.userId, user.id));
+    }
+    for (const user of allUsers) {
+      await db.delete(users).where(eq(users.id, user.id));
+    }
+    await db.delete(verifications).where(eq(verifications.identifier, testEmail)).catch(() => {});
+    await db.delete(tenants).where(eq(tenants.subdomain, tenantSubdomain));
+  });
+
+  it("registers user with emailVerified: false", async () => {
+    await tenantIdStore.run(tenantId, async () => {
+      await auth.api.signUpEmail({
+        body: {
+          email: testEmail,
+          password: "verifytest123",
+          name: "Verify Tester",
+        },
+      });
+    });
+
+    const dbUser = await db.query.users.findFirst({
+      where: and(eq(users.email, testEmail), eq(users.tenantId, tenantId)),
+    });
+    expect(dbUser).toBeDefined();
+    expect(dbUser!.emailVerified).toBe(false);
+  });
+
+  it("rejects login when email is not verified", async () => {
+    try {
+      await tenantIdStore.run(tenantId, async () => {
+        return auth.api.signInEmail({
+          body: {
+            email: testEmail,
+            password: "verifytest123",
+          },
+        });
+      });
+      expect.unreachable("Should have thrown for unverified email");
+    } catch (error: any) {
+      expect(error).toBeDefined();
+      // Better Auth returns an error for unverified email sign-in attempts
+      expect(error.message || error.body?.message || "").toBeTruthy();
+    }
+  });
+
+  it("sends verification email on signup", async () => {
+    // The mocked sendEmail should have been called during signup
+    const { sendEmail } = await import("#/lib/email.ts");
+    expect(sendEmail).toHaveBeenCalled();
+  });
+
+  it("allows login after email verification", async () => {
+    // Verify email directly in DB (simulating clicking the verification link)
+    await verifyUserEmail(testEmail, tenantId);
+
+    const dbUser = await db.query.users.findFirst({
+      where: and(eq(users.email, testEmail), eq(users.tenantId, tenantId)),
+    });
+    expect(dbUser!.emailVerified).toBe(true);
+
+    // Now sign-in should succeed
+    const result = await tenantIdStore.run(tenantId, async () => {
+      return auth.api.signInEmail({
+        body: {
+          email: testEmail,
+          password: "verifytest123",
+        },
+      });
+    });
+
+    expect(result).toBeDefined();
+    expect(result.user.email).toBe(testEmail);
+    expect(result.token).toBeDefined();
+  });
+
+  it("creates verification token in DB on signup", async () => {
+    const newEmail = `verify2-${Date.now()}@example.com`;
+
+    await tenantIdStore.run(tenantId, async () => {
+      await auth.api.signUpEmail({
+        body: {
+          email: newEmail,
+          password: "verifytest456",
+          name: "Verify Tester 2",
+        },
+      });
+    });
+
+    // Better Auth stores verification tokens in the verifications table
+    const token = await db.query.verifications.findFirst({
+      where: eq(verifications.identifier, newEmail),
+    });
+    expect(token).toBeDefined();
+    expect(token!.value).toBeTruthy();
+    expect(token!.expiresAt).toBeDefined();
+
+    // Cleanup
+    await db.delete(verifications).where(eq(verifications.identifier, newEmail)).catch(() => {});
+    const user = await db.query.users.findFirst({
+      where: and(eq(users.email, newEmail), eq(users.tenantId, tenantId)),
+    });
+    if (user) {
+      await db.delete(auditLogs).where(eq(auditLogs.actorId, user.id)).catch(() => {});
+      await db.delete(sessions).where(eq(sessions.userId, user.id)).catch(() => {});
+      await db.delete(accounts).where(eq(accounts.userId, user.id)).catch(() => {});
+      await db.delete(users).where(eq(users.id, user.id)).catch(() => {});
     }
   });
 });

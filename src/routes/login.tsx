@@ -11,17 +11,26 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [isUnverified, setIsUnverified] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setIsUnverified(false);
     setLoading(true);
 
     const result = await authClient.signIn.email({ email, password });
 
     if (result.error) {
-      setError(result.error.message ?? "Invalid email or password");
+      const msg = result.error.message ?? "Invalid email or password";
+      // Better Auth returns this specific error code for unverified emails
+      if (result.error.code === "EMAIL_NOT_VERIFIED") {
+        setIsUnverified(true);
+        setError("Please verify your email before signing in.");
+      } else {
+        setError(msg);
+      }
       setLoading(false);
       return;
     }
@@ -43,6 +52,16 @@ function LoginPage() {
           {error && (
             <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300">
               {error}
+              {isUnverified && (
+                <span className="block mt-1">
+                  <Link
+                    to="/verify-email"
+                    className="font-medium underline hover:no-underline"
+                  >
+                    Resend verification email
+                  </Link>
+                </span>
+              )}
             </div>
           )}
 
@@ -62,9 +81,17 @@ function LoginPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="password" className="block text-sm font-medium">
-              Password
-            </label>
+            <div className="flex items-center justify-between">
+              <label htmlFor="password" className="block text-sm font-medium">
+                Password
+              </label>
+              <a
+                href="/forgot-password"
+                className="text-xs text-neutral-500 hover:underline dark:text-neutral-400"
+              >
+                Forgot password?
+              </a>
+            </div>
             <input
               id="password"
               type="password"
