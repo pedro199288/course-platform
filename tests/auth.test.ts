@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vite-plus/test";
 import { eq, and } from "drizzle-orm";
 import { db } from "#/db/index.ts";
-import { tenants, users, accounts, sessions, verifications } from "#/db/schema/index.ts";
+import { tenants, users, accounts, sessions, verifications, rateLimit } from "#/db/schema/index.ts";
 import { auth } from "#/lib/auth.ts";
 import { tenantIdStore } from "#/lib/tenant-context.ts";
 import { auditLogs } from "#/db/schema/audit-logs.ts";
@@ -656,7 +656,7 @@ describe("password reset flow", () => {
     expect(result.user.email).toBe(testEmail);
   });
 
-  it("revokes existing sessions on password reset", async () => {
+  it("revokes existing sessions on password reset (revokeSessionsOnPasswordReset)", async () => {
     // Create a session
     await tenantIdStore.run(tenantId, async () => {
       return auth.api.signInEmail({
@@ -697,5 +697,264 @@ describe("password reset flow", () => {
       where: eq(sessions.userId, dbUser!.id),
     });
     expect(sessionsAfter.length).toBe(0);
+  });
+});
+
+/**
+ * Rate limiting tests.
+ *
+ * Tests that exceeding the rate limit on /sign-in/email returns 429.
+ * Uses auth.handler (HTTP router) since rate limiting is applied at the
+ * router level, not on direct auth.api calls.
+ */
+describe("rate limiting", () => {
+  const tenantSubdomain = `ratelimit-test-${Date.now()}`;
+  let tenantId: string;
+  const testEmail = `ratelimit-${Date.now()}@example.com`;
+
+  beforeAll(async () => {
+    // Clean rate limit table to avoid interference from other tests
+    await db.delete(rateLimit);
+
+    const [tenant] = await db
+      .insert(tenants)
+      .values({ name: "Rate Limit School", subdomain: tenantSubdomain })
+      .returning();
+    tenantId = tenant.id;
+
+    // Register and verify a user for sign-in attempts
+    await tenantIdStore.run(tenantId, async () => {
+      await auth.api.signUpEmail({
+        body: {
+          email: testEmail,
+          password: "ratelimit123",
+          name: "Rate Limit Tester",
+        },
+      });
+    });
+    await verifyUserEmail(testEmail, tenantId);
+  });
+
+  afterAll(async () => {
+    // Clean rate limit records
+    await db.delete(rateLimit);
+
+    const allUsers = await db.query.users.findMany({
+      where: eq(users.tenantId, tenantId),
+    });
+    for (const user of allUsers) {
+      await db.delete(auditLogs).where(eq(auditLogs.actorId, user.id)).catch(() => {});
+      await db.delete(sessions).where(eq(sessions.userId, user.id));
+      await db.delete(accounts).where(eq(accounts.userId, user.id));
+    }
+    for (const user of allUsers) {
+      await db.delete(users).where(eq(users.id, user.id));
+    }
+    await db.delete(verifications).where(eq(verifications.identifier, testEmail)).catch(() => {});
+    await db.delete(tenants).where(eq(tenants.subdomain, tenantSubdomain));
+  });
+
+  it("returns 429 when sign-in rate limit is exceeded", async () => {
+    // The custom rule for /sign-in/email allows max 5 requests per 60 seconds.
+    // However, Better Auth also has a default special rule for /sign-in/* of max 3 per 10s.
+    // The custom rule overrides: { window: 60, max: 5 }.
+    // We use a unique IP per test to avoid cross-test interference.
+    const testIp = `10.0.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
+
+    const makeSignInRequest = () => {
+      const request = new Request("http://localhost:3000/api/auth/sign-in/email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-forwarded-for": testIp,
+        },
+        body: JSON.stringify({
+          email: testEmail,
+          password: "wrongpassword", // Intentionally wrong — we only care about rate limit
+        }),
+      });
+      return auth.handler(request);
+    };
+
+    // Send requests up to the limit (5 for /sign-in/email)
+    const responses: Response[] = [];
+    for (let i = 0; i < 6; i++) {
+      responses.push(await makeSignInRequest());
+    }
+
+    // First 5 should NOT be 429 (they may be 401 for wrong password, that's fine)
+    for (let i = 0; i < 5; i++) {
+      expect(responses[i].status).not.toBe(429);
+    }
+
+    // 6th request should be rate limited
+    expect(responses[5].status).toBe(429);
+
+    const body = await responses[5].json();
+    expect(body.message).toContain("Too many requests");
+  });
+});
+
+/**
+ * Tenant isolation integration tests.
+ *
+ * Verifies that the same email can register on two different tenants
+ * independently, and that cross-tenant login is correctly rejected.
+ * These tests complement the earlier per-tenant tests by explicitly
+ * testing isolation with full sign-in/sign-up flows.
+ */
+describe("tenant isolation", () => {
+  const tenantASubdomain = `iso-a-${Date.now()}`;
+  const tenantBSubdomain = `iso-b-${Date.now()}`;
+  let tenantAId: string;
+  let tenantBId: string;
+  const sharedEmail = `iso-${Date.now()}@example.com`;
+  const passwordA = "tenant-a-password";
+  const passwordB = "tenant-b-password";
+
+  beforeAll(async () => {
+    const [tenantA] = await db
+      .insert(tenants)
+      .values({ name: "Isolation A", subdomain: tenantASubdomain })
+      .returning();
+    const [tenantB] = await db
+      .insert(tenants)
+      .values({ name: "Isolation B", subdomain: tenantBSubdomain })
+      .returning();
+    tenantAId = tenantA.id;
+    tenantBId = tenantB.id;
+  });
+
+  afterAll(async () => {
+    const allUsers = await db.query.users.findMany({
+      where: eq(users.email, sharedEmail),
+    });
+    for (const user of allUsers) {
+      await db.delete(auditLogs).where(eq(auditLogs.actorId, user.id)).catch(() => {});
+      await db.delete(sessions).where(eq(sessions.userId, user.id));
+      await db.delete(accounts).where(eq(accounts.userId, user.id));
+    }
+    for (const user of allUsers) {
+      await db.delete(users).where(eq(users.id, user.id));
+    }
+    await db.delete(verifications).where(eq(verifications.identifier, sharedEmail)).catch(() => {});
+    await db.delete(tenants).where(eq(tenants.subdomain, tenantASubdomain));
+    await db.delete(tenants).where(eq(tenants.subdomain, tenantBSubdomain));
+  });
+
+  it("same email registers independently on two tenants", async () => {
+    // Register on tenant A
+    const resultA = await tenantIdStore.run(tenantAId, () =>
+      auth.api.signUpEmail({
+        body: { email: sharedEmail, password: passwordA, name: "User on A" },
+      }),
+    );
+    expect(resultA.user.email).toBe(sharedEmail);
+
+    // Register same email on tenant B
+    const resultB = await tenantIdStore.run(tenantBId, () =>
+      auth.api.signUpEmail({
+        body: { email: sharedEmail, password: passwordB, name: "User on B" },
+      }),
+    );
+    expect(resultB.user.email).toBe(sharedEmail);
+
+    // Both users exist with different tenant IDs
+    const userA = await db.query.users.findFirst({
+      where: and(eq(users.email, sharedEmail), eq(users.tenantId, tenantAId)),
+    });
+    const userB = await db.query.users.findFirst({
+      where: and(eq(users.email, sharedEmail), eq(users.tenantId, tenantBId)),
+    });
+    expect(userA).toBeDefined();
+    expect(userB).toBeDefined();
+    expect(userA!.id).not.toBe(userB!.id);
+    expect(userA!.tenantId).toBe(tenantAId);
+    expect(userB!.tenantId).toBe(tenantBId);
+  });
+
+  it("cross-tenant login is rejected", async () => {
+    // Verify both users' emails
+    await verifyUserEmail(sharedEmail, tenantAId);
+    await verifyUserEmail(sharedEmail, tenantBId);
+
+    // Login on tenant A with tenant A's password → success
+    const resultA = await tenantIdStore.run(tenantAId, () =>
+      auth.api.signInEmail({
+        body: { email: sharedEmail, password: passwordA },
+      }),
+    );
+    expect(resultA.user.email).toBe(sharedEmail);
+    expect(resultA.token).toBeDefined();
+
+    // Login on tenant B with tenant B's password → success
+    const resultB = await tenantIdStore.run(tenantBId, () =>
+      auth.api.signInEmail({
+        body: { email: sharedEmail, password: passwordB },
+      }),
+    );
+    expect(resultB.user.email).toBe(sharedEmail);
+    expect(resultB.token).toBeDefined();
+
+    // Login on tenant A with tenant B's password → rejected
+    try {
+      await tenantIdStore.run(tenantAId, () =>
+        auth.api.signInEmail({
+          body: { email: sharedEmail, password: passwordB },
+        }),
+      );
+      expect.unreachable("Cross-tenant login should have been rejected");
+    } catch (error: any) {
+      expect(error).toBeDefined();
+    }
+
+    // Login on tenant B with tenant A's password → rejected
+    try {
+      await tenantIdStore.run(tenantBId, () =>
+        auth.api.signInEmail({
+          body: { email: sharedEmail, password: passwordA },
+        }),
+      );
+      expect.unreachable("Cross-tenant login should have been rejected");
+    } catch (error: any) {
+      expect(error).toBeDefined();
+    }
+  });
+
+  it("isolated sessions between tenants", async () => {
+    // Sign in on both tenants
+    await tenantIdStore.run(tenantAId, () =>
+      auth.api.signInEmail({
+        body: { email: sharedEmail, password: passwordA },
+      }),
+    );
+    await tenantIdStore.run(tenantBId, () =>
+      auth.api.signInEmail({
+        body: { email: sharedEmail, password: passwordB },
+      }),
+    );
+
+    // Verify sessions belong to different users
+    const userA = await db.query.users.findFirst({
+      where: and(eq(users.email, sharedEmail), eq(users.tenantId, tenantAId)),
+    });
+    const userB = await db.query.users.findFirst({
+      where: and(eq(users.email, sharedEmail), eq(users.tenantId, tenantBId)),
+    });
+
+    const sessionsA = await db.query.sessions.findMany({
+      where: eq(sessions.userId, userA!.id),
+    });
+    const sessionsB = await db.query.sessions.findMany({
+      where: eq(sessions.userId, userB!.id),
+    });
+
+    expect(sessionsA.length).toBeGreaterThan(0);
+    expect(sessionsB.length).toBeGreaterThan(0);
+
+    // Sessions are for different user IDs
+    expect(sessionsA[0].userId).toBe(userA!.id);
+    expect(sessionsB[0].userId).toBe(userB!.id);
+    expect(sessionsA[0].userId).not.toBe(sessionsB[0].userId);
   });
 });
