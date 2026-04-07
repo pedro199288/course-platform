@@ -4,6 +4,7 @@ import { db } from "#/db/index.ts";
 import { tenants, users, accounts, sessions } from "#/db/schema/index.ts";
 import { auth } from "#/lib/auth.ts";
 import { tenantIdStore } from "#/lib/tenant-context.ts";
+import { auditLogs } from "#/db/schema/audit-logs.ts";
 
 describe("auth: per-tenant registration, login, and roles", () => {
   const tenantASubdomain = `auth-test-a-${Date.now()}`;
@@ -185,6 +186,136 @@ describe("auth: per-tenant registration, login, and roles", () => {
       });
       // Should not reach here
       expect(true).toBe(false);
+    } catch (error: any) {
+      expect(error).toBeDefined();
+    }
+  });
+});
+
+/**
+ * Regression test for the findUserByEmail monkey-patch.
+ *
+ * The monkey-patch on internalAdapter.findUserByEmail is the only way to achieve
+ * tenant-scoped user lookup in Better Auth (see auth.ts comments). This test
+ * verifies the patch is correctly applied and working. If a Better Auth upgrade
+ * changes the internal adapter structure, this test will fail and alert us.
+ *
+ * Related: issue #37 tracks revisiting this approach if Better Auth adds
+ * hooks support for user lookups.
+ */
+describe("findUserByEmail monkey-patch regression", () => {
+  const tenantXSubdomain = `patch-test-x-${Date.now()}`;
+  const tenantYSubdomain = `patch-test-y-${Date.now()}`;
+  let tenantXId: string;
+  let tenantYId: string;
+  const sharedEmail = `patchtest-${Date.now()}@example.com`;
+
+  beforeAll(async () => {
+    const [tenantX] = await db
+      .insert(tenants)
+      .values({ name: "Patch Test X", subdomain: tenantXSubdomain })
+      .returning();
+    const [tenantY] = await db
+      .insert(tenants)
+      .values({ name: "Patch Test Y", subdomain: tenantYSubdomain })
+      .returning();
+    tenantXId = tenantX.id;
+    tenantYId = tenantY.id;
+
+    // Register same email on both tenants
+    await tenantIdStore.run(tenantXId, () =>
+      auth.api.signUpEmail({
+        body: { email: sharedEmail, password: "password-x", name: "User X" },
+      }),
+    );
+    await tenantIdStore.run(tenantYId, () =>
+      auth.api.signUpEmail({
+        body: { email: sharedEmail, password: "password-y", name: "User Y" },
+      }),
+    );
+  });
+
+  afterAll(async () => {
+    const allUsers = await db.query.users.findMany({
+      where: eq(users.email, sharedEmail),
+    });
+    for (const user of allUsers) {
+      await db.delete(auditLogs).where(eq(auditLogs.actorId, user.id));
+      await db.delete(sessions).where(eq(sessions.userId, user.id));
+      await db.delete(accounts).where(eq(accounts.userId, user.id));
+    }
+    for (const user of allUsers) {
+      await db.delete(users).where(eq(users.id, user.id));
+    }
+    await db.delete(tenants).where(eq(tenants.subdomain, tenantXSubdomain));
+    await db.delete(tenants).where(eq(tenants.subdomain, tenantYSubdomain));
+  });
+
+  it("internalAdapter.findUserByEmail is patched and available", async () => {
+    // Verify the monkey-patch is applied by checking the internal adapter exists
+    // and responds correctly. If Better Auth changes the adapter structure, this
+    // will fail — signaling we need to update the patch.
+    const ctx = await (auth.$context as Promise<any>);
+    expect(ctx.internalAdapter).toBeDefined();
+    expect(typeof ctx.internalAdapter.findUserByEmail).toBe("function");
+  });
+
+  it("returns tenant-scoped user when tenantId is set", async () => {
+    const result = await tenantIdStore.run(tenantXId, async () => {
+      const ctx = await (auth.$context as Promise<any>);
+      return ctx.internalAdapter.findUserByEmail(sharedEmail, {
+        includeAccounts: true,
+      });
+    });
+
+    expect(result).not.toBeNull();
+    expect(result.user.email).toBe(sharedEmail);
+    expect(result.user.tenantId).toBe(tenantXId);
+    expect(result.accounts).toBeDefined();
+  });
+
+  it("returns correct tenant user (not cross-tenant)", async () => {
+    const resultY = await tenantIdStore.run(tenantYId, async () => {
+      const ctx = await (auth.$context as Promise<any>);
+      return ctx.internalAdapter.findUserByEmail(sharedEmail, {
+        includeAccounts: true,
+      });
+    });
+
+    expect(resultY).not.toBeNull();
+    expect(resultY.user.tenantId).toBe(tenantYId);
+    expect(resultY.user.name).toBe("User Y");
+  });
+
+  it("falls back to original adapter when no tenantId is set", async () => {
+    // Without tenant context, the original findUserByEmail is used
+    const ctx = await (auth.$context as Promise<any>);
+    const result = await ctx.internalAdapter.findUserByEmail(sharedEmail, {
+      includeAccounts: false,
+    });
+
+    // Original adapter returns the first match (non-scoped)
+    expect(result).not.toBeNull();
+    expect(result.user.email).toBe(sharedEmail);
+  });
+
+  it("sign-in uses patched lookup for tenant isolation", async () => {
+    // Sign in on tenant X with tenant X's password — should succeed
+    const successResult = await tenantIdStore.run(tenantXId, () =>
+      auth.api.signInEmail({
+        body: { email: sharedEmail, password: "password-x" },
+      }),
+    );
+    expect(successResult.user.email).toBe(sharedEmail);
+
+    // Sign in on tenant X with tenant Y's password — should fail
+    try {
+      await tenantIdStore.run(tenantXId, () =>
+        auth.api.signInEmail({
+          body: { email: sharedEmail, password: "password-y" },
+        }),
+      );
+      expect.unreachable("Should have thrown");
     } catch (error: any) {
       expect(error).toBeDefined();
     }

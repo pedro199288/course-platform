@@ -151,11 +151,21 @@ export const auth = betterAuth({
 });
 
 /**
- * Patch findUserByEmail to scope user lookups by tenantId.
+ * Monkey-patch: scope findUserByEmail by tenantId.
  *
  * Better Auth's internal findUserByEmail only filters by email. For multi-tenant
  * isolation (same email on different tenants), we replace it with a direct Drizzle
  * query that includes the tenantId from AsyncLocalStorage.
+ *
+ * Why a monkey-patch? Better Auth's hooks API (plugin hooks.before, global
+ * hooks.before, plugin init) cannot intercept findUserByEmail:
+ * - Plugin init runs before internalAdapter is created
+ * - hooks.before context merging via defu doesn't reliably override adapter methods
+ * - There is no database hook or adapter extension point for user lookups
+ *
+ * The better-auth version is pinned in package.json to prevent silent breakage.
+ * A regression test in tests/auth.test.ts verifies this patch works correctly.
+ * See issue #37 for revisiting when Better Auth adds hooks support for user lookups.
  *
  * This runs via .then() on the context promise, which resolves before any API call
  * since API methods also await the same promise (and .then() is registered first).
