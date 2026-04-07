@@ -1,4 +1,4 @@
-import { boolean, index, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { bigint, boolean, index, integer, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants.ts";
 
 export const userRole = pgEnum("user_role", [
@@ -28,7 +28,7 @@ export const users = pgTable(
   },
   (table) => [
     index("users_tenant_id_idx").on(table.tenantId),
-    index("users_email_tenant_idx").on(table.email, table.tenantId),
+    uniqueIndex("users_email_tenant_unique").on(table.email, table.tenantId),
   ],
 );
 
@@ -87,4 +87,11 @@ export const verifications = pgTable("verifications", {
     .defaultNow()
     .notNull()
     .$onUpdate(() => new Date()),
+});
+
+export const rateLimit = pgTable("rate_limit", {
+  id: uuid().primaryKey().defaultRandom(),
+  key: text().notNull().unique(),
+  count: integer().notNull(),
+  lastRequest: bigint("last_request", { mode: "number" }).notNull(),
 });

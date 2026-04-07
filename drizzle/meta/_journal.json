@@ -8,6 +8,20 @@
       "when": 1775581946538,
       "tag": "0000_wonderful_wolfsbane",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1775589325958,
+      "tag": "0001_low_prima",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1775595468611,
+      "tag": "0002_careful_the_twelve",
+      "breakpoints": true
     }
   ]
 }
