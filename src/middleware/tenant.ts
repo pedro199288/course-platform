@@ -2,6 +2,7 @@ import { createMiddleware } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 import { db } from "#/db/index.ts";
 import { tenants } from "#/db/schema/index.ts";
+import { tenantIdStore } from "#/lib/tenant-context.ts";
 
 export type TenantContext = {
   tenant: {
@@ -43,6 +44,9 @@ export function extractSubdomain(host: string): string | null {
  * - Requests to a valid tenant subdomain get tenant context injected.
  * - Requests to an unknown subdomain get a 404 response.
  *
+ * Also sets the tenant ID in AsyncLocalStorage so the auth adapter
+ * can scope user lookups to the current tenant.
+ *
  * For local dev, use `tenant.localhost:3000` or set the `X-Tenant` header
  * (e.g., `myschool.localhost:3000`).
  */
@@ -52,7 +56,7 @@ export const tenantMiddleware = createMiddleware().server(async ({ next, request
   const subdomain = extractSubdomain(host);
 
   if (!subdomain) {
-    return next();
+    return tenantIdStore.run(null, () => next());
   }
 
   const tenant = await db.query.tenants.findFirst({
@@ -70,5 +74,5 @@ export const tenantMiddleware = createMiddleware().server(async ({ next, request
     return new Response("Tenant not found", { status: 404 });
   }
 
-  return next({ context: { tenant } });
+  return tenantIdStore.run(tenant.id, () => next({ context: { tenant } }));
 });
