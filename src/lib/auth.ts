@@ -7,7 +7,7 @@ import * as schema from "#/db/schema/index.ts";
 import { auditLogs } from "#/db/schema/audit-logs.ts";
 import { tenantIdStore } from "./tenant-context.ts";
 import { sendEmail } from "./email.ts";
-import { renderVerifyEmail } from "./email-templates/index.ts";
+import { renderVerifyEmail, renderResetPassword } from "./email-templates/index.ts";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -92,6 +92,16 @@ export const auth = betterAuth({
     minPasswordLength: 8,
     maxPasswordLength: 128,
     requireEmailVerification: true,
+    resetPasswordTokenExpiresIn: 1800, // 30 minutes
+    revokeSessionsOnPasswordReset: true,
+    sendResetPassword: async ({ user, url }) => {
+      const html = await renderResetPassword({ resetUrl: url });
+      await sendEmail({
+        to: user.email,
+        subject: "Reset your password",
+        html,
+      });
+    },
   },
   emailVerification: {
     sendOnSignUp: true,
@@ -143,7 +153,7 @@ export const auth = betterAuth({
     customRules: {
       "/sign-in/email": { window: 60, max: 5 },
       "/sign-up/email": { window: 60, max: 3 },
-      "/forget-password": { window: 60, max: 3 },
+      "/request-password-reset": { window: 60, max: 3 },
     },
   },
   advanced: {

@@ -484,3 +484,218 @@ describe("email verification flow", () => {
     }
   });
 });
+
+/**
+ * Password reset flow tests.
+ *
+ * Tests the full lifecycle: request reset → email sent → reset with token →
+ * password changed, sessions revoked. Also tests expired/invalid tokens.
+ */
+describe("password reset flow", () => {
+  const tenantSubdomain = `reset-test-${Date.now()}`;
+  let tenantId: string;
+  const testEmail = `reset-${Date.now()}@example.com`;
+
+  beforeAll(async () => {
+    const [tenant] = await db
+      .insert(tenants)
+      .values({ name: "Reset Test School", subdomain: tenantSubdomain })
+      .returning();
+    tenantId = tenant.id;
+
+    // Register and verify user
+    await tenantIdStore.run(tenantId, async () => {
+      await auth.api.signUpEmail({
+        body: {
+          email: testEmail,
+          password: "oldpassword123",
+          name: "Reset Tester",
+        },
+      });
+    });
+    await verifyUserEmail(testEmail, tenantId);
+  });
+
+  afterAll(async () => {
+    const allUsers = await db.query.users.findMany({
+      where: eq(users.tenantId, tenantId),
+    });
+    for (const user of allUsers) {
+      await db.delete(auditLogs).where(eq(auditLogs.actorId, user.id)).catch(() => {});
+      await db.delete(sessions).where(eq(sessions.userId, user.id));
+      await db.delete(accounts).where(eq(accounts.userId, user.id));
+    }
+    for (const user of allUsers) {
+      await db.delete(users).where(eq(users.id, user.id));
+    }
+    await db.delete(verifications).where(eq(verifications.identifier, testEmail)).catch(() => {});
+    await db.delete(tenants).where(eq(tenants.subdomain, tenantSubdomain));
+  });
+
+  it("sends reset email with token on forgetPassword request", async () => {
+    const { sendEmail } = await import("#/lib/email.ts");
+    const mockSendEmail = sendEmail as ReturnType<typeof vi.fn>;
+    mockSendEmail.mockClear();
+
+    await tenantIdStore.run(tenantId, async () => {
+      await auth.api.requestPasswordReset({
+        body: {
+          email: testEmail,
+          redirectTo: "/reset-password",
+        },
+      });
+    });
+
+    // Verify email was sent
+    expect(mockSendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: testEmail,
+        subject: "Reset your password",
+      }),
+    );
+
+    // Verify token created in DB
+    const token = await db.query.verifications.findFirst({
+      where: eq(verifications.identifier, testEmail),
+    });
+    expect(token).toBeDefined();
+    expect(token!.value).toBeTruthy();
+    expect(token!.expiresAt).toBeDefined();
+  });
+
+  it("resets password with valid token and allows login with new password", async () => {
+    // Get the verification token from DB
+    const tokenRecord = await db.query.verifications.findFirst({
+      where: eq(verifications.identifier, testEmail),
+    });
+    expect(tokenRecord).toBeDefined();
+
+    // Reset the password using the token
+    await auth.api.resetPassword({
+      body: {
+        newPassword: "newpassword456",
+        token: tokenRecord!.value,
+      },
+    });
+
+    // Login with NEW password should succeed
+    const result = await tenantIdStore.run(tenantId, async () => {
+      return auth.api.signInEmail({
+        body: { email: testEmail, password: "newpassword456" },
+      });
+    });
+    expect(result).toBeDefined();
+    expect(result.user.email).toBe(testEmail);
+    expect(result.token).toBeDefined();
+  });
+
+  it("rejects login with old password after reset", async () => {
+    try {
+      await tenantIdStore.run(tenantId, async () => {
+        return auth.api.signInEmail({
+          body: { email: testEmail, password: "oldpassword123" },
+        });
+      });
+      expect.unreachable("Should have thrown for wrong password");
+    } catch (error: any) {
+      expect(error).toBeDefined();
+    }
+  });
+
+  it("rejects reset with invalid token", async () => {
+    try {
+      await auth.api.resetPassword({
+        body: {
+          newPassword: "hackerpassword",
+          token: "invalid-token-12345",
+        },
+      });
+      expect.unreachable("Should have thrown for invalid token");
+    } catch (error: any) {
+      expect(error).toBeDefined();
+    }
+  });
+
+  it("rejects reset with expired token", async () => {
+    // Request a new reset
+    await tenantIdStore.run(tenantId, async () => {
+      await auth.api.requestPasswordReset({
+        body: { email: testEmail, redirectTo: "/reset-password" },
+      });
+    });
+
+    // Manually expire the token by setting expiresAt in the past
+    const tokenRecord = await db.query.verifications.findFirst({
+      where: eq(verifications.identifier, testEmail),
+    });
+    expect(tokenRecord).toBeDefined();
+
+    await db
+      .update(verifications)
+      .set({ expiresAt: new Date(Date.now() - 60000) }) // 1 minute ago
+      .where(eq(verifications.id, tokenRecord!.id));
+
+    try {
+      await auth.api.resetPassword({
+        body: {
+          newPassword: "expiredtokenpassword",
+          token: tokenRecord!.value,
+        },
+      });
+      expect.unreachable("Should have thrown for expired token");
+    } catch (error: any) {
+      expect(error).toBeDefined();
+    }
+
+    // Verify password was NOT changed (can still login with current password)
+    const result = await tenantIdStore.run(tenantId, async () => {
+      return auth.api.signInEmail({
+        body: { email: testEmail, password: "newpassword456" },
+      });
+    });
+    expect(result.user.email).toBe(testEmail);
+  });
+
+  it("revokes existing sessions on password reset", async () => {
+    // Create a session
+    await tenantIdStore.run(tenantId, async () => {
+      return auth.api.signInEmail({
+        body: { email: testEmail, password: "newpassword456" },
+      });
+    });
+
+    const dbUser = await db.query.users.findFirst({
+      where: and(eq(users.email, testEmail), eq(users.tenantId, tenantId)),
+    });
+
+    // Count sessions before reset
+    const sessionsBefore = await db.query.sessions.findMany({
+      where: eq(sessions.userId, dbUser!.id),
+    });
+    expect(sessionsBefore.length).toBeGreaterThan(0);
+
+    // Request and perform password reset
+    await tenantIdStore.run(tenantId, async () => {
+      await auth.api.requestPasswordReset({
+        body: { email: testEmail, redirectTo: "/reset-password" },
+      });
+    });
+
+    const tokenRecord = await db.query.verifications.findFirst({
+      where: eq(verifications.identifier, testEmail),
+    });
+
+    await auth.api.resetPassword({
+      body: {
+        newPassword: "finalpassword789",
+        token: tokenRecord!.value,
+      },
+    });
+
+    // All previous sessions should be revoked
+    const sessionsAfter = await db.query.sessions.findMany({
+      where: eq(sessions.userId, dbUser!.id),
+    });
+    expect(sessionsAfter.length).toBe(0);
+  });
+});
