@@ -22,7 +22,7 @@ for ((i=1; i<=$1; i++)); do
   telegram=$(cat scripts/ralph/telegram.md)
   REMAINING=$(echo "$issues" | jq 'length')
 
-  TG_BOT_CLAUDIA_TOKEN="$TG_BOT_CLAUDIA_TOKEN" TG_BOT_CLAUDIA_CHAT_ID="$TG_BOT_CLAUDIA_CHAT_ID" \
+  TG_BOT_CLAUDIA_TOKEN="$TG_BOT_CLAUDIA_TOKEN" TG_BOT_CLAUDIA_CHAT_ID="$TG_BOT_CLAUDIA_CHAT_ID" GITHUB_TOKEN="$GITHUB_TOKEN" \
   docker sandbox run claude . -- \
     --verbose \
     --print \
