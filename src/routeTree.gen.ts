@@ -28,6 +28,7 @@ import { Route as CheckoutCancelRouteImport } from './routes/checkout/cancel'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiWebhooksStripeRouteImport } from './routes/api/webhooks/stripe'
 import { Route as CoursesCourseSlugLessonsLessonIdRouteImport } from './routes/courses/$courseSlug/lessons/$lessonId'
+import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: '/verify-email',
@@ -124,6 +125,11 @@ const CoursesCourseSlugLessonsLessonIdRoute = CoursesCourseSlugLessonsLessonIdRo
   path: '/courses/$courseSlug/lessons/$lessonId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardIndexRoute = DashboardIndexRouteImport.update({
+  id: '/dashboard/',
+  path: '/dashboard/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -145,6 +151,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/webhooks/stripe': typeof ApiWebhooksStripeRoute
   '/courses/$courseSlug/lessons/$lessonId': typeof CoursesCourseSlugLessonsLessonIdRoute
+  '/dashboard/': typeof DashboardIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -165,6 +172,7 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/webhooks/stripe': typeof ApiWebhooksStripeRoute
   '/courses/$courseSlug/lessons/$lessonId': typeof CoursesCourseSlugLessonsLessonIdRoute
+  '/dashboard': typeof DashboardIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -187,6 +195,7 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/webhooks/stripe': typeof ApiWebhooksStripeRoute
   '/courses/$courseSlug/lessons/$lessonId': typeof CoursesCourseSlugLessonsLessonIdRoute
+  '/dashboard/': typeof DashboardIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -210,6 +219,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/webhooks/stripe'
     | '/courses/$courseSlug/lessons/$lessonId'
+    | '/dashboard/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -230,6 +240,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/webhooks/stripe'
     | '/courses/$courseSlug/lessons/$lessonId'
+    | '/dashboard'
   id:
     | '__root__'
     | '/'
@@ -251,6 +262,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/webhooks/stripe'
     | '/courses/$courseSlug/lessons/$lessonId'
+    | '/dashboard/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -269,6 +281,7 @@ export interface RootRouteChildren {
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiWebhooksStripeRoute: typeof ApiWebhooksStripeRoute
   CoursesCourseSlugLessonsLessonIdRoute: typeof CoursesCourseSlugLessonsLessonIdRoute
+  DashboardIndexRoute: typeof DashboardIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -406,6 +419,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoursesCourseSlugLessonsLessonIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/': {
+      id: '/dashboard/'
+      path: '/dashboard/'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof DashboardIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -443,6 +463,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiWebhooksStripeRoute: ApiWebhooksStripeRoute,
   CoursesCourseSlugLessonsLessonIdRoute: CoursesCourseSlugLessonsLessonIdRoute,
+  DashboardIndexRoute: DashboardIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
