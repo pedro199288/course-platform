@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { getLessonFn } from "#/lib/lesson-actions.ts";
+import { markLessonCompleteFn } from "#/lib/progress-actions.ts";
 
 export const Route = createFileRoute(
   "/courses/$courseSlug/lessons/$lessonId",
@@ -68,10 +70,35 @@ function LessonError({ error }: { error: Error }) {
 }
 
 function LessonViewerPage() {
-  const { course, module, lesson, curriculum, prevLesson, nextLesson } =
-    Route.useLoaderData();
+  const {
+    course,
+    module,
+    lesson,
+    curriculum,
+    prevLesson,
+    nextLesson,
+    completedLessonIds,
+  } = Route.useLoaderData();
 
   const content = lesson.content as { text?: string } | null;
+  const completedSet = new Set(completedLessonIds);
+
+  const [isCompleted, setIsCompleted] = useState(
+    completedSet.has(lesson.id),
+  );
+  const [isMarking, setIsMarking] = useState(false);
+
+  async function handleMarkComplete() {
+    setIsMarking(true);
+    try {
+      await markLessonCompleteFn({
+        data: { courseSlug: course.slug, lessonId: lesson.id },
+      });
+      setIsCompleted(true);
+    } finally {
+      setIsMarking(false);
+    }
+  }
 
   return (
     <main className="page-wrap px-4 py-6">
@@ -97,6 +124,8 @@ function LessonViewerPage() {
                   <ul>
                     {mod.lessons.map((l) => {
                       const isCurrent = l.id === lesson.id;
+                      const isDone =
+                        isCurrent ? isCompleted : completedSet.has(l.id);
                       return (
                         <li key={l.id}>
                           <Link
@@ -105,13 +134,32 @@ function LessonViewerPage() {
                               courseSlug: course.slug,
                               lessonId: l.id,
                             }}
-                            className={`block px-4 py-2 text-sm ${
+                            className={`flex items-center gap-2 px-4 py-2 text-sm ${
                               isCurrent
                                 ? "bg-neutral-100 font-medium text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100"
                                 : "text-neutral-600 hover:bg-neutral-50 dark:text-neutral-400 dark:hover:bg-neutral-800/50"
                             }`}
                           >
-                            {l.title}
+                            <span
+                              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                                isDone
+                                  ? "border-green-500 bg-green-500 text-white"
+                                  : "border-neutral-300 dark:border-neutral-600"
+                              }`}
+                            >
+                              {isDone && (
+                                <svg
+                                  viewBox="0 0 12 12"
+                                  className="h-2.5 w-2.5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                >
+                                  <path d="M2 6l3 3 5-5" />
+                                </svg>
+                              )}
+                            </span>
+                            <span className="truncate">{l.title}</span>
                           </Link>
                         </li>
                       );
@@ -146,6 +194,33 @@ function LessonViewerPage() {
               <p className="text-neutral-500 dark:text-neutral-400 italic">
                 No content yet.
               </p>
+            )}
+          </div>
+
+          {/* Mark as complete */}
+          <div className="mt-8">
+            {isCompleted ? (
+              <div className="inline-flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-4 py-2 text-sm font-medium text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
+                <svg
+                  viewBox="0 0 12 12"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M2 6l3 3 5-5" />
+                </svg>
+                Lesson completed
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleMarkComplete}
+                disabled={isMarking}
+                className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
+              >
+                {isMarking ? "Marking..." : "Mark as complete"}
+              </button>
             )}
           </div>
 

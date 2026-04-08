@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-import { eq, and, asc, isNull, or } from "drizzle-orm";
+import { eq, and, asc, isNull, or, inArray } from "drizzle-orm";
 import { db } from "#/db/index.ts";
 import {
   courses,
@@ -8,6 +8,7 @@ import {
   lessons,
   enrollments,
   subscriptions,
+  lessonProgress,
   tenants,
 } from "#/db/schema/index.ts";
 import { auth } from "./auth.ts";
@@ -158,6 +159,23 @@ export const getLessonFn = createServerFn({ method: "GET" })
         ? allLessons[currentIndex + 1]
         : null;
 
+    // Fetch progress data for sidebar completion indicators
+    const allLessonIds = allLessons.map((l) => l.id);
+    const completedRows = allLessonIds.length > 0
+      ? await db
+          .select({ lessonId: lessonProgress.lessonId })
+          .from(lessonProgress)
+          .where(
+            and(
+              eq(lessonProgress.userId, user.id),
+              eq(lessonProgress.tenantId, tenant.id),
+              eq(lessonProgress.completed, true),
+              inArray(lessonProgress.lessonId, allLessonIds),
+            ),
+          )
+      : [];
+    const completedLessonIds = completedRows.map((r) => r.lessonId);
+
     return {
       tenant,
       course: {
@@ -170,6 +188,7 @@ export const getLessonFn = createServerFn({ method: "GET" })
       curriculum,
       prevLesson,
       nextLesson,
+      completedLessonIds,
     };
   });
 
