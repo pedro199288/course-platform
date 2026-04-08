@@ -29,6 +29,7 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiWebhooksStripeRouteImport } from './routes/api/webhooks/stripe'
 import { Route as CoursesCourseSlugLessonsLessonIdRouteImport } from './routes/courses/$courseSlug/lessons/$lessonId'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
+import { Route as CertificatesCertificateIdRouteImport } from './routes/certificates/$certificateId'
 
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: '/verify-email',
@@ -130,6 +131,11 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
   path: '/dashboard/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CertificatesCertificateIdRoute = CertificatesCertificateIdRouteImport.update({
+  id: '/certificates/$certificateId',
+  path: '/certificates/$certificateId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -152,6 +158,7 @@ export interface FileRoutesByFullPath {
   '/api/webhooks/stripe': typeof ApiWebhooksStripeRoute
   '/courses/$courseSlug/lessons/$lessonId': typeof CoursesCourseSlugLessonsLessonIdRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/certificates/$certificateId': typeof CertificatesCertificateIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -173,6 +180,7 @@ export interface FileRoutesByTo {
   '/api/webhooks/stripe': typeof ApiWebhooksStripeRoute
   '/courses/$courseSlug/lessons/$lessonId': typeof CoursesCourseSlugLessonsLessonIdRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/certificates/$certificateId': typeof CertificatesCertificateIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -196,6 +204,7 @@ export interface FileRoutesById {
   '/api/webhooks/stripe': typeof ApiWebhooksStripeRoute
   '/courses/$courseSlug/lessons/$lessonId': typeof CoursesCourseSlugLessonsLessonIdRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/certificates/$certificateId': typeof CertificatesCertificateIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -220,6 +229,7 @@ export interface FileRouteTypes {
     | '/api/webhooks/stripe'
     | '/courses/$courseSlug/lessons/$lessonId'
     | '/dashboard/'
+    | '/certificates/$certificateId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -241,6 +251,7 @@ export interface FileRouteTypes {
     | '/api/webhooks/stripe'
     | '/courses/$courseSlug/lessons/$lessonId'
     | '/dashboard'
+    | '/certificates/$certificateId'
   id:
     | '__root__'
     | '/'
@@ -263,6 +274,7 @@ export interface FileRouteTypes {
     | '/api/webhooks/stripe'
     | '/courses/$courseSlug/lessons/$lessonId'
     | '/dashboard/'
+    | '/certificates/$certificateId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -282,6 +294,7 @@ export interface RootRouteChildren {
   ApiWebhooksStripeRoute: typeof ApiWebhooksStripeRoute
   CoursesCourseSlugLessonsLessonIdRoute: typeof CoursesCourseSlugLessonsLessonIdRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
+  CertificatesCertificateIdRoute: typeof CertificatesCertificateIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -426,6 +439,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/certificates/$certificateId': {
+      id: '/certificates/$certificateId'
+      path: '/certificates/$certificateId'
+      fullPath: '/certificates/$certificateId'
+      preLoaderRoute: typeof CertificatesCertificateIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -464,6 +484,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiWebhooksStripeRoute: ApiWebhooksStripeRoute,
   CoursesCourseSlugLessonsLessonIdRoute: CoursesCourseSlugLessonsLessonIdRoute,
   DashboardIndexRoute: DashboardIndexRoute,
+  CertificatesCertificateIdRoute: CertificatesCertificateIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

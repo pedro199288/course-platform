@@ -14,6 +14,7 @@ import {
 import { auth } from "./auth.ts";
 import { extractSubdomain } from "#/middleware/tenant.ts";
 import { checkCourseAccess } from "./lesson-actions.ts";
+import { checkAndIssueCertificate } from "./certificate-actions.ts";
 
 /**
  * Resolve tenant from request headers.
@@ -98,7 +99,14 @@ export const markLessonCompleteFn = createServerFn({ method: "POST" })
         set: { completed: true, completedAt: new Date() },
       });
 
-    return { success: true };
+    // Check if course is now 100% complete and issue certificate
+    const certResult = await checkAndIssueCertificate(
+      user.id,
+      course.id,
+      tenant.id,
+    );
+
+    return { success: true, certificateIssued: certResult.issued };
   });
 
 /**

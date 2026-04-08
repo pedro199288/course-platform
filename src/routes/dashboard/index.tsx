@@ -1,5 +1,6 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { getStudentDashboardFn } from "#/lib/dashboard-actions.ts";
+import { getStudentCertificatesFn } from "#/lib/certificate-actions.ts";
 import { getSessionFn } from "#/lib/auth-session.ts";
 
 export const Route = createFileRoute("/dashboard/")({
@@ -10,13 +11,17 @@ export const Route = createFileRoute("/dashboard/")({
     }
   },
   loader: async () => {
-    return getStudentDashboardFn();
+    const [dashboard, certMap] = await Promise.all([
+      getStudentDashboardFn(),
+      getStudentCertificatesFn(),
+    ]);
+    return { ...dashboard, certMap };
   },
   component: StudentDashboard,
 });
 
 function StudentDashboard() {
-  const { courses, hasSubscription } = Route.useLoaderData();
+  const { courses, hasSubscription, certMap } = Route.useLoaderData();
 
   return (
     <main className="page-wrap px-4 py-10">
@@ -45,7 +50,11 @@ function StudentDashboard() {
         ) : (
           <div className="mt-8 grid gap-6 sm:grid-cols-2">
             {courses.map((course) => (
-              <CourseCard key={course.id} course={course} />
+              <CourseCard
+                key={course.id}
+                course={course}
+                certificateId={certMap[course.id]?.id}
+              />
             ))}
           </div>
         )}
@@ -56,6 +65,7 @@ function StudentDashboard() {
 
 function CourseCard({
   course,
+  certificateId,
 }: {
   course: {
     id: string;
@@ -68,6 +78,7 @@ function CourseCard({
     progressPercent: number;
     nextLesson: { id: string; title: string } | null;
   };
+  certificateId?: string;
 }) {
   const isComplete = course.progressPercent === 100;
 
@@ -119,17 +130,28 @@ function CourseCard({
         {/* Continue / Completed CTA */}
         <div className="mt-4">
           {isComplete ? (
-            <div className="inline-flex items-center gap-1.5 text-sm font-medium text-green-600 dark:text-green-400">
-              <svg
-                viewBox="0 0 12 12"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M2 6l3 3 5-5" />
-              </svg>
-              Course completed
+            <div className="flex items-center gap-3">
+              <div className="inline-flex items-center gap-1.5 text-sm font-medium text-green-600 dark:text-green-400">
+                <svg
+                  viewBox="0 0 12 12"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M2 6l3 3 5-5" />
+                </svg>
+                Course completed
+              </div>
+              {certificateId && (
+                <Link
+                  to="/certificates/$certificateId"
+                  params={{ certificateId }}
+                  className="text-sm font-medium text-neutral-600 underline hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+                >
+                  View certificate
+                </Link>
+              )}
             </div>
           ) : course.nextLesson ? (
             <Link
