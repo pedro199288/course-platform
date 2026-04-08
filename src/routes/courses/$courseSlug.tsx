@@ -3,6 +3,7 @@ import { useState } from "react";
 import { getCourseBySlugFn } from "#/lib/storefront-actions.ts";
 import { getSessionFn } from "#/lib/auth-session.ts";
 import { createCheckoutSessionFn } from "#/lib/checkout-actions.ts";
+import { checkEnrollmentFn } from "#/lib/lesson-actions.ts";
 
 export const Route = createFileRoute("/courses/$courseSlug")({
   loader: async ({ params }) => {
@@ -10,13 +11,16 @@ export const Route = createFileRoute("/courses/$courseSlug")({
       getCourseBySlugFn({ data: { slug: params.courseSlug } }),
       getSessionFn().catch(() => null),
     ]);
-    return { ...data, session };
+    const enrollment = session
+      ? await checkEnrollmentFn({ data: { courseSlug: params.courseSlug } }).catch(() => ({ enrolled: false }))
+      : { enrolled: false };
+    return { ...data, session, enrolled: enrollment.enrolled };
   },
   component: CourseDetailPage,
 });
 
 function CourseDetailPage() {
-  const { tenant, course, curriculum, session } = Route.useLoaderData();
+  const { tenant, course, curriculum, session, enrolled } = Route.useLoaderData();
   const totalLessons = curriculum.reduce(
     (sum, mod) => sum + mod.lessons.length,
     0,
@@ -90,9 +94,22 @@ function CourseDetailPage() {
                             className="flex items-center gap-3 px-4 py-2.5 text-sm"
                           >
                             <LessonIcon type={lesson.type} />
-                            <span className="text-neutral-700 dark:text-neutral-300">
-                              {lesson.title}
-                            </span>
+                            {enrolled ? (
+                              <Link
+                                to="/courses/$courseSlug/lessons/$lessonId"
+                                params={{
+                                  courseSlug: course.slug,
+                                  lessonId: lesson.id,
+                                }}
+                                className="text-neutral-700 hover:text-neutral-900 hover:underline dark:text-neutral-300 dark:hover:text-neutral-100"
+                              >
+                                {lesson.title}
+                              </Link>
+                            ) : (
+                              <span className="text-neutral-700 dark:text-neutral-300">
+                                {lesson.title}
+                              </span>
+                            )}
                           </li>
                         ))}
                       </ul>
@@ -138,7 +155,18 @@ function CourseDetailPage() {
               </p>
             </div>
 
-            {session ? (
+            {enrolled ? (
+              <Link
+                to="/courses/$courseSlug/lessons/$lessonId"
+                params={{
+                  courseSlug: course.slug,
+                  lessonId: curriculum[0]?.lessons[0]?.id ?? "",
+                }}
+                className="block w-full rounded-md bg-neutral-900 px-4 py-3 text-center text-sm font-medium text-white no-underline hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
+              >
+                Start learning
+              </Link>
+            ) : session ? (
               <BuyButton courseId={course.id} hasPrice={!!course.price} />
             ) : (
               <Link
