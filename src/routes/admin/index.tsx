@@ -1,11 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { getInstructorDashboardFn, type DashboardMetrics } from "#/lib/instructor-dashboard-actions.ts";
 
 export const Route = createFileRoute("/admin/")({
+  loader: () => getInstructorDashboardFn(),
   component: AdminDashboard,
 });
 
 function AdminDashboard() {
   const { user } = Route.useRouteContext();
+  const metrics = Route.useLoaderData();
 
   return (
     <div className="space-y-6">
@@ -16,13 +19,114 @@ function AdminDashboard() {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {/* Overview Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Link to="/admin/courses" className="block">
-          <DashboardCard title="Courses" value="0" description="Create your first course" />
+          <DashboardCard
+            title="Total Courses"
+            value={String(metrics.totalCourses)}
+            description={`${metrics.publishedCourses} published, ${metrics.draftCourses} draft`}
+          />
         </Link>
-        <DashboardCard title="Students" value="0" description="No students yet" />
-        <DashboardCard title="Revenue" value="$0" description="Start selling courses" />
+        <DashboardCard
+          title="Students"
+          value={String(metrics.totalStudents)}
+          description={metrics.totalStudents === 1 ? "1 enrolled student" : `${metrics.totalStudents} enrolled students`}
+        />
+        <DashboardCard
+          title="Revenue"
+          value={formatCurrency(metrics.totalRevenue)}
+          description="Total earnings"
+        />
+        <DashboardCard
+          title="Published"
+          value={String(metrics.publishedCourses)}
+          description={metrics.publishedCourses === 1 ? "1 live course" : `${metrics.publishedCourses} live courses`}
+        />
       </div>
+
+      {/* Per-Course Stats */}
+      {metrics.perCourseStats.length > 0 && (
+        <div>
+          <h2 className="text-lg font-semibold">Course Performance</h2>
+          <div className="mt-3 overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-800">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900">
+                  <th className="px-4 py-3 text-left font-medium text-neutral-500 dark:text-neutral-400">Course</th>
+                  <th className="px-4 py-3 text-left font-medium text-neutral-500 dark:text-neutral-400">Status</th>
+                  <th className="px-4 py-3 text-right font-medium text-neutral-500 dark:text-neutral-400">Students</th>
+                  <th className="px-4 py-3 text-right font-medium text-neutral-500 dark:text-neutral-400">Revenue</th>
+                </tr>
+              </thead>
+              <tbody>
+                {metrics.perCourseStats.map((course) => (
+                  <tr key={course.courseId} className="border-b border-neutral-100 last:border-0 dark:border-neutral-800">
+                    <td className="px-4 py-3 font-medium">{course.courseTitle}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                          course.status === "published"
+                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                            : "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400"
+                        }`}
+                      >
+                        {course.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums">{course.enrolledStudents}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(course.revenue)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Recent Enrollments */}
+      {metrics.recentEnrollments.length > 0 && (
+        <div>
+          <h2 className="text-lg font-semibold">Recent Enrollments</h2>
+          <div className="mt-3 overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-800">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900">
+                  <th className="px-4 py-3 text-left font-medium text-neutral-500 dark:text-neutral-400">Student</th>
+                  <th className="px-4 py-3 text-left font-medium text-neutral-500 dark:text-neutral-400">Course</th>
+                  <th className="px-4 py-3 text-right font-medium text-neutral-500 dark:text-neutral-400">Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {metrics.recentEnrollments.map((enrollment) => (
+                  <tr key={enrollment.id} className="border-b border-neutral-100 last:border-0 dark:border-neutral-800">
+                    <td className="px-4 py-3">
+                      <div className="font-medium">{enrollment.userName ?? "Unknown"}</div>
+                      <div className="text-xs text-neutral-500 dark:text-neutral-400">{enrollment.userEmail}</div>
+                    </td>
+                    <td className="px-4 py-3">{enrollment.courseTitle}</td>
+                    <td className="px-4 py-3 text-right text-neutral-500 dark:text-neutral-400">
+                      {new Date(enrollment.enrolledAt).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {metrics.totalCourses === 0 && (
+        <div className="rounded-lg border border-dashed border-neutral-300 p-8 text-center dark:border-neutral-700">
+          <p className="text-neutral-500 dark:text-neutral-400">
+            No courses yet.{" "}
+            <Link to="/admin/courses/new" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
+              Create your first course
+            </Link>
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -43,4 +147,9 @@ function DashboardCard({
       <p className="mt-1 text-xs text-neutral-400 dark:text-neutral-500">{description}</p>
     </div>
   );
+}
+
+function formatCurrency(amount: string): string {
+  const num = parseFloat(amount);
+  return `$${num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
