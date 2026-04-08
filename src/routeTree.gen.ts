@@ -21,6 +21,8 @@ import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminCoursesCourseIdRouteImport } from './routes/admin/courses/$courseId'
 import { Route as AdminCoursesIndexRouteImport } from './routes/admin/courses/index'
 import { Route as AdminCoursesNewRouteImport } from './routes/admin/courses/new'
+import { Route as CoursesCourseSlugRouteImport } from './routes/courses/$courseSlug'
+import { Route as CoursesIndexRouteImport } from './routes/courses/index'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
@@ -83,6 +85,16 @@ const AdminCoursesNewRoute = AdminCoursesNewRouteImport.update({
   path: '/courses/new',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const CoursesCourseSlugRoute = CoursesCourseSlugRouteImport.update({
+  id: '/courses/$courseSlug',
+  path: '/courses/$courseSlug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CoursesIndexRoute = CoursesIndexRouteImport.update({
+  id: '/courses/',
+  path: '/courses/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -102,6 +114,8 @@ export interface FileRoutesByFullPath {
   '/admin/courses/$courseId': typeof AdminCoursesCourseIdRoute
   '/admin/courses/': typeof AdminCoursesIndexRoute
   '/admin/courses/new': typeof AdminCoursesNewRoute
+  '/courses/$courseSlug': typeof CoursesCourseSlugRoute
+  '/courses/': typeof CoursesIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
@@ -116,6 +130,8 @@ export interface FileRoutesByTo {
   '/admin/courses/$courseId': typeof AdminCoursesCourseIdRoute
   '/admin/courses': typeof AdminCoursesIndexRoute
   '/admin/courses/new': typeof AdminCoursesNewRoute
+  '/courses/$courseSlug': typeof CoursesCourseSlugRoute
+  '/courses': typeof CoursesIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
@@ -132,6 +148,8 @@ export interface FileRoutesById {
   '/admin/courses/$courseId': typeof AdminCoursesCourseIdRoute
   '/admin/courses/': typeof AdminCoursesIndexRoute
   '/admin/courses/new': typeof AdminCoursesNewRoute
+  '/courses/$courseSlug': typeof CoursesCourseSlugRoute
+  '/courses/': typeof CoursesIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
@@ -149,6 +167,8 @@ export interface FileRouteTypes {
     | '/admin/courses/$courseId'
     | '/admin/courses/'
     | '/admin/courses/new'
+    | '/courses/$courseSlug'
+    | '/courses/'
     | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -163,6 +183,8 @@ export interface FileRouteTypes {
     | '/admin/courses/$courseId'
     | '/admin/courses'
     | '/admin/courses/new'
+    | '/courses/$courseSlug'
+    | '/courses'
     | '/api/auth/$'
   id:
     | '__root__'
@@ -178,6 +200,8 @@ export interface FileRouteTypes {
     | '/admin/courses/$courseId'
     | '/admin/courses/'
     | '/admin/courses/new'
+    | '/courses/$courseSlug'
+    | '/courses/'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
@@ -190,6 +214,8 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
+  CoursesCourseSlugRoute: typeof CoursesCourseSlugRoute
+  CoursesIndexRoute: typeof CoursesIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -279,6 +305,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCoursesNewRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/courses/$courseSlug': {
+      id: '/courses/$courseSlug'
+      path: '/courses/$courseSlug'
+      fullPath: '/courses/$courseSlug'
+      preLoaderRoute: typeof CoursesCourseSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/courses/': {
+      id: '/courses/'
+      path: '/courses/'
+      fullPath: '/courses/'
+      preLoaderRoute: typeof CoursesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -316,6 +356,8 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   VerifyEmailRoute: VerifyEmailRoute,
+  CoursesCourseSlugRoute: CoursesCourseSlugRoute,
+  CoursesIndexRoute: CoursesIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
