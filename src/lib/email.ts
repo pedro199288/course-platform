@@ -8,11 +8,13 @@ interface SendEmailOptions {
   to: string;
   subject: string;
   html: string;
+  /** Optional sender override (e.g. per-tenant sender). Falls back to EMAIL_FROM env var. */
+  from?: string;
 }
 
-export async function sendEmail({ to, subject, html }: SendEmailOptions) {
+export async function sendEmail({ to, subject, html, from }: SendEmailOptions) {
   const { data, error } = await resend.emails.send({
-    from: emailFrom,
+    from: from || emailFrom,
     to,
     subject,
     html,
