@@ -23,6 +23,8 @@ import { Route as AdminCoursesIndexRouteImport } from './routes/admin/courses/in
 import { Route as AdminCoursesNewRouteImport } from './routes/admin/courses/new'
 import { Route as CoursesCourseSlugRouteImport } from './routes/courses/$courseSlug'
 import { Route as CoursesIndexRouteImport } from './routes/courses/index'
+import { Route as CheckoutSuccessRouteImport } from './routes/checkout/success'
+import { Route as CheckoutCancelRouteImport } from './routes/checkout/cancel'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
@@ -95,6 +97,16 @@ const CoursesIndexRoute = CoursesIndexRouteImport.update({
   path: '/courses/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CheckoutSuccessRoute = CheckoutSuccessRouteImport.update({
+  id: '/checkout/success',
+  path: '/checkout/success',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckoutCancelRoute = CheckoutCancelRouteImport.update({
+  id: '/checkout/cancel',
+  path: '/checkout/cancel',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -114,6 +126,8 @@ export interface FileRoutesByFullPath {
   '/admin/courses/$courseId': typeof AdminCoursesCourseIdRoute
   '/admin/courses/': typeof AdminCoursesIndexRoute
   '/admin/courses/new': typeof AdminCoursesNewRoute
+  '/checkout/success': typeof CheckoutSuccessRoute
+  '/checkout/cancel': typeof CheckoutCancelRoute
   '/courses/$courseSlug': typeof CoursesCourseSlugRoute
   '/courses/': typeof CoursesIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -130,6 +144,8 @@ export interface FileRoutesByTo {
   '/admin/courses/$courseId': typeof AdminCoursesCourseIdRoute
   '/admin/courses': typeof AdminCoursesIndexRoute
   '/admin/courses/new': typeof AdminCoursesNewRoute
+  '/checkout/success': typeof CheckoutSuccessRoute
+  '/checkout/cancel': typeof CheckoutCancelRoute
   '/courses/$courseSlug': typeof CoursesCourseSlugRoute
   '/courses': typeof CoursesIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -148,6 +164,8 @@ export interface FileRoutesById {
   '/admin/courses/$courseId': typeof AdminCoursesCourseIdRoute
   '/admin/courses/': typeof AdminCoursesIndexRoute
   '/admin/courses/new': typeof AdminCoursesNewRoute
+  '/checkout/success': typeof CheckoutSuccessRoute
+  '/checkout/cancel': typeof CheckoutCancelRoute
   '/courses/$courseSlug': typeof CoursesCourseSlugRoute
   '/courses/': typeof CoursesIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -167,6 +185,8 @@ export interface FileRouteTypes {
     | '/admin/courses/$courseId'
     | '/admin/courses/'
     | '/admin/courses/new'
+    | '/checkout/success'
+    | '/checkout/cancel'
     | '/courses/$courseSlug'
     | '/courses/'
     | '/api/auth/$'
@@ -183,6 +203,8 @@ export interface FileRouteTypes {
     | '/admin/courses/$courseId'
     | '/admin/courses'
     | '/admin/courses/new'
+    | '/checkout/success'
+    | '/checkout/cancel'
     | '/courses/$courseSlug'
     | '/courses'
     | '/api/auth/$'
@@ -200,6 +222,8 @@ export interface FileRouteTypes {
     | '/admin/courses/$courseId'
     | '/admin/courses/'
     | '/admin/courses/new'
+    | '/checkout/success'
+    | '/checkout/cancel'
     | '/courses/$courseSlug'
     | '/courses/'
     | '/api/auth/$'
@@ -214,6 +238,8 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
+  CheckoutSuccessRoute: typeof CheckoutSuccessRoute
+  CheckoutCancelRoute: typeof CheckoutCancelRoute
   CoursesCourseSlugRoute: typeof CoursesCourseSlugRoute
   CoursesIndexRoute: typeof CoursesIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -305,6 +331,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCoursesNewRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/checkout/success': {
+      id: '/checkout/success'
+      path: '/checkout/success'
+      fullPath: '/checkout/success'
+      preLoaderRoute: typeof CheckoutSuccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checkout/cancel': {
+      id: '/checkout/cancel'
+      path: '/checkout/cancel'
+      fullPath: '/checkout/cancel'
+      preLoaderRoute: typeof CheckoutCancelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/courses/$courseSlug': {
       id: '/courses/$courseSlug'
       path: '/courses/$courseSlug'
@@ -356,6 +396,8 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   VerifyEmailRoute: VerifyEmailRoute,
+  CheckoutSuccessRoute: CheckoutSuccessRoute,
+  CheckoutCancelRoute: CheckoutCancelRoute,
   CoursesCourseSlugRoute: CoursesCourseSlugRoute,
   CoursesIndexRoute: CoursesIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { getCourseBySlugFn } from "#/lib/storefront-actions.ts";
 import { getSessionFn } from "#/lib/auth-session.ts";
+import { createCheckoutSessionFn } from "#/lib/checkout-actions.ts";
 
 export const Route = createFileRoute("/courses/$courseSlug")({
   loader: async ({ params }) => {
@@ -137,12 +139,7 @@ function CourseDetailPage() {
             </div>
 
             {session ? (
-              <button
-                type="button"
-                className="w-full rounded-md bg-neutral-900 px-4 py-3 text-sm font-medium text-white hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
-              >
-                {course.price ? "Buy now" : "Enroll for free"}
-              </button>
+              <BuyButton courseId={course.id} hasPrice={!!course.price} />
             ) : (
               <Link
                 to="/login"
@@ -166,6 +163,47 @@ function CourseDetailPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+function BuyButton({
+  courseId,
+  hasPrice,
+}: {
+  courseId: string;
+  hasPrice: boolean;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleClick() {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await createCheckoutSessionFn({ data: { courseId } });
+      if (result.url) {
+        window.location.href = result.url;
+      }
+    } catch (e: any) {
+      setError(e.message ?? "Something went wrong");
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={loading}
+        className="w-full rounded-md bg-neutral-900 px-4 py-3 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
+      >
+        {loading ? "Redirecting..." : hasPrice ? "Buy now" : "Enroll for free"}
+      </button>
+      {error && (
+        <p className="mt-2 text-xs text-red-600 dark:text-red-400">{error}</p>
+      )}
+    </div>
   );
 }
 
