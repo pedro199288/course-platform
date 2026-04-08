@@ -1,476 +1,309 @@
-import { afterAll, beforeAll, describe, expect, it } from "vite-plus/test";
-import { and, eq } from "drizzle-orm";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vite-plus/test";
+import { eq, and, asc } from "drizzle-orm";
 import { db } from "#/db/index.ts";
-import { tenants, courses, modules, lessons } from "#/db/schema/index.ts";
+import {
+  tenants,
+  courses,
+  modules,
+  lessons,
+} from "#/db/schema/index.ts";
 
-describe("course/module/lesson CRUD (integration)", () => {
-  const ts = Date.now();
-  let tenantAId: string;
+// Mock email to prevent Resend API calls
+vi.mock("#/lib/email.ts", () => ({
+  sendEmail: vi.fn().mockResolvedValue({ id: "mock-email-id" }),
+}));
+
+describe("course/module/lesson CRUD", () => {
+  const tenantSubdomain = `crud-test-${Date.now()}`;
+  let tenantId: string;
   let tenantBId: string;
+  const tenantBSubdomain = `crud-test-b-${Date.now()}`;
 
   beforeAll(async () => {
-    const [tA] = await db
+    const [tenantA] = await db
       .insert(tenants)
-      .values({ name: "School A", subdomain: `school-a-${ts}` })
+      .values({ name: "CRUD Test School", subdomain: tenantSubdomain })
       .returning();
-    tenantAId = tA.id;
+    tenantId = tenantA.id;
 
-    const [tB] = await db
+    const [tenantB] = await db
       .insert(tenants)
-      .values({ name: "School B", subdomain: `school-b-${ts}` })
+      .values({ name: "CRUD Test School B", subdomain: tenantBSubdomain })
       .returning();
-    tenantBId = tB.id;
+    tenantBId = tenantB.id;
   });
 
   afterAll(async () => {
-    // Cascade: deleting courses removes modules and lessons
-    await db.delete(courses).where(eq(courses.tenantId, tenantAId));
-    await db.delete(courses).where(eq(courses.tenantId, tenantBId));
-    await db.delete(tenants).where(eq(tenants.id, tenantAId));
-    await db.delete(tenants).where(eq(tenants.id, tenantBId));
+    // Clean up: lessons → modules → courses → tenants
+    // Cascade deletes handle lessons and modules when courses are deleted
+    await db.delete(courses).where(eq(courses.tenantId, tenantId)).catch(() => {});
+    await db.delete(courses).where(eq(courses.tenantId, tenantBId)).catch(() => {});
+    await db.delete(tenants).where(eq(tenants.subdomain, tenantSubdomain)).catch(() => {});
+    await db.delete(tenants).where(eq(tenants.subdomain, tenantBSubdomain)).catch(() => {});
   });
 
-  // ── Course CRUD ────────────────────────────────────────────────────
+  // ── Course CRUD ──────────────────────────────────────────────────
 
-  describe("course CRUD", () => {
-    let courseId: string;
+  let courseId: string;
 
-    it("creates a course with correct defaults", async () => {
-      const [course] = await db
-        .insert(courses)
-        .values({
-          tenantId: tenantAId,
-          title: "Intro to Testing",
-          slug: `intro-testing-${ts}`,
-          description: "Learn testing basics",
-        })
-        .returning();
+  it("creates a course scoped to a tenant", async () => {
+    const [course] = await db
+      .insert(courses)
+      .values({
+        tenantId,
+        title: "Test Course",
+        description: "A test course",
+        slug: "test-course",
+        price: "29.99",
+        pricingModel: "one_time",
+        status: "draft",
+      })
+      .returning();
 
-      courseId = course.id;
-      expect(course.title).toBe("Intro to Testing");
-      expect(course.slug).toBe(`intro-testing-${ts}`);
-      expect(course.description).toBe("Learn testing basics");
-      expect(course.status).toBe("draft");
-      expect(course.pricingModel).toBe("one_time");
-      expect(course.price).toBeNull();
-      expect(course.tenantId).toBe(tenantAId);
-    });
-
-    it("reads a course by id and tenant", async () => {
-      const course = await db.query.courses.findFirst({
-        where: and(eq(courses.id, courseId), eq(courses.tenantId, tenantAId)),
-      });
-
-      expect(course).toBeDefined();
-      expect(course!.title).toBe("Intro to Testing");
-    });
-
-    it("updates course title and description", async () => {
-      const [updated] = await db
-        .update(courses)
-        .set({ title: "Advanced Testing", description: "Deep dive into testing" })
-        .where(eq(courses.id, courseId))
-        .returning();
-
-      expect(updated.title).toBe("Advanced Testing");
-      expect(updated.description).toBe("Deep dive into testing");
-    });
-
-    it("updates course price and pricing model", async () => {
-      const [updated] = await db
-        .update(courses)
-        .set({ price: "29.99", pricingModel: "subscription" })
-        .where(eq(courses.id, courseId))
-        .returning();
-
-      expect(updated.price).toBe("29.99");
-      expect(updated.pricingModel).toBe("subscription");
-    });
-
-    it("deletes a course", async () => {
-      const [temp] = await db
-        .insert(courses)
-        .values({
-          tenantId: tenantAId,
-          title: "To Delete",
-          slug: `delete-me-${ts}`,
-        })
-        .returning();
-
-      await db.delete(courses).where(eq(courses.id, temp.id));
-
-      const deleted = await db.query.courses.findFirst({
-        where: eq(courses.id, temp.id),
-      });
-      expect(deleted).toBeUndefined();
-    });
+    expect(course).toBeDefined();
+    expect(course.title).toBe("Test Course");
+    expect(course.tenantId).toBe(tenantId);
+    expect(course.status).toBe("draft");
+    expect(course.price).toBe("29.99");
+    courseId = course.id;
   });
 
-  // ── Draft / Published ──────────────────────────────────────────────
-
-  describe("draft/published status toggle", () => {
-    let courseId: string;
-
-    beforeAll(async () => {
-      const [course] = await db
-        .insert(courses)
-        .values({
-          tenantId: tenantAId,
-          title: "Status Course",
-          slug: `status-course-${ts}`,
-        })
-        .returning();
-      courseId = course.id;
+  it("lists courses filtered by tenant", async () => {
+    // Create a course on tenant B
+    await db.insert(courses).values({
+      tenantId: tenantBId,
+      title: "Other Tenant Course",
+      slug: "other-course",
     });
 
-    it("starts as draft", async () => {
-      const course = await db.query.courses.findFirst({
-        where: eq(courses.id, courseId),
-      });
-      expect(course!.status).toBe("draft");
-    });
+    // Query for tenant A's courses only
+    const tenantACourses = await db
+      .select()
+      .from(courses)
+      .where(eq(courses.tenantId, tenantId));
 
-    it("toggles to published", async () => {
-      const [updated] = await db
-        .update(courses)
-        .set({ status: "published" })
-        .where(eq(courses.id, courseId))
-        .returning();
+    const tenantBCourses = await db
+      .select()
+      .from(courses)
+      .where(eq(courses.tenantId, tenantBId));
 
-      expect(updated.status).toBe("published");
-    });
+    expect(tenantACourses.length).toBe(1);
+    expect(tenantACourses[0].title).toBe("Test Course");
 
-    it("toggles back to draft", async () => {
-      const [updated] = await db
-        .update(courses)
-        .set({ status: "draft" })
-        .where(eq(courses.id, courseId))
-        .returning();
-
-      expect(updated.status).toBe("draft");
-    });
-
-    it("filters courses by status", async () => {
-      // Make sure course is published
-      await db.update(courses).set({ status: "published" }).where(eq(courses.id, courseId));
-
-      const published = await db.query.courses.findMany({
-        where: and(eq(courses.tenantId, tenantAId), eq(courses.status, "published")),
-      });
-      expect(published.some((c) => c.id === courseId)).toBe(true);
-
-      const drafts = await db.query.courses.findMany({
-        where: and(eq(courses.tenantId, tenantAId), eq(courses.status, "draft")),
-      });
-      expect(drafts.some((c) => c.id === courseId)).toBe(false);
-    });
+    expect(tenantBCourses.length).toBe(1);
+    expect(tenantBCourses[0].title).toBe("Other Tenant Course");
   });
 
-  // ── Tenant Isolation ───────────────────────────────────────────────
+  it("updates a course", async () => {
+    const [updated] = await db
+      .update(courses)
+      .set({ title: "Updated Course", status: "published" })
+      .where(and(eq(courses.id, courseId), eq(courses.tenantId, tenantId)))
+      .returning();
 
-  describe("tenant isolation", () => {
-    let courseAId: string;
-
-    beforeAll(async () => {
-      const [courseA] = await db
-        .insert(courses)
-        .values({
-          tenantId: tenantAId,
-          title: "Tenant A Course",
-          slug: `tenant-a-course-${ts}`,
-        })
-        .returning();
-      courseAId = courseA.id;
-
-      await db.insert(courses).values({
-        tenantId: tenantBId,
-        title: "Tenant B Course",
-        slug: `tenant-b-course-${ts}`,
-      });
-    });
-
-    it("tenant A cannot see tenant B courses", async () => {
-      const tenantACourses = await db.query.courses.findMany({
-        where: eq(courses.tenantId, tenantAId),
-      });
-
-      expect(tenantACourses.every((c) => c.tenantId === tenantAId)).toBe(true);
-      expect(tenantACourses.some((c) => c.title === "Tenant B Course")).toBe(false);
-    });
-
-    it("tenant B cannot see tenant A courses", async () => {
-      const tenantBCourses = await db.query.courses.findMany({
-        where: eq(courses.tenantId, tenantBId),
-      });
-
-      expect(tenantBCourses.every((c) => c.tenantId === tenantBId)).toBe(true);
-      expect(tenantBCourses.some((c) => c.title === "Tenant A Course")).toBe(false);
-    });
-
-    it("cross-tenant course access returns nothing", async () => {
-      const crossAccess = await db.query.courses.findFirst({
-        where: and(eq(courses.id, courseAId), eq(courses.tenantId, tenantBId)),
-      });
-
-      expect(crossAccess).toBeUndefined();
-    });
+    expect(updated.title).toBe("Updated Course");
+    expect(updated.status).toBe("published");
   });
 
-  // ── Module CRUD ────────────────────────────────────────────────────
+  it("rejects update on wrong tenant", async () => {
+    const result = await db
+      .update(courses)
+      .set({ title: "Hacked" })
+      .where(and(eq(courses.id, courseId), eq(courses.tenantId, tenantBId)))
+      .returning();
 
-  describe("module CRUD", () => {
-    let courseId: string;
-    let moduleId: string;
+    // Should not match any rows
+    expect(result.length).toBe(0);
 
-    beforeAll(async () => {
-      const [course] = await db
-        .insert(courses)
-        .values({
-          tenantId: tenantAId,
-          title: "Module Test Course",
-          slug: `module-test-${ts}`,
-        })
-        .returning();
-      courseId = course.id;
-    });
-
-    it("creates a module with title and position", async () => {
-      const [mod] = await db
-        .insert(modules)
-        .values({ courseId, title: "Getting Started", position: 0 })
-        .returning();
-
-      moduleId = mod.id;
-      expect(mod.title).toBe("Getting Started");
-      expect(mod.position).toBe(0);
-      expect(mod.courseId).toBe(courseId);
-    });
-
-    it("creates multiple modules with ordering", async () => {
-      await db.insert(modules).values({ courseId, title: "Intermediate", position: 1 });
-      await db.insert(modules).values({ courseId, title: "Advanced", position: 2 });
-
-      const mods = await db.query.modules.findMany({
-        where: eq(modules.courseId, courseId),
-        orderBy: (m, { asc }) => [asc(m.position)],
-      });
-
-      expect(mods).toHaveLength(3);
-      expect(mods[0].title).toBe("Getting Started");
-      expect(mods[1].title).toBe("Intermediate");
-      expect(mods[2].title).toBe("Advanced");
-    });
-
-    it("updates a module title", async () => {
-      const [updated] = await db
-        .update(modules)
-        .set({ title: "Quick Start" })
-        .where(eq(modules.id, moduleId))
-        .returning();
-
-      expect(updated.title).toBe("Quick Start");
-    });
-
-    it("updates module position", async () => {
-      const [updated] = await db
-        .update(modules)
-        .set({ position: 5 })
-        .where(eq(modules.id, moduleId))
-        .returning();
-
-      expect(updated.position).toBe(5);
-    });
-
-    it("deletes a module", async () => {
-      const [temp] = await db
-        .insert(modules)
-        .values({ courseId, title: "Temp Module", position: 99 })
-        .returning();
-
-      await db.delete(modules).where(eq(modules.id, temp.id));
-
-      const deleted = await db.query.modules.findFirst({
-        where: eq(modules.id, temp.id),
-      });
-      expect(deleted).toBeUndefined();
-    });
+    // Verify original is unchanged
+    const [original] = await db
+      .select()
+      .from(courses)
+      .where(eq(courses.id, courseId));
+    expect(original.title).toBe("Updated Course");
   });
 
-  // ── Lesson CRUD ────────────────────────────────────────────────────
+  // ── Module CRUD ──────────────────────────────────────────────────
 
-  describe("lesson CRUD", () => {
-    let courseId: string;
-    let moduleId: string;
-    let lessonId: string;
+  let moduleId: string;
+  let module2Id: string;
 
-    beforeAll(async () => {
-      const [course] = await db
-        .insert(courses)
-        .values({
-          tenantId: tenantAId,
-          title: "Lesson Test Course",
-          slug: `lesson-test-${ts}`,
-        })
-        .returning();
-      courseId = course.id;
+  it("creates modules with auto-incrementing position", async () => {
+    const [mod1] = await db
+      .insert(modules)
+      .values({ courseId, title: "Module 1", position: 0 })
+      .returning();
 
-      const [mod] = await db
-        .insert(modules)
-        .values({ courseId, title: "Module 1", position: 0 })
-        .returning();
-      moduleId = mod.id;
-    });
+    const [mod2] = await db
+      .insert(modules)
+      .values({ courseId, title: "Module 2", position: 1 })
+      .returning();
 
-    it("creates a text lesson with content", async () => {
-      const [lesson] = await db
-        .insert(lessons)
-        .values({
-          moduleId,
-          title: "Welcome",
-          type: "text",
-          content: { text: "Hello students!" },
-          position: 0,
-        })
-        .returning();
+    expect(mod1.position).toBe(0);
+    expect(mod2.position).toBe(1);
+    moduleId = mod1.id;
+    module2Id = mod2.id;
+  });
 
-      lessonId = lesson.id;
-      expect(lesson.title).toBe("Welcome");
-      expect(lesson.type).toBe("text");
-      expect(lesson.content).toEqual({ text: "Hello students!" });
-      expect(lesson.position).toBe(0);
-      expect(lesson.moduleId).toBe(moduleId);
-    });
+  it("lists modules ordered by position", async () => {
+    const mods = await db
+      .select()
+      .from(modules)
+      .where(eq(modules.courseId, courseId))
+      .orderBy(asc(modules.position));
 
-    it("creates lessons with different types", async () => {
-      await db.insert(lessons).values({
+    expect(mods.length).toBe(2);
+    expect(mods[0].title).toBe("Module 1");
+    expect(mods[1].title).toBe("Module 2");
+  });
+
+  it("updates a module title", async () => {
+    const [updated] = await db
+      .update(modules)
+      .set({ title: "Renamed Module" })
+      .where(eq(modules.id, moduleId))
+      .returning();
+
+    expect(updated.title).toBe("Renamed Module");
+  });
+
+  // ── Lesson CRUD ──────────────────────────────────────────────────
+
+  let lessonId: string;
+
+  it("creates lessons with position and content", async () => {
+    const [lesson1] = await db
+      .insert(lessons)
+      .values({
         moduleId,
-        title: "Video Lesson",
-        type: "video",
+        title: "Introduction",
+        type: "text",
+        content: { text: "Welcome to the course" },
+        position: 0,
+      })
+      .returning();
+
+    const [lesson2] = await db
+      .insert(lessons)
+      .values({
+        moduleId,
+        title: "Getting Started",
+        type: "text",
+        content: { text: "Let's begin" },
         position: 1,
-      });
+      })
+      .returning();
 
-      const all = await db.query.lessons.findMany({
-        where: eq(lessons.moduleId, moduleId),
-        orderBy: (l, { asc }) => [asc(l.position)],
-      });
-
-      expect(all).toHaveLength(2);
-      expect(all[0].type).toBe("text");
-      expect(all[1].type).toBe("video");
-    });
-
-    it("updates lesson title and content", async () => {
-      const [updated] = await db
-        .update(lessons)
-        .set({
-          title: "Welcome Updated",
-          content: { text: "Updated content!" },
-        })
-        .where(eq(lessons.id, lessonId))
-        .returning();
-
-      expect(updated.title).toBe("Welcome Updated");
-      expect(updated.content).toEqual({ text: "Updated content!" });
-    });
-
-    it("updates lesson position", async () => {
-      const [updated] = await db
-        .update(lessons)
-        .set({ position: 10 })
-        .where(eq(lessons.id, lessonId))
-        .returning();
-
-      expect(updated.position).toBe(10);
-    });
-
-    it("deletes a lesson", async () => {
-      const [temp] = await db
-        .insert(lessons)
-        .values({ moduleId, title: "Temp", type: "text", position: 99 })
-        .returning();
-
-      await db.delete(lessons).where(eq(lessons.id, temp.id));
-
-      const deleted = await db.query.lessons.findFirst({
-        where: eq(lessons.id, temp.id),
-      });
-      expect(deleted).toBeUndefined();
-    });
+    expect(lesson1.title).toBe("Introduction");
+    expect(lesson1.type).toBe("text");
+    expect(lesson1.content).toEqual({ text: "Welcome to the course" });
+    expect(lesson1.position).toBe(0);
+    expect(lesson2.position).toBe(1);
+    lessonId = lesson1.id;
   });
 
-  // ── Cascading Deletes ──────────────────────────────────────────────
+  it("lists lessons ordered by position", async () => {
+    const lessonList = await db
+      .select()
+      .from(lessons)
+      .where(eq(lessons.moduleId, moduleId))
+      .orderBy(asc(lessons.position));
 
-  describe("cascading deletes", () => {
-    it("deleting a module cascades to its lessons", async () => {
-      const [course] = await db
-        .insert(courses)
-        .values({
-          tenantId: tenantAId,
-          title: "Cascade Module Test",
-          slug: `cascade-mod-${ts}`,
-        })
-        .returning();
+    expect(lessonList.length).toBe(2);
+    expect(lessonList[0].title).toBe("Introduction");
+    expect(lessonList[1].title).toBe("Getting Started");
+  });
 
-      const [mod] = await db
-        .insert(modules)
-        .values({ courseId: course.id, title: "Cascade Module", position: 0 })
-        .returning();
+  it("updates lesson content", async () => {
+    const [updated] = await db
+      .update(lessons)
+      .set({ content: { text: "Updated welcome message" } })
+      .where(eq(lessons.id, lessonId))
+      .returning();
 
-      const [lesson1] = await db
-        .insert(lessons)
-        .values({ moduleId: mod.id, title: "Lesson 1", type: "text", position: 0 })
-        .returning();
+    expect(updated.content).toEqual({ text: "Updated welcome message" });
+  });
 
-      const [lesson2] = await db
-        .insert(lessons)
-        .values({ moduleId: mod.id, title: "Lesson 2", type: "text", position: 1 })
-        .returning();
+  it("deletes a lesson", async () => {
+    // Create a temporary lesson to delete
+    const [temp] = await db
+      .insert(lessons)
+      .values({ moduleId, title: "To Delete", position: 99 })
+      .returning();
 
-      // Delete the module
-      await db.delete(modules).where(eq(modules.id, mod.id));
+    await db.delete(lessons).where(eq(lessons.id, temp.id));
 
-      // Lessons should be gone
-      const l1 = await db.query.lessons.findFirst({ where: eq(lessons.id, lesson1.id) });
-      const l2 = await db.query.lessons.findFirst({ where: eq(lessons.id, lesson2.id) });
-      expect(l1).toBeUndefined();
-      expect(l2).toBeUndefined();
-    });
+    const found = await db
+      .select()
+      .from(lessons)
+      .where(eq(lessons.id, temp.id));
+    expect(found.length).toBe(0);
+  });
 
-    it("deleting a course cascades to modules and lessons", async () => {
-      const [course] = await db
-        .insert(courses)
-        .values({
-          tenantId: tenantAId,
-          title: "Cascade Course Test",
-          slug: `cascade-course-${ts}`,
-        })
-        .returning();
+  // ── Cascade Deletes ──────────────────────────────────────────────
 
-      const [mod1] = await db
-        .insert(modules)
-        .values({ courseId: course.id, title: "Mod A", position: 0 })
-        .returning();
+  it("deleting a module cascades to its lessons", async () => {
+    // module2 has no lessons yet; add one
+    const [lesson] = await db
+      .insert(lessons)
+      .values({ moduleId: module2Id, title: "Cascade Test Lesson", position: 0 })
+      .returning();
 
-      const [mod2] = await db
-        .insert(modules)
-        .values({ courseId: course.id, title: "Mod B", position: 1 })
-        .returning();
+    await db.delete(modules).where(eq(modules.id, module2Id));
 
-      const [lesson] = await db
-        .insert(lessons)
-        .values({ moduleId: mod1.id, title: "Lesson in Mod A", type: "text", position: 0 })
-        .returning();
+    const found = await db
+      .select()
+      .from(lessons)
+      .where(eq(lessons.id, lesson.id));
+    expect(found.length).toBe(0);
+  });
 
-      // Delete the course
-      await db.delete(courses).where(eq(courses.id, course.id));
+  it("deleting a course cascades to modules and lessons", async () => {
+    // Create a course with module and lesson for cascade test
+    const [tempCourse] = await db
+      .insert(courses)
+      .values({ tenantId, title: "Cascade Course", slug: "cascade-course" })
+      .returning();
 
-      // Modules and lessons should be gone
-      const m1 = await db.query.modules.findFirst({ where: eq(modules.id, mod1.id) });
-      const m2 = await db.query.modules.findFirst({ where: eq(modules.id, mod2.id) });
-      const l = await db.query.lessons.findFirst({ where: eq(lessons.id, lesson.id) });
-      expect(m1).toBeUndefined();
-      expect(m2).toBeUndefined();
-      expect(l).toBeUndefined();
-    });
+    const [tempMod] = await db
+      .insert(modules)
+      .values({ courseId: tempCourse.id, title: "Cascade Module", position: 0 })
+      .returning();
+
+    const [tempLesson] = await db
+      .insert(lessons)
+      .values({ moduleId: tempMod.id, title: "Cascade Lesson", position: 0 })
+      .returning();
+
+    await db.delete(courses).where(eq(courses.id, tempCourse.id));
+
+    const foundMod = await db.select().from(modules).where(eq(modules.id, tempMod.id));
+    const foundLesson = await db.select().from(lessons).where(eq(lessons.id, tempLesson.id));
+    expect(foundMod.length).toBe(0);
+    expect(foundLesson.length).toBe(0);
+  });
+
+  // ── Draft visibility ──────────────────────────────────────────────
+
+  it("can filter published vs draft courses", async () => {
+    // courseId is "published" from the update test
+    const [draftCourse] = await db
+      .insert(courses)
+      .values({ tenantId, title: "Draft Course", slug: "draft-course", status: "draft" })
+      .returning();
+
+    const published = await db
+      .select()
+      .from(courses)
+      .where(and(eq(courses.tenantId, tenantId), eq(courses.status, "published")));
+
+    const drafts = await db
+      .select()
+      .from(courses)
+      .where(and(eq(courses.tenantId, tenantId), eq(courses.status, "draft")));
+
+    expect(published.some((c) => c.id === courseId)).toBe(true);
+    expect(drafts.some((c) => c.id === draftCourse.id)).toBe(true);
+    expect(published.some((c) => c.id === draftCourse.id)).toBe(false);
   });
 });

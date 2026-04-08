@@ -8,542 +8,326 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from "./routes/__root";
-import { Route as VerifyEmailRouteImport } from "./routes/verify-email";
-import { Route as ResetPasswordRouteImport } from "./routes/reset-password";
-import { Route as RegisterRouteImport } from "./routes/register";
-import { Route as LoginRouteImport } from "./routes/login";
-import { Route as ForgotPasswordRouteImport } from "./routes/forgot-password";
-import { Route as CreateSchoolRouteImport } from "./routes/create-school";
-import { Route as AboutRouteImport } from "./routes/about";
-import { Route as PlatformAdminRouteRouteImport } from "./routes/platform-admin/route";
-import { Route as AdminRouteRouteImport } from "./routes/admin/route";
-import { Route as IndexRouteImport } from "./routes/index";
-import { Route as PlatformAdminIndexRouteImport } from "./routes/platform-admin/index";
-import { Route as AdminIndexRouteImport } from "./routes/admin/index";
-import { Route as AdminOnboardingRouteImport } from "./routes/admin/onboarding";
-import { Route as PlatformAdminTenantsIndexRouteImport } from "./routes/platform-admin/tenants/index";
-import { Route as PlatformAdminPlansIndexRouteImport } from "./routes/platform-admin/plans/index";
-import { Route as AdminCoursesIndexRouteImport } from "./routes/admin/courses/index";
-import { Route as PlatformAdminTenantsTenantIdRouteImport } from "./routes/platform-admin/tenants/$tenantId";
-import { Route as PlatformAdminPlansNewRouteImport } from "./routes/platform-admin/plans/new";
-import { Route as PlatformAdminPlansPlanIdRouteImport } from "./routes/platform-admin/plans/$planId";
-import { Route as ApiWebhooksStripeRouteImport } from "./routes/api/webhooks/stripe";
-import { Route as ApiWebhooksBunnyRouteImport } from "./routes/api/webhooks/bunny";
-import { Route as ApiAuthSplatRouteImport } from "./routes/api/auth/$";
-import { Route as AdminCoursesCourseIdRouteImport } from "./routes/admin/courses/$courseId";
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as VerifyEmailRouteImport } from './routes/verify-email'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as RegisterRouteImport } from './routes/register'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as AdminRouteRouteImport } from './routes/admin/route'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminCoursesCourseIdRouteImport } from './routes/admin/courses/$courseId'
+import { Route as AdminCoursesIndexRouteImport } from './routes/admin/courses/index'
+import { Route as AdminCoursesNewRouteImport } from './routes/admin/courses/new'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
-  id: "/verify-email",
-  path: "/verify-email",
+  id: '/verify-email',
+  path: '/verify-email',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: "/reset-password",
-  path: "/reset-password",
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const RegisterRoute = RegisterRouteImport.update({
-  id: "/register",
-  path: "/register",
+  id: '/register',
+  path: '/register',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const LoginRoute = LoginRouteImport.update({
-  id: "/login",
-  path: "/login",
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
-  id: "/forgot-password",
-  path: "/forgot-password",
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
-} as any);
-const CreateSchoolRoute = CreateSchoolRouteImport.update({
-  id: "/create-school",
-  path: "/create-school",
-  getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const AboutRoute = AboutRouteImport.update({
-  id: "/about",
-  path: "/about",
+  id: '/about',
+  path: '/about',
   getParentRoute: () => rootRouteImport,
-} as any);
-const PlatformAdminRouteRoute = PlatformAdminRouteRouteImport.update({
-  id: "/platform-admin",
-  path: "/platform-admin",
-  getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const AdminRouteRoute = AdminRouteRouteImport.update({
-  id: "/admin",
-  path: "/admin",
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const IndexRoute = IndexRouteImport.update({
-  id: "/",
-  path: "/",
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
-} as any);
-const PlatformAdminIndexRoute = PlatformAdminIndexRouteImport.update({
-  id: "/",
-  path: "/",
-  getParentRoute: () => PlatformAdminRouteRoute,
-} as any);
+} as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
-  id: "/",
-  path: "/",
+  id: '/',
+  path: '/',
   getParentRoute: () => AdminRouteRoute,
-} as any);
-const AdminOnboardingRoute = AdminOnboardingRouteImport.update({
-  id: "/onboarding",
-  path: "/onboarding",
-  getParentRoute: () => AdminRouteRoute,
-} as any);
-const PlatformAdminTenantsIndexRoute = PlatformAdminTenantsIndexRouteImport.update({
-  id: "/tenants/",
-  path: "/tenants/",
-  getParentRoute: () => PlatformAdminRouteRoute,
-} as any);
-const PlatformAdminPlansIndexRoute = PlatformAdminPlansIndexRouteImport.update({
-  id: "/plans/",
-  path: "/plans/",
-  getParentRoute: () => PlatformAdminRouteRoute,
-} as any);
-const AdminCoursesIndexRoute = AdminCoursesIndexRouteImport.update({
-  id: "/courses/",
-  path: "/courses/",
-  getParentRoute: () => AdminRouteRoute,
-} as any);
-const PlatformAdminTenantsTenantIdRoute = PlatformAdminTenantsTenantIdRouteImport.update({
-  id: "/tenants/$tenantId",
-  path: "/tenants/$tenantId",
-  getParentRoute: () => PlatformAdminRouteRoute,
-} as any);
-const PlatformAdminPlansNewRoute = PlatformAdminPlansNewRouteImport.update({
-  id: "/plans/new",
-  path: "/plans/new",
-  getParentRoute: () => PlatformAdminRouteRoute,
-} as any);
-const PlatformAdminPlansPlanIdRoute = PlatformAdminPlansPlanIdRouteImport.update({
-  id: "/plans/$planId",
-  path: "/plans/$planId",
-  getParentRoute: () => PlatformAdminRouteRoute,
-} as any);
-const ApiWebhooksStripeRoute = ApiWebhooksStripeRouteImport.update({
-  id: "/api/webhooks/stripe",
-  path: "/api/webhooks/stripe",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const ApiWebhooksBunnyRoute = ApiWebhooksBunnyRouteImport.update({
-  id: "/api/webhooks/bunny",
-  path: "/api/webhooks/bunny",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
-  id: "/api/auth/$",
-  path: "/api/auth/$",
-  getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const AdminCoursesCourseIdRoute = AdminCoursesCourseIdRouteImport.update({
-  id: "/courses/$courseId",
-  path: "/courses/$courseId",
+  id: '/courses/$courseId',
+  path: '/courses/$courseId',
   getParentRoute: () => AdminRouteRoute,
-} as any);
+} as any)
+const AdminCoursesIndexRoute = AdminCoursesIndexRouteImport.update({
+  id: '/courses/',
+  path: '/courses/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminCoursesNewRoute = AdminCoursesNewRouteImport.update({
+  id: '/courses/new',
+  path: '/courses/new',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
-  "/": typeof IndexRoute;
-  "/admin": typeof AdminRouteRouteWithChildren;
-  "/platform-admin": typeof PlatformAdminRouteRouteWithChildren;
-  "/about": typeof AboutRoute;
-  "/create-school": typeof CreateSchoolRoute;
-  "/forgot-password": typeof ForgotPasswordRoute;
-  "/login": typeof LoginRoute;
-  "/register": typeof RegisterRoute;
-  "/reset-password": typeof ResetPasswordRoute;
-  "/verify-email": typeof VerifyEmailRoute;
-  "/admin/onboarding": typeof AdminOnboardingRoute;
-  "/admin/": typeof AdminIndexRoute;
-  "/platform-admin/": typeof PlatformAdminIndexRoute;
-  "/admin/courses/$courseId": typeof AdminCoursesCourseIdRoute;
-  "/api/auth/$": typeof ApiAuthSplatRoute;
-  "/api/webhooks/bunny": typeof ApiWebhooksBunnyRoute;
-  "/api/webhooks/stripe": typeof ApiWebhooksStripeRoute;
-  "/platform-admin/plans/$planId": typeof PlatformAdminPlansPlanIdRoute;
-  "/platform-admin/plans/new": typeof PlatformAdminPlansNewRoute;
-  "/platform-admin/tenants/$tenantId": typeof PlatformAdminTenantsTenantIdRoute;
-  "/admin/courses/": typeof AdminCoursesIndexRoute;
-  "/platform-admin/plans/": typeof PlatformAdminPlansIndexRoute;
-  "/platform-admin/tenants/": typeof PlatformAdminTenantsIndexRoute;
+  '/': typeof IndexRoute
+  '/admin': typeof AdminRouteRouteWithChildren
+  '/about': typeof AboutRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/verify-email': typeof VerifyEmailRoute
+  '/admin/': typeof AdminIndexRoute
+  '/admin/courses/$courseId': typeof AdminCoursesCourseIdRoute
+  '/admin/courses/': typeof AdminCoursesIndexRoute
+  '/admin/courses/new': typeof AdminCoursesNewRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
-  "/": typeof IndexRoute;
-  "/about": typeof AboutRoute;
-  "/create-school": typeof CreateSchoolRoute;
-  "/forgot-password": typeof ForgotPasswordRoute;
-  "/login": typeof LoginRoute;
-  "/register": typeof RegisterRoute;
-  "/reset-password": typeof ResetPasswordRoute;
-  "/verify-email": typeof VerifyEmailRoute;
-  "/admin/onboarding": typeof AdminOnboardingRoute;
-  "/admin": typeof AdminIndexRoute;
-  "/platform-admin": typeof PlatformAdminIndexRoute;
-  "/admin/courses/$courseId": typeof AdminCoursesCourseIdRoute;
-  "/api/auth/$": typeof ApiAuthSplatRoute;
-  "/api/webhooks/bunny": typeof ApiWebhooksBunnyRoute;
-  "/api/webhooks/stripe": typeof ApiWebhooksStripeRoute;
-  "/platform-admin/plans/$planId": typeof PlatformAdminPlansPlanIdRoute;
-  "/platform-admin/plans/new": typeof PlatformAdminPlansNewRoute;
-  "/platform-admin/tenants/$tenantId": typeof PlatformAdminTenantsTenantIdRoute;
-  "/admin/courses": typeof AdminCoursesIndexRoute;
-  "/platform-admin/plans": typeof PlatformAdminPlansIndexRoute;
-  "/platform-admin/tenants": typeof PlatformAdminTenantsIndexRoute;
+  '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/verify-email': typeof VerifyEmailRoute
+  '/admin': typeof AdminIndexRoute
+  '/admin/courses/$courseId': typeof AdminCoursesCourseIdRoute
+  '/admin/courses': typeof AdminCoursesIndexRoute
+  '/admin/courses/new': typeof AdminCoursesNewRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport;
-  "/": typeof IndexRoute;
-  "/admin": typeof AdminRouteRouteWithChildren;
-  "/platform-admin": typeof PlatformAdminRouteRouteWithChildren;
-  "/about": typeof AboutRoute;
-  "/create-school": typeof CreateSchoolRoute;
-  "/forgot-password": typeof ForgotPasswordRoute;
-  "/login": typeof LoginRoute;
-  "/register": typeof RegisterRoute;
-  "/reset-password": typeof ResetPasswordRoute;
-  "/verify-email": typeof VerifyEmailRoute;
-  "/admin/onboarding": typeof AdminOnboardingRoute;
-  "/admin/": typeof AdminIndexRoute;
-  "/platform-admin/": typeof PlatformAdminIndexRoute;
-  "/admin/courses/$courseId": typeof AdminCoursesCourseIdRoute;
-  "/api/auth/$": typeof ApiAuthSplatRoute;
-  "/api/webhooks/bunny": typeof ApiWebhooksBunnyRoute;
-  "/api/webhooks/stripe": typeof ApiWebhooksStripeRoute;
-  "/platform-admin/plans/$planId": typeof PlatformAdminPlansPlanIdRoute;
-  "/platform-admin/plans/new": typeof PlatformAdminPlansNewRoute;
-  "/platform-admin/tenants/$tenantId": typeof PlatformAdminTenantsTenantIdRoute;
-  "/admin/courses/": typeof AdminCoursesIndexRoute;
-  "/platform-admin/plans/": typeof PlatformAdminPlansIndexRoute;
-  "/platform-admin/tenants/": typeof PlatformAdminTenantsIndexRoute;
+  __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
+  '/admin': typeof AdminRouteRouteWithChildren
+  '/about': typeof AboutRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/verify-email': typeof VerifyEmailRoute
+  '/admin/': typeof AdminIndexRoute
+  '/admin/courses/$courseId': typeof AdminCoursesCourseIdRoute
+  '/admin/courses/': typeof AdminCoursesIndexRoute
+  '/admin/courses/new': typeof AdminCoursesNewRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath;
+  fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | "/"
-    | "/admin"
-    | "/platform-admin"
-    | "/about"
-    | "/create-school"
-    | "/forgot-password"
-    | "/login"
-    | "/register"
-    | "/reset-password"
-    | "/verify-email"
-    | "/admin/onboarding"
-    | "/admin/"
-    | "/platform-admin/"
-    | "/admin/courses/$courseId"
-    | "/api/auth/$"
-    | "/api/webhooks/bunny"
-    | "/api/webhooks/stripe"
-    | "/platform-admin/plans/$planId"
-    | "/platform-admin/plans/new"
-    | "/platform-admin/tenants/$tenantId"
-    | "/admin/courses/"
-    | "/platform-admin/plans/"
-    | "/platform-admin/tenants/";
-  fileRoutesByTo: FileRoutesByTo;
+    | '/'
+    | '/admin'
+    | '/about'
+    | '/forgot-password'
+    | '/login'
+    | '/register'
+    | '/reset-password'
+    | '/verify-email'
+    | '/admin/'
+    | '/admin/courses/$courseId'
+    | '/admin/courses/'
+    | '/admin/courses/new'
+    | '/api/auth/$'
+  fileRoutesByTo: FileRoutesByTo
   to:
-    | "/"
-    | "/about"
-    | "/create-school"
-    | "/forgot-password"
-    | "/login"
-    | "/register"
-    | "/reset-password"
-    | "/verify-email"
-    | "/admin/onboarding"
-    | "/admin"
-    | "/platform-admin"
-    | "/admin/courses/$courseId"
-    | "/api/auth/$"
-    | "/api/webhooks/bunny"
-    | "/api/webhooks/stripe"
-    | "/platform-admin/plans/$planId"
-    | "/platform-admin/plans/new"
-    | "/platform-admin/tenants/$tenantId"
-    | "/admin/courses"
-    | "/platform-admin/plans"
-    | "/platform-admin/tenants";
+    | '/'
+    | '/about'
+    | '/forgot-password'
+    | '/login'
+    | '/register'
+    | '/reset-password'
+    | '/verify-email'
+    | '/admin'
+    | '/admin/courses/$courseId'
+    | '/admin/courses'
+    | '/admin/courses/new'
+    | '/api/auth/$'
   id:
-    | "__root__"
-    | "/"
-    | "/admin"
-    | "/platform-admin"
-    | "/about"
-    | "/create-school"
-    | "/forgot-password"
-    | "/login"
-    | "/register"
-    | "/reset-password"
-    | "/verify-email"
-    | "/admin/onboarding"
-    | "/admin/"
-    | "/platform-admin/"
-    | "/admin/courses/$courseId"
-    | "/api/auth/$"
-    | "/api/webhooks/bunny"
-    | "/api/webhooks/stripe"
-    | "/platform-admin/plans/$planId"
-    | "/platform-admin/plans/new"
-    | "/platform-admin/tenants/$tenantId"
-    | "/admin/courses/"
-    | "/platform-admin/plans/"
-    | "/platform-admin/tenants/";
-  fileRoutesById: FileRoutesById;
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/about'
+    | '/forgot-password'
+    | '/login'
+    | '/register'
+    | '/reset-password'
+    | '/verify-email'
+    | '/admin/'
+    | '/admin/courses/$courseId'
+    | '/admin/courses/'
+    | '/admin/courses/new'
+    | '/api/auth/$'
+  fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute;
-  AdminRouteRoute: typeof AdminRouteRouteWithChildren;
-  PlatformAdminRouteRoute: typeof PlatformAdminRouteRouteWithChildren;
-  AboutRoute: typeof AboutRoute;
-  CreateSchoolRoute: typeof CreateSchoolRoute;
-  ForgotPasswordRoute: typeof ForgotPasswordRoute;
-  LoginRoute: typeof LoginRoute;
-  RegisterRoute: typeof RegisterRoute;
-  ResetPasswordRoute: typeof ResetPasswordRoute;
-  VerifyEmailRoute: typeof VerifyEmailRoute;
-  ApiAuthSplatRoute: typeof ApiAuthSplatRoute;
-  ApiWebhooksBunnyRoute: typeof ApiWebhooksBunnyRoute;
-  ApiWebhooksStripeRoute: typeof ApiWebhooksStripeRoute;
+  IndexRoute: typeof IndexRoute
+  AdminRouteRoute: typeof AdminRouteRouteWithChildren
+  AboutRoute: typeof AboutRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
+  LoginRoute: typeof LoginRoute
+  RegisterRoute: typeof RegisterRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
+  VerifyEmailRoute: typeof VerifyEmailRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
-declare module "@tanstack/react-router" {
+declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    "/verify-email": {
-      id: "/verify-email";
-      path: "/verify-email";
-      fullPath: "/verify-email";
-      preLoaderRoute: typeof VerifyEmailRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/reset-password": {
-      id: "/reset-password";
-      path: "/reset-password";
-      fullPath: "/reset-password";
-      preLoaderRoute: typeof ResetPasswordRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/register": {
-      id: "/register";
-      path: "/register";
-      fullPath: "/register";
-      preLoaderRoute: typeof RegisterRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/login": {
-      id: "/login";
-      path: "/login";
-      fullPath: "/login";
-      preLoaderRoute: typeof LoginRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/forgot-password": {
-      id: "/forgot-password";
-      path: "/forgot-password";
-      fullPath: "/forgot-password";
-      preLoaderRoute: typeof ForgotPasswordRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/create-school": {
-      id: "/create-school";
-      path: "/create-school";
-      fullPath: "/create-school";
-      preLoaderRoute: typeof CreateSchoolRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/about": {
-      id: "/about";
-      path: "/about";
-      fullPath: "/about";
-      preLoaderRoute: typeof AboutRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/platform-admin": {
-      id: "/platform-admin";
-      path: "/platform-admin";
-      fullPath: "/platform-admin";
-      preLoaderRoute: typeof PlatformAdminRouteRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/admin": {
-      id: "/admin";
-      path: "/admin";
-      fullPath: "/admin";
-      preLoaderRoute: typeof AdminRouteRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/": {
-      id: "/";
-      path: "/";
-      fullPath: "/";
-      preLoaderRoute: typeof IndexRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/platform-admin/": {
-      id: "/platform-admin/";
-      path: "/";
-      fullPath: "/platform-admin/";
-      preLoaderRoute: typeof PlatformAdminIndexRouteImport;
-      parentRoute: typeof PlatformAdminRouteRoute;
-    };
-    "/admin/": {
-      id: "/admin/";
-      path: "/";
-      fullPath: "/admin/";
-      preLoaderRoute: typeof AdminIndexRouteImport;
-      parentRoute: typeof AdminRouteRoute;
-    };
-    "/admin/onboarding": {
-      id: "/admin/onboarding";
-      path: "/onboarding";
-      fullPath: "/admin/onboarding";
-      preLoaderRoute: typeof AdminOnboardingRouteImport;
-      parentRoute: typeof AdminRouteRoute;
-    };
-    "/platform-admin/tenants/": {
-      id: "/platform-admin/tenants/";
-      path: "/tenants";
-      fullPath: "/platform-admin/tenants/";
-      preLoaderRoute: typeof PlatformAdminTenantsIndexRouteImport;
-      parentRoute: typeof PlatformAdminRouteRoute;
-    };
-    "/platform-admin/plans/": {
-      id: "/platform-admin/plans/";
-      path: "/plans";
-      fullPath: "/platform-admin/plans/";
-      preLoaderRoute: typeof PlatformAdminPlansIndexRouteImport;
-      parentRoute: typeof PlatformAdminRouteRoute;
-    };
-    "/admin/courses/": {
-      id: "/admin/courses/";
-      path: "/courses";
-      fullPath: "/admin/courses/";
-      preLoaderRoute: typeof AdminCoursesIndexRouteImport;
-      parentRoute: typeof AdminRouteRoute;
-    };
-    "/platform-admin/tenants/$tenantId": {
-      id: "/platform-admin/tenants/$tenantId";
-      path: "/tenants/$tenantId";
-      fullPath: "/platform-admin/tenants/$tenantId";
-      preLoaderRoute: typeof PlatformAdminTenantsTenantIdRouteImport;
-      parentRoute: typeof PlatformAdminRouteRoute;
-    };
-    "/platform-admin/plans/new": {
-      id: "/platform-admin/plans/new";
-      path: "/plans/new";
-      fullPath: "/platform-admin/plans/new";
-      preLoaderRoute: typeof PlatformAdminPlansNewRouteImport;
-      parentRoute: typeof PlatformAdminRouteRoute;
-    };
-    "/platform-admin/plans/$planId": {
-      id: "/platform-admin/plans/$planId";
-      path: "/plans/$planId";
-      fullPath: "/platform-admin/plans/$planId";
-      preLoaderRoute: typeof PlatformAdminPlansPlanIdRouteImport;
-      parentRoute: typeof PlatformAdminRouteRoute;
-    };
-    "/api/webhooks/stripe": {
-      id: "/api/webhooks/stripe";
-      path: "/api/webhooks/stripe";
-      fullPath: "/api/webhooks/stripe";
-      preLoaderRoute: typeof ApiWebhooksStripeRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/api/webhooks/bunny": {
-      id: "/api/webhooks/bunny";
-      path: "/api/webhooks/bunny";
-      fullPath: "/api/webhooks/bunny";
-      preLoaderRoute: typeof ApiWebhooksBunnyRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/api/auth/$": {
-      id: "/api/auth/$";
-      path: "/api/auth/$";
-      fullPath: "/api/auth/$";
-      preLoaderRoute: typeof ApiAuthSplatRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/admin/courses/$courseId": {
-      id: "/admin/courses/$courseId";
-      path: "/courses/$courseId";
-      fullPath: "/admin/courses/$courseId";
-      preLoaderRoute: typeof AdminCoursesCourseIdRouteImport;
-      parentRoute: typeof AdminRouteRoute;
-    };
+    '/verify-email': {
+      id: '/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof VerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/courses/$courseId': {
+      id: '/admin/courses/$courseId'
+      path: '/courses/$courseId'
+      fullPath: '/admin/courses/$courseId'
+      preLoaderRoute: typeof AdminCoursesCourseIdRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/courses/': {
+      id: '/admin/courses/'
+      path: '/courses/'
+      fullPath: '/admin/courses/'
+      preLoaderRoute: typeof AdminCoursesIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/courses/new': {
+      id: '/admin/courses/new'
+      path: '/courses/new'
+      fullPath: '/admin/courses/new'
+      preLoaderRoute: typeof AdminCoursesNewRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AdminRouteRouteChildren {
-  AdminOnboardingRoute: typeof AdminOnboardingRoute;
-  AdminIndexRoute: typeof AdminIndexRoute;
-  AdminCoursesCourseIdRoute: typeof AdminCoursesCourseIdRoute;
-  AdminCoursesIndexRoute: typeof AdminCoursesIndexRoute;
+  AdminIndexRoute: typeof AdminIndexRoute
+  AdminCoursesCourseIdRoute: typeof AdminCoursesCourseIdRoute
+  AdminCoursesIndexRoute: typeof AdminCoursesIndexRoute
+  AdminCoursesNewRoute: typeof AdminCoursesNewRoute
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
-  AdminOnboardingRoute: AdminOnboardingRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminCoursesCourseIdRoute: AdminCoursesCourseIdRoute,
   AdminCoursesIndexRoute: AdminCoursesIndexRoute,
-};
-
-const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(AdminRouteRouteChildren);
-
-interface PlatformAdminRouteRouteChildren {
-  PlatformAdminIndexRoute: typeof PlatformAdminIndexRoute;
-  PlatformAdminPlansPlanIdRoute: typeof PlatformAdminPlansPlanIdRoute;
-  PlatformAdminPlansNewRoute: typeof PlatformAdminPlansNewRoute;
-  PlatformAdminTenantsTenantIdRoute: typeof PlatformAdminTenantsTenantIdRoute;
-  PlatformAdminPlansIndexRoute: typeof PlatformAdminPlansIndexRoute;
-  PlatformAdminTenantsIndexRoute: typeof PlatformAdminTenantsIndexRoute;
+  AdminCoursesNewRoute: AdminCoursesNewRoute,
 }
 
-const PlatformAdminRouteRouteChildren: PlatformAdminRouteRouteChildren = {
-  PlatformAdminIndexRoute: PlatformAdminIndexRoute,
-  PlatformAdminPlansPlanIdRoute: PlatformAdminPlansPlanIdRoute,
-  PlatformAdminPlansNewRoute: PlatformAdminPlansNewRoute,
-  PlatformAdminTenantsTenantIdRoute: PlatformAdminTenantsTenantIdRoute,
-  PlatformAdminPlansIndexRoute: PlatformAdminPlansIndexRoute,
-  PlatformAdminTenantsIndexRoute: PlatformAdminTenantsIndexRoute,
-};
-
-const PlatformAdminRouteRouteWithChildren = PlatformAdminRouteRoute._addFileChildren(
-  PlatformAdminRouteRouteChildren,
-);
+const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
+  AdminRouteRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRouteRoute: AdminRouteRouteWithChildren,
-  PlatformAdminRouteRoute: PlatformAdminRouteRouteWithChildren,
   AboutRoute: AboutRoute,
-  CreateSchoolRoute: CreateSchoolRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
-  ApiWebhooksBunnyRoute: ApiWebhooksBunnyRoute,
-  ApiWebhooksStripeRoute: ApiWebhooksStripeRoute,
-};
+}
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>();
+  ._addFileTypes<FileRouteTypes>()
 
-import type { getRouter } from "./router.tsx";
-import type { startInstance } from "./start.ts";
-declare module "@tanstack/react-start" {
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
   interface Register {
-    ssr: true;
-    router: Awaited<ReturnType<typeof getRouter>>;
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>;
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
   }
 }

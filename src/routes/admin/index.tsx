@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/admin/")({
   component: AdminDashboard,
@@ -17,7 +17,9 @@ function AdminDashboard() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <DashboardCard title="Courses" value="0" description="Create your first course" />
+        <Link to="/admin/courses" className="block">
+          <DashboardCard title="Courses" value="0" description="Create your first course" />
+        </Link>
         <DashboardCard title="Students" value="0" description="No students yet" />
         <DashboardCard title="Revenue" value="$0" description="Start selling courses" />
       </div>
