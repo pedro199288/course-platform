@@ -70,7 +70,7 @@ export const lessons = pgTable(
       .references(() => modules.id, { onDelete: "cascade" }),
     title: text().notNull(),
     type: lessonType().notNull().default("text"),
-    content: jsonb(),
+    content: jsonb().$type<Record<string, string> | null>(),
     videoProviderId: text("video_provider_id"),
     fileUrl: text("file_url"),
     position: integer().notNull().default(0),

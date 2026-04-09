@@ -8,302 +8,342 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routes/__root'
-import { Route as VerifyEmailRouteImport } from './routes/verify-email'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as RegisterRouteImport } from './routes/register'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
-import { Route as CreateSchoolRouteImport } from './routes/create-school'
-import { Route as AboutRouteImport } from './routes/about'
-import { Route as AdminRouteRouteImport } from './routes/admin/route'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as AdminIndexRouteImport } from './routes/admin/index'
-import { Route as AdminOnboardingRouteImport } from './routes/admin/onboarding'
-import { Route as ApiWebhooksStripeRouteImport } from './routes/api/webhooks/stripe'
-import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as rootRouteImport } from "./routes/__root";
+import { Route as VerifyEmailRouteImport } from "./routes/verify-email";
+import { Route as ResetPasswordRouteImport } from "./routes/reset-password";
+import { Route as RegisterRouteImport } from "./routes/register";
+import { Route as LoginRouteImport } from "./routes/login";
+import { Route as ForgotPasswordRouteImport } from "./routes/forgot-password";
+import { Route as CreateSchoolRouteImport } from "./routes/create-school";
+import { Route as AboutRouteImport } from "./routes/about";
+import { Route as AdminRouteRouteImport } from "./routes/admin/route";
+import { Route as IndexRouteImport } from "./routes/index";
+import { Route as AdminIndexRouteImport } from "./routes/admin/index";
+import { Route as AdminOnboardingRouteImport } from "./routes/admin/onboarding";
+import { Route as AdminCoursesIndexRouteImport } from "./routes/admin/courses/index";
+import { Route as ApiWebhooksStripeRouteImport } from "./routes/api/webhooks/stripe";
+import { Route as ApiAuthSplatRouteImport } from "./routes/api/auth/$";
+import { Route as AdminCoursesCourseIdRouteImport } from "./routes/admin/courses/$courseId";
 
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
-  id: '/verify-email',
-  path: '/verify-email',
+  id: "/verify-email",
+  path: "/verify-email",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
+  id: "/reset-password",
+  path: "/reset-password",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const RegisterRoute = RegisterRouteImport.update({
-  id: '/register',
-  path: '/register',
+  id: "/register",
+  path: "/register",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
+  id: "/login",
+  path: "/login",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
-  id: '/forgot-password',
-  path: '/forgot-password',
+  id: "/forgot-password",
+  path: "/forgot-password",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const CreateSchoolRoute = CreateSchoolRouteImport.update({
-  id: '/create-school',
-  path: '/create-school',
+  id: "/create-school",
+  path: "/create-school",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const AboutRoute = AboutRouteImport.update({
-  id: '/about',
-  path: '/about',
+  id: "/about",
+  path: "/about",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const AdminRouteRoute = AdminRouteRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+  id: "/admin",
+  path: "/admin",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const AdminIndexRoute = AdminIndexRouteImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => AdminRouteRoute,
-} as any)
+} as any);
 const AdminOnboardingRoute = AdminOnboardingRouteImport.update({
-  id: '/onboarding',
-  path: '/onboarding',
+  id: "/onboarding",
+  path: "/onboarding",
   getParentRoute: () => AdminRouteRoute,
-} as any)
+} as any);
+const AdminCoursesIndexRoute = AdminCoursesIndexRouteImport.update({
+  id: "/courses/",
+  path: "/courses/",
+  getParentRoute: () => AdminRouteRoute,
+} as any);
 const ApiWebhooksStripeRoute = ApiWebhooksStripeRouteImport.update({
-  id: '/api/webhooks/stripe',
-  path: '/api/webhooks/stripe',
+  id: "/api/webhooks/stripe",
+  path: "/api/webhooks/stripe",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
-  id: '/api/auth/$',
-  path: '/api/auth/$',
+  id: "/api/auth/$",
+  path: "/api/auth/$",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
+const AdminCoursesCourseIdRoute = AdminCoursesCourseIdRouteImport.update({
+  id: "/courses/$courseId",
+  path: "/courses/$courseId",
+  getParentRoute: () => AdminRouteRoute,
+} as any);
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/admin': typeof AdminRouteRouteWithChildren
-  '/about': typeof AboutRoute
-  '/create-school': typeof CreateSchoolRoute
-  '/forgot-password': typeof ForgotPasswordRoute
-  '/login': typeof LoginRoute
-  '/register': typeof RegisterRoute
-  '/reset-password': typeof ResetPasswordRoute
-  '/verify-email': typeof VerifyEmailRoute
-  '/admin/onboarding': typeof AdminOnboardingRoute
-  '/admin/': typeof AdminIndexRoute
-  '/api/auth/$': typeof ApiAuthSplatRoute
-  '/api/webhooks/stripe': typeof ApiWebhooksStripeRoute
+  "/": typeof IndexRoute;
+  "/admin": typeof AdminRouteRouteWithChildren;
+  "/about": typeof AboutRoute;
+  "/create-school": typeof CreateSchoolRoute;
+  "/forgot-password": typeof ForgotPasswordRoute;
+  "/login": typeof LoginRoute;
+  "/register": typeof RegisterRoute;
+  "/reset-password": typeof ResetPasswordRoute;
+  "/verify-email": typeof VerifyEmailRoute;
+  "/admin/onboarding": typeof AdminOnboardingRoute;
+  "/admin/": typeof AdminIndexRoute;
+  "/admin/courses/$courseId": typeof AdminCoursesCourseIdRoute;
+  "/api/auth/$": typeof ApiAuthSplatRoute;
+  "/api/webhooks/stripe": typeof ApiWebhooksStripeRoute;
+  "/admin/courses/": typeof AdminCoursesIndexRoute;
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/about': typeof AboutRoute
-  '/create-school': typeof CreateSchoolRoute
-  '/forgot-password': typeof ForgotPasswordRoute
-  '/login': typeof LoginRoute
-  '/register': typeof RegisterRoute
-  '/reset-password': typeof ResetPasswordRoute
-  '/verify-email': typeof VerifyEmailRoute
-  '/admin/onboarding': typeof AdminOnboardingRoute
-  '/admin': typeof AdminIndexRoute
-  '/api/auth/$': typeof ApiAuthSplatRoute
-  '/api/webhooks/stripe': typeof ApiWebhooksStripeRoute
+  "/": typeof IndexRoute;
+  "/about": typeof AboutRoute;
+  "/create-school": typeof CreateSchoolRoute;
+  "/forgot-password": typeof ForgotPasswordRoute;
+  "/login": typeof LoginRoute;
+  "/register": typeof RegisterRoute;
+  "/reset-password": typeof ResetPasswordRoute;
+  "/verify-email": typeof VerifyEmailRoute;
+  "/admin/onboarding": typeof AdminOnboardingRoute;
+  "/admin": typeof AdminIndexRoute;
+  "/admin/courses/$courseId": typeof AdminCoursesCourseIdRoute;
+  "/api/auth/$": typeof ApiAuthSplatRoute;
+  "/api/webhooks/stripe": typeof ApiWebhooksStripeRoute;
+  "/admin/courses": typeof AdminCoursesIndexRoute;
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/admin': typeof AdminRouteRouteWithChildren
-  '/about': typeof AboutRoute
-  '/create-school': typeof CreateSchoolRoute
-  '/forgot-password': typeof ForgotPasswordRoute
-  '/login': typeof LoginRoute
-  '/register': typeof RegisterRoute
-  '/reset-password': typeof ResetPasswordRoute
-  '/verify-email': typeof VerifyEmailRoute
-  '/admin/onboarding': typeof AdminOnboardingRoute
-  '/admin/': typeof AdminIndexRoute
-  '/api/auth/$': typeof ApiAuthSplatRoute
-  '/api/webhooks/stripe': typeof ApiWebhooksStripeRoute
+  __root__: typeof rootRouteImport;
+  "/": typeof IndexRoute;
+  "/admin": typeof AdminRouteRouteWithChildren;
+  "/about": typeof AboutRoute;
+  "/create-school": typeof CreateSchoolRoute;
+  "/forgot-password": typeof ForgotPasswordRoute;
+  "/login": typeof LoginRoute;
+  "/register": typeof RegisterRoute;
+  "/reset-password": typeof ResetPasswordRoute;
+  "/verify-email": typeof VerifyEmailRoute;
+  "/admin/onboarding": typeof AdminOnboardingRoute;
+  "/admin/": typeof AdminIndexRoute;
+  "/admin/courses/$courseId": typeof AdminCoursesCourseIdRoute;
+  "/api/auth/$": typeof ApiAuthSplatRoute;
+  "/api/webhooks/stripe": typeof ApiWebhooksStripeRoute;
+  "/admin/courses/": typeof AdminCoursesIndexRoute;
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
+  fileRoutesByFullPath: FileRoutesByFullPath;
   fullPaths:
-    | '/'
-    | '/admin'
-    | '/about'
-    | '/create-school'
-    | '/forgot-password'
-    | '/login'
-    | '/register'
-    | '/reset-password'
-    | '/verify-email'
-    | '/admin/onboarding'
-    | '/admin/'
-    | '/api/auth/$'
-    | '/api/webhooks/stripe'
-  fileRoutesByTo: FileRoutesByTo
+    | "/"
+    | "/admin"
+    | "/about"
+    | "/create-school"
+    | "/forgot-password"
+    | "/login"
+    | "/register"
+    | "/reset-password"
+    | "/verify-email"
+    | "/admin/onboarding"
+    | "/admin/"
+    | "/admin/courses/$courseId"
+    | "/api/auth/$"
+    | "/api/webhooks/stripe"
+    | "/admin/courses/";
+  fileRoutesByTo: FileRoutesByTo;
   to:
-    | '/'
-    | '/about'
-    | '/create-school'
-    | '/forgot-password'
-    | '/login'
-    | '/register'
-    | '/reset-password'
-    | '/verify-email'
-    | '/admin/onboarding'
-    | '/admin'
-    | '/api/auth/$'
-    | '/api/webhooks/stripe'
+    | "/"
+    | "/about"
+    | "/create-school"
+    | "/forgot-password"
+    | "/login"
+    | "/register"
+    | "/reset-password"
+    | "/verify-email"
+    | "/admin/onboarding"
+    | "/admin"
+    | "/admin/courses/$courseId"
+    | "/api/auth/$"
+    | "/api/webhooks/stripe"
+    | "/admin/courses";
   id:
-    | '__root__'
-    | '/'
-    | '/admin'
-    | '/about'
-    | '/create-school'
-    | '/forgot-password'
-    | '/login'
-    | '/register'
-    | '/reset-password'
-    | '/verify-email'
-    | '/admin/onboarding'
-    | '/admin/'
-    | '/api/auth/$'
-    | '/api/webhooks/stripe'
-  fileRoutesById: FileRoutesById
+    | "__root__"
+    | "/"
+    | "/admin"
+    | "/about"
+    | "/create-school"
+    | "/forgot-password"
+    | "/login"
+    | "/register"
+    | "/reset-password"
+    | "/verify-email"
+    | "/admin/onboarding"
+    | "/admin/"
+    | "/admin/courses/$courseId"
+    | "/api/auth/$"
+    | "/api/webhooks/stripe"
+    | "/admin/courses/";
+  fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  AdminRouteRoute: typeof AdminRouteRouteWithChildren
-  AboutRoute: typeof AboutRoute
-  CreateSchoolRoute: typeof CreateSchoolRoute
-  ForgotPasswordRoute: typeof ForgotPasswordRoute
-  LoginRoute: typeof LoginRoute
-  RegisterRoute: typeof RegisterRoute
-  ResetPasswordRoute: typeof ResetPasswordRoute
-  VerifyEmailRoute: typeof VerifyEmailRoute
-  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
-  ApiWebhooksStripeRoute: typeof ApiWebhooksStripeRoute
+  IndexRoute: typeof IndexRoute;
+  AdminRouteRoute: typeof AdminRouteRouteWithChildren;
+  AboutRoute: typeof AboutRoute;
+  CreateSchoolRoute: typeof CreateSchoolRoute;
+  ForgotPasswordRoute: typeof ForgotPasswordRoute;
+  LoginRoute: typeof LoginRoute;
+  RegisterRoute: typeof RegisterRoute;
+  ResetPasswordRoute: typeof ResetPasswordRoute;
+  VerifyEmailRoute: typeof VerifyEmailRoute;
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute;
+  ApiWebhooksStripeRoute: typeof ApiWebhooksStripeRoute;
 }
 
-declare module '@tanstack/react-router' {
+declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
-    '/verify-email': {
-      id: '/verify-email'
-      path: '/verify-email'
-      fullPath: '/verify-email'
-      preLoaderRoute: typeof VerifyEmailRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/register': {
-      id: '/register'
-      path: '/register'
-      fullPath: '/register'
-      preLoaderRoute: typeof RegisterRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/forgot-password': {
-      id: '/forgot-password'
-      path: '/forgot-password'
-      fullPath: '/forgot-password'
-      preLoaderRoute: typeof ForgotPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/create-school': {
-      id: '/create-school'
-      path: '/create-school'
-      fullPath: '/create-school'
-      preLoaderRoute: typeof CreateSchoolRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/about': {
-      id: '/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof AboutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/': {
-      id: '/admin/'
-      path: '/'
-      fullPath: '/admin/'
-      preLoaderRoute: typeof AdminIndexRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/onboarding': {
-      id: '/admin/onboarding'
-      path: '/onboarding'
-      fullPath: '/admin/onboarding'
-      preLoaderRoute: typeof AdminOnboardingRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/api/webhooks/stripe': {
-      id: '/api/webhooks/stripe'
-      path: '/api/webhooks/stripe'
-      fullPath: '/api/webhooks/stripe'
-      preLoaderRoute: typeof ApiWebhooksStripeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/auth/$': {
-      id: '/api/auth/$'
-      path: '/api/auth/$'
-      fullPath: '/api/auth/$'
-      preLoaderRoute: typeof ApiAuthSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+    "/verify-email": {
+      id: "/verify-email";
+      path: "/verify-email";
+      fullPath: "/verify-email";
+      preLoaderRoute: typeof VerifyEmailRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/reset-password": {
+      id: "/reset-password";
+      path: "/reset-password";
+      fullPath: "/reset-password";
+      preLoaderRoute: typeof ResetPasswordRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/register": {
+      id: "/register";
+      path: "/register";
+      fullPath: "/register";
+      preLoaderRoute: typeof RegisterRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/login": {
+      id: "/login";
+      path: "/login";
+      fullPath: "/login";
+      preLoaderRoute: typeof LoginRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/forgot-password": {
+      id: "/forgot-password";
+      path: "/forgot-password";
+      fullPath: "/forgot-password";
+      preLoaderRoute: typeof ForgotPasswordRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/create-school": {
+      id: "/create-school";
+      path: "/create-school";
+      fullPath: "/create-school";
+      preLoaderRoute: typeof CreateSchoolRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/about": {
+      id: "/about";
+      path: "/about";
+      fullPath: "/about";
+      preLoaderRoute: typeof AboutRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/admin": {
+      id: "/admin";
+      path: "/admin";
+      fullPath: "/admin";
+      preLoaderRoute: typeof AdminRouteRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/": {
+      id: "/";
+      path: "/";
+      fullPath: "/";
+      preLoaderRoute: typeof IndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/admin/": {
+      id: "/admin/";
+      path: "/";
+      fullPath: "/admin/";
+      preLoaderRoute: typeof AdminIndexRouteImport;
+      parentRoute: typeof AdminRouteRoute;
+    };
+    "/admin/onboarding": {
+      id: "/admin/onboarding";
+      path: "/onboarding";
+      fullPath: "/admin/onboarding";
+      preLoaderRoute: typeof AdminOnboardingRouteImport;
+      parentRoute: typeof AdminRouteRoute;
+    };
+    "/admin/courses/": {
+      id: "/admin/courses/";
+      path: "/courses";
+      fullPath: "/admin/courses/";
+      preLoaderRoute: typeof AdminCoursesIndexRouteImport;
+      parentRoute: typeof AdminRouteRoute;
+    };
+    "/api/webhooks/stripe": {
+      id: "/api/webhooks/stripe";
+      path: "/api/webhooks/stripe";
+      fullPath: "/api/webhooks/stripe";
+      preLoaderRoute: typeof ApiWebhooksStripeRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/api/auth/$": {
+      id: "/api/auth/$";
+      path: "/api/auth/$";
+      fullPath: "/api/auth/$";
+      preLoaderRoute: typeof ApiAuthSplatRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/admin/courses/$courseId": {
+      id: "/admin/courses/$courseId";
+      path: "/courses/$courseId";
+      fullPath: "/admin/courses/$courseId";
+      preLoaderRoute: typeof AdminCoursesCourseIdRouteImport;
+      parentRoute: typeof AdminRouteRoute;
+    };
   }
 }
 
 interface AdminRouteRouteChildren {
-  AdminOnboardingRoute: typeof AdminOnboardingRoute
-  AdminIndexRoute: typeof AdminIndexRoute
+  AdminOnboardingRoute: typeof AdminOnboardingRoute;
+  AdminIndexRoute: typeof AdminIndexRoute;
+  AdminCoursesCourseIdRoute: typeof AdminCoursesCourseIdRoute;
+  AdminCoursesIndexRoute: typeof AdminCoursesIndexRoute;
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminOnboardingRoute: AdminOnboardingRoute,
   AdminIndexRoute: AdminIndexRoute,
-}
+  AdminCoursesCourseIdRoute: AdminCoursesCourseIdRoute,
+  AdminCoursesIndexRoute: AdminCoursesIndexRoute,
+};
 
-const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
-  AdminRouteRouteChildren,
-)
+const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(AdminRouteRouteChildren);
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -317,17 +357,17 @@ const rootRouteChildren: RootRouteChildren = {
   VerifyEmailRoute: VerifyEmailRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiWebhooksStripeRoute: ApiWebhooksStripeRoute,
-}
+};
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>()
+  ._addFileTypes<FileRouteTypes>();
 
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
+import type { getRouter } from "./router.tsx";
+import type { startInstance } from "./start.ts";
+declare module "@tanstack/react-start" {
   interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+    ssr: true;
+    router: Awaited<ReturnType<typeof getRouter>>;
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>;
   }
 }
