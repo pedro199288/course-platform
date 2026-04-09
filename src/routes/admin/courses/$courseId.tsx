@@ -1,0 +1,366 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
+import { and, asc, eq } from "drizzle-orm";
+import { useState } from "react";
+import { db } from "#/db/index.ts";
+import { courses, modules, lessons } from "#/db/schema/index.ts";
+import { auth } from "#/lib/auth.ts";
+import {
+  updateCourseFn,
+  createModuleFn,
+  deleteModuleFn,
+  createLessonFn,
+  deleteLessonFn,
+} from "#/lib/courses.ts";
+
+type Module = typeof modules.$inferSelect;
+type Lesson = typeof lessons.$inferSelect;
+
+const loadCourseDetailFn = createServerFn({ method: "GET" })
+  .inputValidator((input: { courseId: string }) => input)
+  .handler(async ({ data }) => {
+    const request = getRequest();
+    const session = await auth.api.getSession({ headers: request.headers });
+    if (!session) throw new Error("Unauthorized");
+
+    const user = session.user as { tenantId: string };
+    const course = await db.query.courses.findFirst({
+      where: and(eq(courses.id, data.courseId), eq(courses.tenantId, user.tenantId)),
+    });
+    if (!course) throw new Error("Course not found");
+
+    const courseModules = await db.query.modules.findMany({
+      where: eq(modules.courseId, course.id),
+      orderBy: [asc(modules.position)],
+    });
+
+    const moduleLessons: Record<string, Lesson[]> = {};
+    for (const mod of courseModules) {
+      moduleLessons[mod.id] = await db.query.lessons.findMany({
+        where: eq(lessons.moduleId, mod.id),
+        orderBy: [asc(lessons.position)],
+      });
+    }
+
+    return { course, modules: courseModules, lessons: moduleLessons };
+  });
+
+export const Route = createFileRoute("/admin/courses/$courseId")({
+  loader: ({ params }) => loadCourseDetailFn({ data: { courseId: params.courseId } }),
+  component: CourseDetailPage,
+});
+
+function CourseDetailPage() {
+  const initial = Route.useLoaderData();
+  const [course, setCourse] = useState(initial.course);
+  const [moduleList, setModuleList] = useState<Module[]>(initial.modules);
+  const [lessonMap, setLessonMap] = useState<Record<string, Lesson[]>>(initial.lessons);
+
+  // Course edit state
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(course.title);
+  const [editDesc, setEditDesc] = useState(course.description || "");
+  const [editSlug, setEditSlug] = useState(course.slug);
+
+  // Module creation
+  const [newModuleTitle, setNewModuleTitle] = useState("");
+
+  // Lesson creation per module
+  const [addingLessonFor, setAddingLessonFor] = useState<string | null>(null);
+  const [newLessonTitle, setNewLessonTitle] = useState("");
+  const [newLessonContent, setNewLessonContent] = useState("");
+
+  async function handleUpdateCourse() {
+    const updated = await updateCourseFn({
+      data: {
+        courseId: course.id,
+        title: editTitle,
+        description: editDesc || undefined,
+        slug: editSlug,
+      },
+    });
+    setCourse(updated);
+    setEditing(false);
+  }
+
+  async function handleToggleStatus() {
+    const newStatus = course.status === "draft" ? "published" : "draft";
+    const updated = await updateCourseFn({
+      data: { courseId: course.id, status: newStatus as "draft" | "published" },
+    });
+    setCourse(updated);
+  }
+
+  async function handleAddModule(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newModuleTitle.trim()) return;
+    const mod = await createModuleFn({ data: { courseId: course.id, title: newModuleTitle } });
+    setModuleList((prev) => [...prev, mod]);
+    setLessonMap((prev) => ({ ...prev, [mod.id]: [] }));
+    setNewModuleTitle("");
+  }
+
+  async function handleDeleteModule(moduleId: string) {
+    if (!confirm("Delete this module and all its lessons?")) return;
+    await deleteModuleFn({ data: { moduleId } });
+    setModuleList((prev) => prev.filter((m) => m.id !== moduleId));
+    setLessonMap((prev) => {
+      const next = { ...prev };
+      delete next[moduleId];
+      return next;
+    });
+  }
+
+  async function handleAddLesson(moduleId: string, e: React.FormEvent) {
+    e.preventDefault();
+    if (!newLessonTitle.trim()) return;
+    const lesson = await createLessonFn({
+      data: {
+        moduleId,
+        title: newLessonTitle,
+        type: "text",
+        content: newLessonContent ? { text: newLessonContent } : undefined,
+      },
+    });
+    setLessonMap((prev) => ({
+      ...prev,
+      [moduleId]: [...(prev[moduleId] || []), lesson],
+    }));
+    setNewLessonTitle("");
+    setNewLessonContent("");
+    setAddingLessonFor(null);
+  }
+
+  async function handleDeleteLesson(lessonId: string, moduleId: string) {
+    if (!confirm("Delete this lesson?")) return;
+    await deleteLessonFn({ data: { lessonId } });
+    setLessonMap((prev) => ({
+      ...prev,
+      [moduleId]: (prev[moduleId] || []).filter((l) => l.id !== lessonId),
+    }));
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400">
+        <Link to="/admin/courses" className="hover:underline">
+          Courses
+        </Link>
+        <span>/</span>
+        <span>{course.title}</span>
+      </div>
+
+      {/* Course Header */}
+      <div className="rounded-lg border border-neutral-200 bg-white p-6 dark:border-neutral-800 dark:bg-neutral-900">
+        {editing ? (
+          <div className="space-y-3">
+            <div>
+              <label htmlFor="editTitle" className="block text-sm font-medium">
+                Title
+              </label>
+              <input
+                id="editTitle"
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="mt-1 w-full rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm dark:border-neutral-700"
+              />
+            </div>
+            <div>
+              <label htmlFor="editSlug" className="block text-sm font-medium">
+                Slug
+              </label>
+              <input
+                id="editSlug"
+                type="text"
+                value={editSlug}
+                onChange={(e) => setEditSlug(e.target.value)}
+                className="mt-1 w-full rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm dark:border-neutral-700"
+              />
+            </div>
+            <div>
+              <label htmlFor="editDesc" className="block text-sm font-medium">
+                Description
+              </label>
+              <textarea
+                id="editDesc"
+                value={editDesc}
+                onChange={(e) => setEditDesc(e.target.value)}
+                rows={3}
+                className="mt-1 w-full rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm dark:border-neutral-700"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleUpdateCourse}
+                className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900"
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditing(false)}
+                className="rounded-md border border-neutral-300 px-4 py-2 text-sm font-medium dark:border-neutral-700"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold">{course.title}</h1>
+                <span
+                  className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                    course.status === "published"
+                      ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                      : "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400"
+                  }`}
+                >
+                  {course.status}
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">/{course.slug}</p>
+              {course.description && <p className="mt-2 text-sm">{course.description}</p>}
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleToggleStatus}
+                className="rounded-md border border-neutral-300 px-3 py-1.5 text-xs font-medium hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+              >
+                {course.status === "draft" ? "Publish" : "Unpublish"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className="rounded-md border border-neutral-300 px-3 py-1.5 text-xs font-medium hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+              >
+                Edit
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Modules & Lessons */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold">Modules</h2>
+
+        {moduleList.map((mod) => (
+          <div
+            key={mod.id}
+            className="rounded-lg border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
+          >
+            <div className="flex items-center justify-between border-b border-neutral-200 p-4 dark:border-neutral-800">
+              <h3 className="font-medium">{mod.title}</h3>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAddingLessonFor(addingLessonFor === mod.id ? null : mod.id);
+                    setNewLessonTitle("");
+                    setNewLessonContent("");
+                  }}
+                  className="rounded-md border border-neutral-300 px-3 py-1 text-xs font-medium hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                >
+                  Add Lesson
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteModule(mod.id)}
+                  className="rounded-md border border-red-300 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+
+            <div className="p-4">
+              {(lessonMap[mod.id] || []).length === 0 ? (
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">No lessons yet.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {(lessonMap[mod.id] || []).map((lesson) => (
+                    <li
+                      key={lesson.id}
+                      className="flex items-center justify-between rounded-md border border-neutral-100 p-3 dark:border-neutral-800"
+                    >
+                      <div>
+                        <span className="text-sm font-medium">{lesson.title}</span>
+                        <span className="ml-2 text-xs text-neutral-400">{lesson.type}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteLesson(lesson.id, mod.id)}
+                        className="text-xs text-red-500 hover:text-red-700"
+                      >
+                        Delete
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {addingLessonFor === mod.id && (
+                <form onSubmit={(e) => handleAddLesson(mod.id, e)} className="mt-3 space-y-2">
+                  <input
+                    type="text"
+                    value={newLessonTitle}
+                    onChange={(e) => setNewLessonTitle(e.target.value)}
+                    placeholder="Lesson title"
+                    required
+                    className="w-full rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm dark:border-neutral-700"
+                  />
+                  <textarea
+                    value={newLessonContent}
+                    onChange={(e) => setNewLessonContent(e.target.value)}
+                    placeholder="Lesson content (plain text)"
+                    rows={3}
+                    className="w-full rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm dark:border-neutral-700"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="submit"
+                      className="rounded-md bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900"
+                    >
+                      Add Lesson
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAddingLessonFor(null)}
+                      className="rounded-md border border-neutral-300 px-3 py-1.5 text-xs font-medium dark:border-neutral-700"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        ))}
+
+        {/* Add Module Form */}
+        <form onSubmit={handleAddModule} className="flex gap-2">
+          <input
+            type="text"
+            value={newModuleTitle}
+            onChange={(e) => setNewModuleTitle(e.target.value)}
+            placeholder="New module title"
+            className="flex-1 rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm dark:border-neutral-700"
+          />
+          <button
+            type="submit"
+            disabled={!newModuleTitle.trim()}
+            className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-white dark:text-neutral-900"
+          >
+            Add Module
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
