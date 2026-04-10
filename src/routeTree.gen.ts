@@ -22,9 +22,11 @@ import { Route as IndexRouteImport } from "./routes/index";
 import { Route as PlatformAdminIndexRouteImport } from "./routes/platform-admin/index";
 import { Route as AdminIndexRouteImport } from "./routes/admin/index";
 import { Route as AdminOnboardingRouteImport } from "./routes/admin/onboarding";
+import { Route as AdminCoursesIndexRouteImport } from "./routes/admin/courses/index";
 import { Route as PlatformAdminTenantsTenantIdRouteImport } from "./routes/platform-admin/tenants/$tenantId";
 import { Route as ApiWebhooksStripeRouteImport } from "./routes/api/webhooks/stripe";
 import { Route as ApiAuthSplatRouteImport } from "./routes/api/auth/$";
+import { Route as AdminCoursesCourseIdRouteImport } from "./routes/admin/courses/$courseId";
 
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: "/verify-email",
@@ -91,6 +93,11 @@ const AdminOnboardingRoute = AdminOnboardingRouteImport.update({
   path: "/onboarding",
   getParentRoute: () => AdminRouteRoute,
 } as any);
+const AdminCoursesIndexRoute = AdminCoursesIndexRouteImport.update({
+  id: "/courses/",
+  path: "/courses/",
+  getParentRoute: () => AdminRouteRoute,
+} as any);
 const PlatformAdminTenantsTenantIdRoute = PlatformAdminTenantsTenantIdRouteImport.update({
   id: "/tenants/$tenantId",
   path: "/tenants/$tenantId",
@@ -105,6 +112,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: "/api/auth/$",
   path: "/api/auth/$",
   getParentRoute: () => rootRouteImport,
+} as any);
+const AdminCoursesCourseIdRoute = AdminCoursesCourseIdRouteImport.update({
+  id: "/courses/$courseId",
+  path: "/courses/$courseId",
+  getParentRoute: () => AdminRouteRoute,
 } as any);
 
 export interface FileRoutesByFullPath {
@@ -121,9 +133,11 @@ export interface FileRoutesByFullPath {
   "/admin/onboarding": typeof AdminOnboardingRoute;
   "/admin/": typeof AdminIndexRoute;
   "/platform-admin/": typeof PlatformAdminIndexRoute;
+  "/admin/courses/$courseId": typeof AdminCoursesCourseIdRoute;
   "/api/auth/$": typeof ApiAuthSplatRoute;
   "/api/webhooks/stripe": typeof ApiWebhooksStripeRoute;
   "/platform-admin/tenants/$tenantId": typeof PlatformAdminTenantsTenantIdRoute;
+  "/admin/courses/": typeof AdminCoursesIndexRoute;
 }
 export interface FileRoutesByTo {
   "/": typeof IndexRoute;
@@ -137,9 +151,11 @@ export interface FileRoutesByTo {
   "/admin/onboarding": typeof AdminOnboardingRoute;
   "/admin": typeof AdminIndexRoute;
   "/platform-admin": typeof PlatformAdminIndexRoute;
+  "/admin/courses/$courseId": typeof AdminCoursesCourseIdRoute;
   "/api/auth/$": typeof ApiAuthSplatRoute;
   "/api/webhooks/stripe": typeof ApiWebhooksStripeRoute;
   "/platform-admin/tenants/$tenantId": typeof PlatformAdminTenantsTenantIdRoute;
+  "/admin/courses": typeof AdminCoursesIndexRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
@@ -156,9 +172,11 @@ export interface FileRoutesById {
   "/admin/onboarding": typeof AdminOnboardingRoute;
   "/admin/": typeof AdminIndexRoute;
   "/platform-admin/": typeof PlatformAdminIndexRoute;
+  "/admin/courses/$courseId": typeof AdminCoursesCourseIdRoute;
   "/api/auth/$": typeof ApiAuthSplatRoute;
   "/api/webhooks/stripe": typeof ApiWebhooksStripeRoute;
   "/platform-admin/tenants/$tenantId": typeof PlatformAdminTenantsTenantIdRoute;
+  "/admin/courses/": typeof AdminCoursesIndexRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
@@ -176,9 +194,11 @@ export interface FileRouteTypes {
     | "/admin/onboarding"
     | "/admin/"
     | "/platform-admin/"
+    | "/admin/courses/$courseId"
     | "/api/auth/$"
     | "/api/webhooks/stripe"
-    | "/platform-admin/tenants/$tenantId";
+    | "/platform-admin/tenants/$tenantId"
+    | "/admin/courses/";
   fileRoutesByTo: FileRoutesByTo;
   to:
     | "/"
@@ -192,9 +212,11 @@ export interface FileRouteTypes {
     | "/admin/onboarding"
     | "/admin"
     | "/platform-admin"
+    | "/admin/courses/$courseId"
     | "/api/auth/$"
     | "/api/webhooks/stripe"
-    | "/platform-admin/tenants/$tenantId";
+    | "/platform-admin/tenants/$tenantId"
+    | "/admin/courses";
   id:
     | "__root__"
     | "/"
@@ -210,9 +232,11 @@ export interface FileRouteTypes {
     | "/admin/onboarding"
     | "/admin/"
     | "/platform-admin/"
+    | "/admin/courses/$courseId"
     | "/api/auth/$"
     | "/api/webhooks/stripe"
-    | "/platform-admin/tenants/$tenantId";
+    | "/platform-admin/tenants/$tenantId"
+    | "/admin/courses/";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
@@ -323,6 +347,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AdminOnboardingRouteImport;
       parentRoute: typeof AdminRouteRoute;
     };
+    "/admin/courses/": {
+      id: "/admin/courses/";
+      path: "/courses";
+      fullPath: "/admin/courses/";
+      preLoaderRoute: typeof AdminCoursesIndexRouteImport;
+      parentRoute: typeof AdminRouteRoute;
+    };
     "/platform-admin/tenants/$tenantId": {
       id: "/platform-admin/tenants/$tenantId";
       path: "/tenants/$tenantId";
@@ -344,17 +375,28 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof ApiAuthSplatRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    "/admin/courses/$courseId": {
+      id: "/admin/courses/$courseId";
+      path: "/courses/$courseId";
+      fullPath: "/admin/courses/$courseId";
+      preLoaderRoute: typeof AdminCoursesCourseIdRouteImport;
+      parentRoute: typeof AdminRouteRoute;
+    };
   }
 }
 
 interface AdminRouteRouteChildren {
   AdminOnboardingRoute: typeof AdminOnboardingRoute;
   AdminIndexRoute: typeof AdminIndexRoute;
+  AdminCoursesCourseIdRoute: typeof AdminCoursesCourseIdRoute;
+  AdminCoursesIndexRoute: typeof AdminCoursesIndexRoute;
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminOnboardingRoute: AdminOnboardingRoute,
   AdminIndexRoute: AdminIndexRoute,
+  AdminCoursesCourseIdRoute: AdminCoursesCourseIdRoute,
+  AdminCoursesIndexRoute: AdminCoursesIndexRoute,
 };
 
 const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(AdminRouteRouteChildren);
