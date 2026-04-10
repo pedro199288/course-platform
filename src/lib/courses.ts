@@ -5,6 +5,7 @@ import { db } from "#/db/index.ts";
 import { courses, modules, lessons } from "#/db/schema/index.ts";
 import type { LessonContent } from "#/lib/rich-text/types.ts";
 import { auth } from "./auth.ts";
+import { assertCanCreateCourse } from "./plans.ts";
 
 type SessionUser = { id: string; role: string; tenantId: string };
 
@@ -80,6 +81,9 @@ export const createCourseFn = createServerFn({ method: "POST" })
       columns: { id: true },
     });
     if (existing) throw new Error("A course with this slug already exists");
+
+    // Enforce plan constraints (max courses per tenant)
+    await assertCanCreateCourse(user.tenantId);
 
     const [course] = await db
       .insert(courses)
