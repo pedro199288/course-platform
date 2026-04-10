@@ -22,8 +22,12 @@ import { Route as IndexRouteImport } from "./routes/index";
 import { Route as PlatformAdminIndexRouteImport } from "./routes/platform-admin/index";
 import { Route as AdminIndexRouteImport } from "./routes/admin/index";
 import { Route as AdminOnboardingRouteImport } from "./routes/admin/onboarding";
+import { Route as PlatformAdminTenantsIndexRouteImport } from "./routes/platform-admin/tenants/index";
+import { Route as PlatformAdminPlansIndexRouteImport } from "./routes/platform-admin/plans/index";
 import { Route as AdminCoursesIndexRouteImport } from "./routes/admin/courses/index";
 import { Route as PlatformAdminTenantsTenantIdRouteImport } from "./routes/platform-admin/tenants/$tenantId";
+import { Route as PlatformAdminPlansNewRouteImport } from "./routes/platform-admin/plans/new";
+import { Route as PlatformAdminPlansPlanIdRouteImport } from "./routes/platform-admin/plans/$planId";
 import { Route as ApiWebhooksStripeRouteImport } from "./routes/api/webhooks/stripe";
 import { Route as ApiWebhooksBunnyRouteImport } from "./routes/api/webhooks/bunny";
 import { Route as ApiAuthSplatRouteImport } from "./routes/api/auth/$";
@@ -94,6 +98,16 @@ const AdminOnboardingRoute = AdminOnboardingRouteImport.update({
   path: "/onboarding",
   getParentRoute: () => AdminRouteRoute,
 } as any);
+const PlatformAdminTenantsIndexRoute = PlatformAdminTenantsIndexRouteImport.update({
+  id: "/tenants/",
+  path: "/tenants/",
+  getParentRoute: () => PlatformAdminRouteRoute,
+} as any);
+const PlatformAdminPlansIndexRoute = PlatformAdminPlansIndexRouteImport.update({
+  id: "/plans/",
+  path: "/plans/",
+  getParentRoute: () => PlatformAdminRouteRoute,
+} as any);
 const AdminCoursesIndexRoute = AdminCoursesIndexRouteImport.update({
   id: "/courses/",
   path: "/courses/",
@@ -102,6 +116,16 @@ const AdminCoursesIndexRoute = AdminCoursesIndexRouteImport.update({
 const PlatformAdminTenantsTenantIdRoute = PlatformAdminTenantsTenantIdRouteImport.update({
   id: "/tenants/$tenantId",
   path: "/tenants/$tenantId",
+  getParentRoute: () => PlatformAdminRouteRoute,
+} as any);
+const PlatformAdminPlansNewRoute = PlatformAdminPlansNewRouteImport.update({
+  id: "/plans/new",
+  path: "/plans/new",
+  getParentRoute: () => PlatformAdminRouteRoute,
+} as any);
+const PlatformAdminPlansPlanIdRoute = PlatformAdminPlansPlanIdRouteImport.update({
+  id: "/plans/$planId",
+  path: "/plans/$planId",
   getParentRoute: () => PlatformAdminRouteRoute,
 } as any);
 const ApiWebhooksStripeRoute = ApiWebhooksStripeRouteImport.update({
@@ -143,8 +167,12 @@ export interface FileRoutesByFullPath {
   "/api/auth/$": typeof ApiAuthSplatRoute;
   "/api/webhooks/bunny": typeof ApiWebhooksBunnyRoute;
   "/api/webhooks/stripe": typeof ApiWebhooksStripeRoute;
+  "/platform-admin/plans/$planId": typeof PlatformAdminPlansPlanIdRoute;
+  "/platform-admin/plans/new": typeof PlatformAdminPlansNewRoute;
   "/platform-admin/tenants/$tenantId": typeof PlatformAdminTenantsTenantIdRoute;
   "/admin/courses/": typeof AdminCoursesIndexRoute;
+  "/platform-admin/plans/": typeof PlatformAdminPlansIndexRoute;
+  "/platform-admin/tenants/": typeof PlatformAdminTenantsIndexRoute;
 }
 export interface FileRoutesByTo {
   "/": typeof IndexRoute;
@@ -162,8 +190,12 @@ export interface FileRoutesByTo {
   "/api/auth/$": typeof ApiAuthSplatRoute;
   "/api/webhooks/bunny": typeof ApiWebhooksBunnyRoute;
   "/api/webhooks/stripe": typeof ApiWebhooksStripeRoute;
+  "/platform-admin/plans/$planId": typeof PlatformAdminPlansPlanIdRoute;
+  "/platform-admin/plans/new": typeof PlatformAdminPlansNewRoute;
   "/platform-admin/tenants/$tenantId": typeof PlatformAdminTenantsTenantIdRoute;
   "/admin/courses": typeof AdminCoursesIndexRoute;
+  "/platform-admin/plans": typeof PlatformAdminPlansIndexRoute;
+  "/platform-admin/tenants": typeof PlatformAdminTenantsIndexRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
@@ -184,8 +216,12 @@ export interface FileRoutesById {
   "/api/auth/$": typeof ApiAuthSplatRoute;
   "/api/webhooks/bunny": typeof ApiWebhooksBunnyRoute;
   "/api/webhooks/stripe": typeof ApiWebhooksStripeRoute;
+  "/platform-admin/plans/$planId": typeof PlatformAdminPlansPlanIdRoute;
+  "/platform-admin/plans/new": typeof PlatformAdminPlansNewRoute;
   "/platform-admin/tenants/$tenantId": typeof PlatformAdminTenantsTenantIdRoute;
   "/admin/courses/": typeof AdminCoursesIndexRoute;
+  "/platform-admin/plans/": typeof PlatformAdminPlansIndexRoute;
+  "/platform-admin/tenants/": typeof PlatformAdminTenantsIndexRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
@@ -207,8 +243,12 @@ export interface FileRouteTypes {
     | "/api/auth/$"
     | "/api/webhooks/bunny"
     | "/api/webhooks/stripe"
+    | "/platform-admin/plans/$planId"
+    | "/platform-admin/plans/new"
     | "/platform-admin/tenants/$tenantId"
-    | "/admin/courses/";
+    | "/admin/courses/"
+    | "/platform-admin/plans/"
+    | "/platform-admin/tenants/";
   fileRoutesByTo: FileRoutesByTo;
   to:
     | "/"
@@ -226,8 +266,12 @@ export interface FileRouteTypes {
     | "/api/auth/$"
     | "/api/webhooks/bunny"
     | "/api/webhooks/stripe"
+    | "/platform-admin/plans/$planId"
+    | "/platform-admin/plans/new"
     | "/platform-admin/tenants/$tenantId"
-    | "/admin/courses";
+    | "/admin/courses"
+    | "/platform-admin/plans"
+    | "/platform-admin/tenants";
   id:
     | "__root__"
     | "/"
@@ -247,8 +291,12 @@ export interface FileRouteTypes {
     | "/api/auth/$"
     | "/api/webhooks/bunny"
     | "/api/webhooks/stripe"
+    | "/platform-admin/plans/$planId"
+    | "/platform-admin/plans/new"
     | "/platform-admin/tenants/$tenantId"
-    | "/admin/courses/";
+    | "/admin/courses/"
+    | "/platform-admin/plans/"
+    | "/platform-admin/tenants/";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
@@ -360,6 +408,20 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AdminOnboardingRouteImport;
       parentRoute: typeof AdminRouteRoute;
     };
+    "/platform-admin/tenants/": {
+      id: "/platform-admin/tenants/";
+      path: "/tenants";
+      fullPath: "/platform-admin/tenants/";
+      preLoaderRoute: typeof PlatformAdminTenantsIndexRouteImport;
+      parentRoute: typeof PlatformAdminRouteRoute;
+    };
+    "/platform-admin/plans/": {
+      id: "/platform-admin/plans/";
+      path: "/plans";
+      fullPath: "/platform-admin/plans/";
+      preLoaderRoute: typeof PlatformAdminPlansIndexRouteImport;
+      parentRoute: typeof PlatformAdminRouteRoute;
+    };
     "/admin/courses/": {
       id: "/admin/courses/";
       path: "/courses";
@@ -372,6 +434,20 @@ declare module "@tanstack/react-router" {
       path: "/tenants/$tenantId";
       fullPath: "/platform-admin/tenants/$tenantId";
       preLoaderRoute: typeof PlatformAdminTenantsTenantIdRouteImport;
+      parentRoute: typeof PlatformAdminRouteRoute;
+    };
+    "/platform-admin/plans/new": {
+      id: "/platform-admin/plans/new";
+      path: "/plans/new";
+      fullPath: "/platform-admin/plans/new";
+      preLoaderRoute: typeof PlatformAdminPlansNewRouteImport;
+      parentRoute: typeof PlatformAdminRouteRoute;
+    };
+    "/platform-admin/plans/$planId": {
+      id: "/platform-admin/plans/$planId";
+      path: "/plans/$planId";
+      fullPath: "/platform-admin/plans/$planId";
+      preLoaderRoute: typeof PlatformAdminPlansPlanIdRouteImport;
       parentRoute: typeof PlatformAdminRouteRoute;
     };
     "/api/webhooks/stripe": {
@@ -423,12 +499,20 @@ const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(AdminRouteR
 
 interface PlatformAdminRouteRouteChildren {
   PlatformAdminIndexRoute: typeof PlatformAdminIndexRoute;
+  PlatformAdminPlansPlanIdRoute: typeof PlatformAdminPlansPlanIdRoute;
+  PlatformAdminPlansNewRoute: typeof PlatformAdminPlansNewRoute;
   PlatformAdminTenantsTenantIdRoute: typeof PlatformAdminTenantsTenantIdRoute;
+  PlatformAdminPlansIndexRoute: typeof PlatformAdminPlansIndexRoute;
+  PlatformAdminTenantsIndexRoute: typeof PlatformAdminTenantsIndexRoute;
 }
 
 const PlatformAdminRouteRouteChildren: PlatformAdminRouteRouteChildren = {
   PlatformAdminIndexRoute: PlatformAdminIndexRoute,
+  PlatformAdminPlansPlanIdRoute: PlatformAdminPlansPlanIdRoute,
+  PlatformAdminPlansNewRoute: PlatformAdminPlansNewRoute,
   PlatformAdminTenantsTenantIdRoute: PlatformAdminTenantsTenantIdRoute,
+  PlatformAdminPlansIndexRoute: PlatformAdminPlansIndexRoute,
+  PlatformAdminTenantsIndexRoute: PlatformAdminTenantsIndexRoute,
 };
 
 const PlatformAdminRouteRouteWithChildren = PlatformAdminRouteRoute._addFileChildren(

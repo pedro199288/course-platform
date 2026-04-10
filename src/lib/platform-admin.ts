@@ -1,8 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-import { count, eq } from "drizzle-orm";
+import { count, eq, sql } from "drizzle-orm";
 import { db } from "#/db/index.ts";
-import { tenants, users, plans } from "#/db/schema/index.ts";
+import { courses, payments, tenants, users, plans } from "#/db/schema/index.ts";
 import { auth } from "./auth.ts";
 
 async function requirePlatformAdmin() {
@@ -104,3 +104,67 @@ export const updateTenantStatusFn = createServerFn({ method: "POST" })
 
     return { error: null };
   });
+
+export const updateTenantPlanFn = createServerFn({ method: "POST" })
+  .inputValidator((input: { tenantId: string; planId: string | null }) => input)
+  .handler(async ({ data }) => {
+    await requirePlatformAdmin();
+
+    const tenant = await db.query.tenants.findFirst({
+      where: eq(tenants.id, data.tenantId),
+      columns: { id: true },
+    });
+    if (!tenant) {
+      return { error: "Tenant not found" };
+    }
+
+    if (data.planId !== null) {
+      const plan = await db.query.plans.findFirst({
+        where: eq(plans.id, data.planId),
+        columns: { id: true },
+      });
+      if (!plan) {
+        return { error: "Plan not found" };
+      }
+    }
+
+    await db.update(tenants).set({ planId: data.planId }).where(eq(tenants.id, data.tenantId));
+
+    return { error: null };
+  });
+
+export const getPlatformMetricsFn = createServerFn({ method: "GET" }).handler(async () => {
+  await requirePlatformAdmin();
+
+  const [tenantCountRow] = await db.select({ total: count() }).from(tenants);
+  const [studentCountRow] = await db
+    .select({ total: count() })
+    .from(users)
+    .where(eq(users.role, "student"));
+  const [courseCountRow] = await db.select({ total: count() }).from(courses);
+  const [revenueRow] = await db
+    .select({ total: sql<string>`COALESCE(SUM(${payments.amount}), 0)` })
+    .from(payments);
+
+  const tenantsByStatus = await db
+    .select({ status: tenants.status, total: count() })
+    .from(tenants)
+    .groupBy(tenants.status);
+
+  const statusBreakdown: Record<"active" | "suspended" | "inactive", number> = {
+    active: 0,
+    suspended: 0,
+    inactive: 0,
+  };
+  for (const row of tenantsByStatus) {
+    statusBreakdown[row.status] = row.total;
+  }
+
+  return {
+    tenantCount: tenantCountRow?.total ?? 0,
+    studentCount: studentCountRow?.total ?? 0,
+    courseCount: courseCountRow?.total ?? 0,
+    totalRevenue: revenueRow?.total ?? "0",
+    tenantsByStatus: statusBreakdown,
+  };
+});

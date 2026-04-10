@@ -8,6 +8,7 @@ import { auditLogs } from "#/db/schema/audit-logs.ts";
 import { tenantIdStore } from "./tenant-context.ts";
 import { sendEmail } from "./email.ts";
 import { renderVerifyEmail, renderResetPassword } from "./email-templates/index.ts";
+import { assertCanAddStudent } from "./plans.ts";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -32,11 +33,16 @@ export const auth = betterAuth({
         before: async (user) => {
           const tenantId = tenantIdStore.getStore();
           if (tenantId) {
+            const role = (user as { role?: string }).role || "student";
+            // Enforce plan student cap for student signups
+            if (role === "student") {
+              await assertCanAddStudent(tenantId);
+            }
             return {
               data: {
                 ...user,
                 tenantId,
-                role: user.role || "student",
+                role,
               },
             };
           }
@@ -196,9 +202,7 @@ export const auth = betterAuth({
  * since API methods also await the same promise (and .then() is registered first).
  */
 (auth.$context as Promise<any>).then((ctx: any) => {
-  const originalFindUserByEmail = ctx.internalAdapter.findUserByEmail.bind(
-    ctx.internalAdapter,
-  );
+  const originalFindUserByEmail = ctx.internalAdapter.findUserByEmail.bind(ctx.internalAdapter);
 
   ctx.internalAdapter.findUserByEmail = async (
     email: string,
@@ -208,10 +212,7 @@ export const auth = betterAuth({
     if (!tenantId) return originalFindUserByEmail(email, options);
 
     const user = await db.query.users.findFirst({
-      where: and(
-        eq(schema.users.email, email.toLowerCase()),
-        eq(schema.users.tenantId, tenantId),
-      ),
+      where: and(eq(schema.users.email, email.toLowerCase()), eq(schema.users.tenantId, tenantId)),
     });
     if (!user) return null;
 
