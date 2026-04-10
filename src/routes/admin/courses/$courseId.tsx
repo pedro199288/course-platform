@@ -3,6 +3,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { and, asc, eq } from "drizzle-orm";
 import { useState } from "react";
+import { RichTextEditor } from "#/components/RichTextEditor.tsx";
+import { RichTextViewer } from "#/components/RichTextViewer.tsx";
 import { db } from "#/db/index.ts";
 import { courses, modules, lessons } from "#/db/schema/index.ts";
 import { auth } from "#/lib/auth.ts";
@@ -12,9 +14,11 @@ import {
   deleteModuleFn,
   reorderModulesFn,
   createLessonFn,
+  updateLessonFn,
   deleteLessonFn,
   reorderLessonsFn,
 } from "#/lib/courses.ts";
+import { emptyRichTextDoc, isRichTextDoc, type RichTextDoc } from "#/lib/rich-text/types.ts";
 
 type Module = typeof modules.$inferSelect;
 type Lesson = typeof lessons.$inferSelect;
@@ -71,7 +75,15 @@ function CourseDetailPage() {
   // Lesson creation per module
   const [addingLessonFor, setAddingLessonFor] = useState<string | null>(null);
   const [newLessonTitle, setNewLessonTitle] = useState("");
-  const [newLessonContent, setNewLessonContent] = useState("");
+  const [newLessonContent, setNewLessonContent] = useState<RichTextDoc>(emptyRichTextDoc());
+
+  // Lesson edit state (by lesson id)
+  const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
+  const [editLessonTitle, setEditLessonTitle] = useState("");
+  const [editLessonContent, setEditLessonContent] = useState<RichTextDoc>(emptyRichTextDoc());
+
+  // Preview expansion (by lesson id)
+  const [expandedLessonIds, setExpandedLessonIds] = useState<Set<string>>(new Set());
 
   async function handleUpdateCourse() {
     const updated = await updateCourseFn({
@@ -114,6 +126,12 @@ function CourseDetailPage() {
     });
   }
 
+  function openLessonForm(moduleId: string) {
+    setAddingLessonFor(moduleId);
+    setNewLessonTitle("");
+    setNewLessonContent(emptyRichTextDoc());
+  }
+
   async function handleAddLesson(moduleId: string, e: React.FormEvent) {
     e.preventDefault();
     if (!newLessonTitle.trim()) return;
@@ -122,7 +140,7 @@ function CourseDetailPage() {
         moduleId,
         title: newLessonTitle,
         type: "text",
-        content: newLessonContent ? { text: newLessonContent } : undefined,
+        content: newLessonContent,
       },
     });
     setLessonMap((prev) => ({
@@ -130,8 +148,34 @@ function CourseDetailPage() {
       [moduleId]: [...(prev[moduleId] || []), lesson],
     }));
     setNewLessonTitle("");
-    setNewLessonContent("");
+    setNewLessonContent(emptyRichTextDoc());
     setAddingLessonFor(null);
+  }
+
+  function openLessonEditor(lesson: Lesson) {
+    setEditingLessonId(lesson.id);
+    setEditLessonTitle(lesson.title);
+    setEditLessonContent(isRichTextDoc(lesson.content) ? lesson.content : emptyRichTextDoc());
+  }
+
+  async function handleSaveLessonEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingLessonId) return;
+    const updated = await updateLessonFn({
+      data: {
+        lessonId: editingLessonId,
+        title: editLessonTitle,
+        content: editLessonContent,
+      },
+    });
+    setLessonMap((prev) => {
+      const next: Record<string, Lesson[]> = {};
+      for (const [mid, list] of Object.entries(prev)) {
+        next[mid] = list.map((l) => (l.id === updated.id ? updated : l));
+      }
+      return next;
+    });
+    setEditingLessonId(null);
   }
 
   async function handleDeleteLesson(lessonId: string, moduleId: string) {
@@ -141,6 +185,15 @@ function CourseDetailPage() {
       ...prev,
       [moduleId]: (prev[moduleId] || []).filter((l) => l.id !== lessonId),
     }));
+  }
+
+  function toggleLessonPreview(lessonId: string) {
+    setExpandedLessonIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(lessonId)) next.delete(lessonId);
+      else next.add(lessonId);
+      return next;
+    });
   }
 
   async function handleMoveModule(moduleId: string, direction: "up" | "down") {
@@ -337,11 +390,9 @@ function CourseDetailPage() {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setAddingLessonFor(addingLessonFor === mod.id ? null : mod.id);
-                    setNewLessonTitle("");
-                    setNewLessonContent("");
-                  }}
+                  onClick={() =>
+                    addingLessonFor === mod.id ? setAddingLessonFor(null) : openLessonForm(mod.id)
+                  }
                   className="rounded-md border border-neutral-300 px-3 py-1 text-xs font-medium hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
                 >
                   Add Lesson
@@ -363,44 +414,109 @@ function CourseDetailPage() {
                 <ul className="space-y-2">
                   {(lessonMap[mod.id] || []).map((lesson, lessonIndex) => {
                     const lessonsForMod = lessonMap[mod.id] || [];
+                    const isEditing = editingLessonId === lesson.id;
+                    const isExpanded = expandedLessonIds.has(lesson.id);
                     return (
                       <li
                         key={lesson.id}
-                        className="flex items-center justify-between rounded-md border border-neutral-100 p-3 dark:border-neutral-800"
+                        className="rounded-md border border-neutral-100 p-3 dark:border-neutral-800"
                       >
-                        <div className="flex items-center gap-2">
-                          <div className="flex flex-col">
-                            <button
-                              type="button"
-                              aria-label={`Move lesson ${lesson.title} up`}
-                              onClick={() => handleMoveLesson(mod.id, lesson.id, "up")}
-                              disabled={lessonIndex === 0}
-                              className="px-1 text-xs text-neutral-500 hover:text-neutral-900 disabled:opacity-30 disabled:hover:text-neutral-500 dark:hover:text-neutral-100"
-                            >
-                              ▲
-                            </button>
-                            <button
-                              type="button"
-                              aria-label={`Move lesson ${lesson.title} down`}
-                              onClick={() => handleMoveLesson(mod.id, lesson.id, "down")}
-                              disabled={lessonIndex === lessonsForMod.length - 1}
-                              className="px-1 text-xs text-neutral-500 hover:text-neutral-900 disabled:opacity-30 disabled:hover:text-neutral-500 dark:hover:text-neutral-100"
-                            >
-                              ▼
-                            </button>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="flex flex-col">
+                              <button
+                                type="button"
+                                aria-label={`Move lesson ${lesson.title} up`}
+                                onClick={() => handleMoveLesson(mod.id, lesson.id, "up")}
+                                disabled={lessonIndex === 0}
+                                className="px-1 text-xs text-neutral-500 hover:text-neutral-900 disabled:opacity-30 disabled:hover:text-neutral-500 dark:hover:text-neutral-100"
+                              >
+                                ▲
+                              </button>
+                              <button
+                                type="button"
+                                aria-label={`Move lesson ${lesson.title} down`}
+                                onClick={() => handleMoveLesson(mod.id, lesson.id, "down")}
+                                disabled={lessonIndex === lessonsForMod.length - 1}
+                                className="px-1 text-xs text-neutral-500 hover:text-neutral-900 disabled:opacity-30 disabled:hover:text-neutral-500 dark:hover:text-neutral-100"
+                              >
+                                ▼
+                              </button>
+                            </div>
+                            <div>
+                              <span className="text-sm font-medium">{lesson.title}</span>
+                              <span className="ml-2 text-xs text-neutral-400">{lesson.type}</span>
+                            </div>
                           </div>
-                          <div>
-                            <span className="text-sm font-medium">{lesson.title}</span>
-                            <span className="ml-2 text-xs text-neutral-400">{lesson.type}</span>
+                          <div className="flex gap-2 text-xs">
+                            {lesson.type === "text" && !isEditing && (
+                              <button
+                                type="button"
+                                onClick={() => toggleLessonPreview(lesson.id)}
+                                className="text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+                              >
+                                {isExpanded ? "Hide" : "Preview"}
+                              </button>
+                            )}
+                            {lesson.type === "text" && !isEditing && (
+                              <button
+                                type="button"
+                                onClick={() => openLessonEditor(lesson)}
+                                className="text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+                              >
+                                Edit
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteLesson(lesson.id, mod.id)}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              Delete
+                            </button>
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteLesson(lesson.id, mod.id)}
-                          className="text-xs text-red-500 hover:text-red-700"
-                        >
-                          Delete
-                        </button>
+
+                        {isEditing ? (
+                          <form onSubmit={handleSaveLessonEdit} className="mt-3 space-y-2">
+                            <input
+                              type="text"
+                              value={editLessonTitle}
+                              onChange={(e) => setEditLessonTitle(e.target.value)}
+                              placeholder="Lesson title"
+                              required
+                              className="w-full rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm dark:border-neutral-700"
+                            />
+                            <RichTextEditor
+                              value={editLessonContent}
+                              onChange={setEditLessonContent}
+                              ariaLabel="Lesson content"
+                              placeholder="Write the lesson content…"
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                type="submit"
+                                className="rounded-md bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900"
+                              >
+                                Save
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingLessonId(null)}
+                                className="rounded-md border border-neutral-300 px-3 py-1.5 text-xs font-medium dark:border-neutral-700"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </form>
+                        ) : (
+                          isExpanded &&
+                          lesson.type === "text" && (
+                            <div className="mt-3 rounded-md border border-neutral-100 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-950">
+                              <RichTextViewer content={lesson.content} />
+                            </div>
+                          )
+                        )}
                       </li>
                     );
                   })}
@@ -417,12 +533,11 @@ function CourseDetailPage() {
                     required
                     className="w-full rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm dark:border-neutral-700"
                   />
-                  <textarea
+                  <RichTextEditor
                     value={newLessonContent}
-                    onChange={(e) => setNewLessonContent(e.target.value)}
-                    placeholder="Lesson content (plain text)"
-                    rows={3}
-                    className="w-full rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm dark:border-neutral-700"
+                    onChange={setNewLessonContent}
+                    ariaLabel="Lesson content"
+                    placeholder="Write the lesson content…"
                   />
                   <div className="flex gap-2">
                     <button

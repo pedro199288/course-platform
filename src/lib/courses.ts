@@ -3,6 +3,7 @@ import { getRequest } from "@tanstack/react-start/server";
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "#/db/index.ts";
 import { courses, modules, lessons } from "#/db/schema/index.ts";
+import type { LessonContent } from "#/lib/rich-text/types.ts";
 import { auth } from "./auth.ts";
 
 type SessionUser = { id: string; role: string; tenantId: string };
@@ -349,7 +350,7 @@ export const createLessonFn = createServerFn({ method: "POST" })
       moduleId: string;
       title: string;
       type?: "video" | "text" | "quiz" | "file";
-      content?: Record<string, string> | null;
+      content?: LessonContent;
       position?: number;
     }) => input,
   )
@@ -400,7 +401,7 @@ export const updateLessonFn = createServerFn({ method: "POST" })
       lessonId: string;
       title?: string;
       type?: "video" | "text" | "quiz" | "file";
-      content?: Record<string, string> | null;
+      content?: LessonContent;
       position?: number;
     }) => input,
   )
