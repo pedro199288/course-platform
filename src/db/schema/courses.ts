@@ -9,6 +9,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { LessonContent } from "#/lib/rich-text/types.ts";
 import { tenants } from "./tenants.ts";
 
 export const courseStatus = pgEnum("course_status", ["draft", "published"]);
@@ -78,7 +79,7 @@ export const lessons = pgTable(
       .references(() => modules.id, { onDelete: "cascade" }),
     title: text().notNull(),
     type: lessonType().notNull().default("text"),
-    content: jsonb().$type<Record<string, string> | null>(),
+    content: jsonb().$type<LessonContent>(),
     videoProviderId: text("video_provider_id"),
     videoUploadStatus: videoUploadStatus("video_upload_status"),
     fileUrl: text("file_url"),
