@@ -29,6 +29,13 @@
       "when": 1775595768245,
       "tag": "0003_square_warbird",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1775770195968,
+      "tag": "0004_lowly_wendell_rand",
+      "breakpoints": true
     }
   ]
 }

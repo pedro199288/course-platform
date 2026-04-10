@@ -25,6 +25,7 @@ import { Route as AdminOnboardingRouteImport } from "./routes/admin/onboarding";
 import { Route as AdminCoursesIndexRouteImport } from "./routes/admin/courses/index";
 import { Route as PlatformAdminTenantsTenantIdRouteImport } from "./routes/platform-admin/tenants/$tenantId";
 import { Route as ApiWebhooksStripeRouteImport } from "./routes/api/webhooks/stripe";
+import { Route as ApiWebhooksBunnyRouteImport } from "./routes/api/webhooks/bunny";
 import { Route as ApiAuthSplatRouteImport } from "./routes/api/auth/$";
 import { Route as AdminCoursesCourseIdRouteImport } from "./routes/admin/courses/$courseId";
 
@@ -108,6 +109,11 @@ const ApiWebhooksStripeRoute = ApiWebhooksStripeRouteImport.update({
   path: "/api/webhooks/stripe",
   getParentRoute: () => rootRouteImport,
 } as any);
+const ApiWebhooksBunnyRoute = ApiWebhooksBunnyRouteImport.update({
+  id: "/api/webhooks/bunny",
+  path: "/api/webhooks/bunny",
+  getParentRoute: () => rootRouteImport,
+} as any);
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: "/api/auth/$",
   path: "/api/auth/$",
@@ -135,6 +141,7 @@ export interface FileRoutesByFullPath {
   "/platform-admin/": typeof PlatformAdminIndexRoute;
   "/admin/courses/$courseId": typeof AdminCoursesCourseIdRoute;
   "/api/auth/$": typeof ApiAuthSplatRoute;
+  "/api/webhooks/bunny": typeof ApiWebhooksBunnyRoute;
   "/api/webhooks/stripe": typeof ApiWebhooksStripeRoute;
   "/platform-admin/tenants/$tenantId": typeof PlatformAdminTenantsTenantIdRoute;
   "/admin/courses/": typeof AdminCoursesIndexRoute;
@@ -153,6 +160,7 @@ export interface FileRoutesByTo {
   "/platform-admin": typeof PlatformAdminIndexRoute;
   "/admin/courses/$courseId": typeof AdminCoursesCourseIdRoute;
   "/api/auth/$": typeof ApiAuthSplatRoute;
+  "/api/webhooks/bunny": typeof ApiWebhooksBunnyRoute;
   "/api/webhooks/stripe": typeof ApiWebhooksStripeRoute;
   "/platform-admin/tenants/$tenantId": typeof PlatformAdminTenantsTenantIdRoute;
   "/admin/courses": typeof AdminCoursesIndexRoute;
@@ -174,6 +182,7 @@ export interface FileRoutesById {
   "/platform-admin/": typeof PlatformAdminIndexRoute;
   "/admin/courses/$courseId": typeof AdminCoursesCourseIdRoute;
   "/api/auth/$": typeof ApiAuthSplatRoute;
+  "/api/webhooks/bunny": typeof ApiWebhooksBunnyRoute;
   "/api/webhooks/stripe": typeof ApiWebhooksStripeRoute;
   "/platform-admin/tenants/$tenantId": typeof PlatformAdminTenantsTenantIdRoute;
   "/admin/courses/": typeof AdminCoursesIndexRoute;
@@ -196,6 +205,7 @@ export interface FileRouteTypes {
     | "/platform-admin/"
     | "/admin/courses/$courseId"
     | "/api/auth/$"
+    | "/api/webhooks/bunny"
     | "/api/webhooks/stripe"
     | "/platform-admin/tenants/$tenantId"
     | "/admin/courses/";
@@ -214,6 +224,7 @@ export interface FileRouteTypes {
     | "/platform-admin"
     | "/admin/courses/$courseId"
     | "/api/auth/$"
+    | "/api/webhooks/bunny"
     | "/api/webhooks/stripe"
     | "/platform-admin/tenants/$tenantId"
     | "/admin/courses";
@@ -234,6 +245,7 @@ export interface FileRouteTypes {
     | "/platform-admin/"
     | "/admin/courses/$courseId"
     | "/api/auth/$"
+    | "/api/webhooks/bunny"
     | "/api/webhooks/stripe"
     | "/platform-admin/tenants/$tenantId"
     | "/admin/courses/";
@@ -251,6 +263,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute;
   VerifyEmailRoute: typeof VerifyEmailRoute;
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute;
+  ApiWebhooksBunnyRoute: typeof ApiWebhooksBunnyRoute;
   ApiWebhooksStripeRoute: typeof ApiWebhooksStripeRoute;
 }
 
@@ -368,6 +381,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof ApiWebhooksStripeRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    "/api/webhooks/bunny": {
+      id: "/api/webhooks/bunny";
+      path: "/api/webhooks/bunny";
+      fullPath: "/api/webhooks/bunny";
+      preLoaderRoute: typeof ApiWebhooksBunnyRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     "/api/auth/$": {
       id: "/api/auth/$";
       path: "/api/auth/$";
@@ -427,6 +447,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiWebhooksBunnyRoute: ApiWebhooksBunnyRoute,
   ApiWebhooksStripeRoute: ApiWebhooksStripeRoute,
 };
 export const routeTree = rootRouteImport

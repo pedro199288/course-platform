@@ -17,6 +17,14 @@ export const pricingModel = pgEnum("pricing_model", ["one_time", "subscription",
 
 export const lessonType = pgEnum("lesson_type", ["video", "text", "quiz", "file"]);
 
+export const videoUploadStatus = pgEnum("video_upload_status", [
+  "pending",
+  "uploading",
+  "processing",
+  "ready",
+  "failed",
+]);
+
 export const courses = pgTable(
   "courses",
   {
@@ -72,6 +80,7 @@ export const lessons = pgTable(
     type: lessonType().notNull().default("text"),
     content: jsonb().$type<Record<string, string> | null>(),
     videoProviderId: text("video_provider_id"),
+    videoUploadStatus: videoUploadStatus("video_upload_status"),
     fileUrl: text("file_url"),
     position: integer().notNull().default(0),
     createdAt: timestamp("created_at").defaultNow().notNull(),

@@ -1,0 +1,2 @@
+CREATE TYPE "public"."video_upload_status" AS ENUM('pending', 'uploading', 'processing', 'ready', 'failed');--> statement-breakpoint
+ALTER TABLE "lessons" ADD COLUMN "video_upload_status" "video_upload_status";
