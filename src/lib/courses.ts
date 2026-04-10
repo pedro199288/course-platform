@@ -272,6 +272,53 @@ export const deleteModuleFn = createServerFn({ method: "POST" })
     return { success: true };
   });
 
+export const reorderModulesFn = createServerFn({ method: "POST" })
+  .inputValidator((input: { courseId: string; moduleIds: string[] }) => input)
+  .handler(async ({ data }) => {
+    const user = await requireInstructor();
+
+    // Verify course ownership
+    const course = await db.query.courses.findFirst({
+      where: and(eq(courses.id, data.courseId), eq(courses.tenantId, user.tenantId)),
+      columns: { id: true },
+    });
+    if (!course) throw new Error("Course not found");
+
+    if (data.moduleIds.length === 0) return [];
+
+    // Verify all modules belong to this course and that the input
+    // represents the complete set (no partial reorders that would leave
+    // gaps or phantom entries)
+    const existing = await db.query.modules.findMany({
+      where: eq(modules.courseId, data.courseId),
+      columns: { id: true },
+    });
+
+    if (existing.length !== data.moduleIds.length) {
+      throw new Error("Module list does not match course modules");
+    }
+    const existingIds = new Set(existing.map((m) => m.id));
+    for (const id of data.moduleIds) {
+      if (!existingIds.has(id)) {
+        throw new Error("Module list does not match course modules");
+      }
+    }
+
+    // Atomic update: set each module's position to its index in the list
+    const reordered = await db.transaction(async (tx) => {
+      for (let i = 0; i < data.moduleIds.length; i++) {
+        await tx.update(modules).set({ position: i }).where(eq(modules.id, data.moduleIds[i]));
+      }
+
+      return tx.query.modules.findMany({
+        where: eq(modules.courseId, data.courseId),
+        orderBy: [asc(modules.position)],
+      });
+    });
+
+    return reordered;
+  });
+
 // ── Lessons ──────────────────────────────────────────────────────────
 
 export const listLessonsFn = createServerFn({ method: "GET" })
@@ -415,4 +462,55 @@ export const deleteLessonFn = createServerFn({ method: "POST" })
 
     await db.delete(lessons).where(eq(lessons.id, data.lessonId));
     return { success: true };
+  });
+
+export const reorderLessonsFn = createServerFn({ method: "POST" })
+  .inputValidator((input: { moduleId: string; lessonIds: string[] }) => input)
+  .handler(async ({ data }) => {
+    const user = await requireInstructor();
+
+    // Verify module → course → tenant chain
+    const mod = await db.query.modules.findFirst({
+      where: eq(modules.id, data.moduleId),
+    });
+    if (!mod) throw new Error("Module not found");
+
+    const course = await db.query.courses.findFirst({
+      where: and(eq(courses.id, mod.courseId), eq(courses.tenantId, user.tenantId)),
+      columns: { id: true },
+    });
+    if (!course) throw new Error("Module not found");
+
+    if (data.lessonIds.length === 0) return [];
+
+    // Verify all lessons belong to this module and that the input
+    // represents the complete set
+    const existing = await db.query.lessons.findMany({
+      where: eq(lessons.moduleId, data.moduleId),
+      columns: { id: true },
+    });
+
+    if (existing.length !== data.lessonIds.length) {
+      throw new Error("Lesson list does not match module lessons");
+    }
+    const existingIds = new Set(existing.map((l) => l.id));
+    for (const id of data.lessonIds) {
+      if (!existingIds.has(id)) {
+        throw new Error("Lesson list does not match module lessons");
+      }
+    }
+
+    // Atomic update: set each lesson's position to its index in the list
+    const reordered = await db.transaction(async (tx) => {
+      for (let i = 0; i < data.lessonIds.length; i++) {
+        await tx.update(lessons).set({ position: i }).where(eq(lessons.id, data.lessonIds[i]));
+      }
+
+      return tx.query.lessons.findMany({
+        where: eq(lessons.moduleId, data.moduleId),
+        orderBy: [asc(lessons.position)],
+      });
+    });
+
+    return reordered;
   });

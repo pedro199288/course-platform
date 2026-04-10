@@ -12,9 +12,11 @@ import {
   updateCourseFn,
   createModuleFn,
   deleteModuleFn,
+  reorderModulesFn,
   createLessonFn,
   updateLessonFn,
   deleteLessonFn,
+  reorderLessonsFn,
 } from "#/lib/courses.ts";
 import { emptyRichTextDoc, isRichTextDoc, type RichTextDoc } from "#/lib/rich-text/types.ts";
 
@@ -194,6 +196,59 @@ function CourseDetailPage() {
     });
   }
 
+  async function handleMoveModule(moduleId: string, direction: "up" | "down") {
+    const currentIndex = moduleList.findIndex((m) => m.id === moduleId);
+    if (currentIndex === -1) return;
+    const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= moduleList.length) return;
+
+    const reordered = [...moduleList];
+    [reordered[currentIndex], reordered[targetIndex]] = [
+      reordered[targetIndex],
+      reordered[currentIndex],
+    ];
+
+    // Optimistic update
+    setModuleList(reordered);
+    try {
+      const updated = await reorderModulesFn({
+        data: { courseId: course.id, moduleIds: reordered.map((m) => m.id) },
+      });
+      setModuleList(updated);
+    } catch (err) {
+      // Revert on error
+      setModuleList(moduleList);
+      alert(err instanceof Error ? err.message : "Failed to reorder modules");
+    }
+  }
+
+  async function handleMoveLesson(moduleId: string, lessonId: string, direction: "up" | "down") {
+    const current = lessonMap[moduleId] || [];
+    const currentIndex = current.findIndex((l) => l.id === lessonId);
+    if (currentIndex === -1) return;
+    const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= current.length) return;
+
+    const reordered = [...current];
+    [reordered[currentIndex], reordered[targetIndex]] = [
+      reordered[targetIndex],
+      reordered[currentIndex],
+    ];
+
+    // Optimistic update
+    setLessonMap((prev) => ({ ...prev, [moduleId]: reordered }));
+    try {
+      const updated = await reorderLessonsFn({
+        data: { moduleId, lessonIds: reordered.map((l) => l.id) },
+      });
+      setLessonMap((prev) => ({ ...prev, [moduleId]: updated }));
+    } catch (err) {
+      // Revert on error
+      setLessonMap((prev) => ({ ...prev, [moduleId]: current }));
+      alert(err instanceof Error ? err.message : "Failed to reorder lessons");
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400">
@@ -303,13 +358,35 @@ function CourseDetailPage() {
       <div className="space-y-4">
         <h2 className="text-lg font-semibold">Modules</h2>
 
-        {moduleList.map((mod) => (
+        {moduleList.map((mod, modIndex) => (
           <div
             key={mod.id}
             className="rounded-lg border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
           >
             <div className="flex items-center justify-between border-b border-neutral-200 p-4 dark:border-neutral-800">
-              <h3 className="font-medium">{mod.title}</h3>
+              <div className="flex items-center gap-2">
+                <div className="flex flex-col">
+                  <button
+                    type="button"
+                    aria-label={`Move module ${mod.title} up`}
+                    onClick={() => handleMoveModule(mod.id, "up")}
+                    disabled={modIndex === 0}
+                    className="px-1 text-xs text-neutral-500 hover:text-neutral-900 disabled:opacity-30 disabled:hover:text-neutral-500 dark:hover:text-neutral-100"
+                  >
+                    ▲
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Move module ${mod.title} down`}
+                    onClick={() => handleMoveModule(mod.id, "down")}
+                    disabled={modIndex === moduleList.length - 1}
+                    className="px-1 text-xs text-neutral-500 hover:text-neutral-900 disabled:opacity-30 disabled:hover:text-neutral-500 dark:hover:text-neutral-100"
+                  >
+                    ▼
+                  </button>
+                </div>
+                <h3 className="font-medium">{mod.title}</h3>
+              </div>
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -335,7 +412,8 @@ function CourseDetailPage() {
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">No lessons yet.</p>
               ) : (
                 <ul className="space-y-2">
-                  {(lessonMap[mod.id] || []).map((lesson) => {
+                  {(lessonMap[mod.id] || []).map((lesson, lessonIndex) => {
+                    const lessonsForMod = lessonMap[mod.id] || [];
                     const isEditing = editingLessonId === lesson.id;
                     const isExpanded = expandedLessonIds.has(lesson.id);
                     return (
@@ -344,9 +422,31 @@ function CourseDetailPage() {
                         className="rounded-md border border-neutral-100 p-3 dark:border-neutral-800"
                       >
                         <div className="flex items-center justify-between">
-                          <div>
-                            <span className="text-sm font-medium">{lesson.title}</span>
-                            <span className="ml-2 text-xs text-neutral-400">{lesson.type}</span>
+                          <div className="flex items-center gap-2">
+                            <div className="flex flex-col">
+                              <button
+                                type="button"
+                                aria-label={`Move lesson ${lesson.title} up`}
+                                onClick={() => handleMoveLesson(mod.id, lesson.id, "up")}
+                                disabled={lessonIndex === 0}
+                                className="px-1 text-xs text-neutral-500 hover:text-neutral-900 disabled:opacity-30 disabled:hover:text-neutral-500 dark:hover:text-neutral-100"
+                              >
+                                ▲
+                              </button>
+                              <button
+                                type="button"
+                                aria-label={`Move lesson ${lesson.title} down`}
+                                onClick={() => handleMoveLesson(mod.id, lesson.id, "down")}
+                                disabled={lessonIndex === lessonsForMod.length - 1}
+                                className="px-1 text-xs text-neutral-500 hover:text-neutral-900 disabled:opacity-30 disabled:hover:text-neutral-500 dark:hover:text-neutral-100"
+                              >
+                                ▼
+                              </button>
+                            </div>
+                            <div>
+                              <span className="text-sm font-medium">{lesson.title}</span>
+                              <span className="ml-2 text-xs text-neutral-400">{lesson.type}</span>
+                            </div>
                           </div>
                           <div className="flex gap-2 text-xs">
                             {lesson.type === "text" && !isEditing && (
