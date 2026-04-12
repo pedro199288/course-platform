@@ -1,14 +1,22 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { getInstructorDashboardFn, type DashboardMetrics } from "#/lib/instructor-dashboard-actions.ts";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { useState } from "react";
+import { getInstructorDashboardFn } from "#/lib/instructor-dashboard-actions.ts";
+import { getSubscriptionPriceFn, setSubscriptionPriceFn } from "#/lib/checkout-actions.ts";
 
 export const Route = createFileRoute("/admin/")({
-  loader: () => getInstructorDashboardFn(),
+  loader: async () => {
+    const [metrics, subscriptionPricing] = await Promise.all([
+      getInstructorDashboardFn(),
+      getSubscriptionPriceFn(),
+    ]);
+    return { ...metrics, subscriptionPricing };
+  },
   component: AdminDashboard,
 });
 
 function AdminDashboard() {
   const { user } = Route.useRouteContext();
-  const metrics = Route.useLoaderData();
+  const { subscriptionPricing, ...metrics } = Route.useLoaderData();
 
   return (
     <div className="space-y-6">
@@ -116,6 +124,9 @@ function AdminDashboard() {
         </div>
       )}
 
+      {/* Subscription Pricing */}
+      <SubscriptionPricing currentPrice={subscriptionPricing.subscriptionPrice} />
+
       {/* Empty state */}
       {metrics.totalCourses === 0 && (
         <div className="rounded-lg border border-dashed border-neutral-300 p-8 text-center dark:border-neutral-700">
@@ -127,6 +138,69 @@ function AdminDashboard() {
           </p>
         </div>
       )}
+    </div>
+  );
+}
+
+function SubscriptionPricing({ currentPrice }: { currentPrice: string | null }) {
+  const router = useRouter();
+  const [price, setPrice] = useState(currentPrice ?? "");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setSaved(false);
+    try {
+      await setSubscriptionPriceFn({
+        data: { price: price.trim() || null },
+      });
+      setSaved(true);
+      void router.invalidate();
+    } catch {
+      alert("Failed to save subscription price");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div>
+      <h2 className="text-lg font-semibold">Subscription Pricing</h2>
+      <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+        Set a monthly price for students to access all your courses. Leave empty to disable subscriptions.
+      </p>
+      <form onSubmit={(e) => void handleSave(e)} className="mt-3 flex items-end gap-3">
+        <div className="space-y-1.5">
+          <label htmlFor="subscriptionPrice" className="block text-sm font-medium">
+            Monthly price (USD)
+          </label>
+          <div className="flex items-center">
+            <span className="mr-1 text-sm text-neutral-500">$</span>
+            <input
+              id="subscriptionPrice"
+              type="number"
+              step="0.01"
+              min="0"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder="0.00"
+              className="w-32 rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 dark:border-neutral-700 dark:bg-neutral-900"
+            />
+          </div>
+        </div>
+        <button
+          type="submit"
+          disabled={saving}
+          className="rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
+        >
+          {saving ? "Saving..." : "Save"}
+        </button>
+        {saved && (
+          <span className="text-sm text-green-600 dark:text-green-400">Saved</span>
+        )}
+      </form>
     </div>
   );
 }

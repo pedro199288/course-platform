@@ -23,6 +23,7 @@ async function requireTenant() {
       name: true,
       subdomain: true,
       stripeConnectAccountId: true,
+      subscriptionPrice: true,
     },
   });
   if (!tenant) throw new Error("Tenant not found");

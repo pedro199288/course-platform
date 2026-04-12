@@ -2,7 +2,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { getCourseBySlugFn } from "#/lib/storefront-actions.ts";
 import { getSessionFn } from "#/lib/auth-session.ts";
-import { createCheckoutSessionFn } from "#/lib/checkout-actions.ts";
+import {
+  createCheckoutSessionFn,
+  createSubscriptionCheckoutFn,
+  getSubscriptionStatusFn,
+} from "#/lib/checkout-actions.ts";
 import { checkEnrollmentFn } from "#/lib/lesson-actions.ts";
 
 export const Route = createFileRoute("/courses/$courseSlug")({
@@ -11,16 +15,21 @@ export const Route = createFileRoute("/courses/$courseSlug")({
       getCourseBySlugFn({ data: { slug: params.courseSlug } }),
       getSessionFn().catch(() => null),
     ]);
-    const enrollment = session
-      ? await checkEnrollmentFn({ data: { courseSlug: params.courseSlug } }).catch(() => ({ enrolled: false }))
-      : { enrolled: false };
-    return { ...data, session, enrolled: enrollment.enrolled };
+    const [enrollment, subscriptionStatus] = session
+      ? await Promise.all([
+          checkEnrollmentFn({ data: { courseSlug: params.courseSlug } }).catch(() => ({ enrolled: false })),
+          getSubscriptionStatusFn().catch(() => ({ hasSubscription: false as const })),
+        ])
+      : [{ enrolled: false }, { hasSubscription: false as const }];
+    return { ...data, session, enrolled: enrollment.enrolled, subscriptionStatus };
   },
   component: CourseDetailPage,
 });
 
 function CourseDetailPage() {
-  const { tenant, course, curriculum, session, enrolled } = Route.useLoaderData();
+  const { tenant, course, curriculum, session, enrolled, subscriptionStatus } = Route.useLoaderData();
+  const hasActiveSubscription = subscriptionStatus.hasSubscription && "status" in subscriptionStatus && subscriptionStatus.status === "active";
+  const hasAccess = enrolled || hasActiveSubscription;
   const totalLessons = curriculum.reduce(
     (sum, mod) => sum + mod.lessons.length,
     0,
@@ -94,7 +103,7 @@ function CourseDetailPage() {
                             className="flex items-center gap-3 px-4 py-2.5 text-sm"
                           >
                             <LessonIcon type={lesson.type} />
-                            {enrolled ? (
+                            {hasAccess ? (
                               <Link
                                 to="/courses/$courseSlug/lessons/$lessonId"
                                 params={{
@@ -153,9 +162,15 @@ function CourseDetailPage() {
                     ? "One-time purchase or subscription"
                     : "One-time purchase"}
               </p>
+              {(course.pricingModel === "subscription" || course.pricingModel === "both") &&
+                tenant.subscriptionPrice && (
+                  <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                    ${tenant.subscriptionPrice}/mo for all courses
+                  </p>
+                )}
             </div>
 
-            {enrolled ? (
+            {hasAccess ? (
               <Link
                 to="/courses/$courseSlug/lessons/$lessonId"
                 params={{
@@ -167,7 +182,15 @@ function CourseDetailPage() {
                 Start learning
               </Link>
             ) : session ? (
-              <BuyButton courseId={course.id} hasPrice={!!course.price} />
+              <div className="space-y-2">
+                {(course.pricingModel === "one_time" || course.pricingModel === "both") && (
+                  <BuyButton courseId={course.id} hasPrice={!!course.price} />
+                )}
+                {(course.pricingModel === "subscription" || course.pricingModel === "both") &&
+                  tenant.subscriptionPrice && (
+                    <SubscribeButton price={tenant.subscriptionPrice} />
+                  )}
+              </div>
             ) : (
               <Link
                 to="/login"
@@ -227,6 +250,41 @@ function BuyButton({
         className="w-full rounded-md bg-neutral-900 px-4 py-3 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
       >
         {loading ? "Redirecting..." : hasPrice ? "Buy now" : "Enroll for free"}
+      </button>
+      {error && (
+        <p className="mt-2 text-xs text-red-600 dark:text-red-400">{error}</p>
+      )}
+    </div>
+  );
+}
+
+function SubscribeButton({ price }: { price: string }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleClick() {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await createSubscriptionCheckoutFn();
+      if (result.url) {
+        window.location.href = result.url;
+      }
+    } catch (e: any) {
+      setError(e.message ?? "Something went wrong");
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={loading}
+        className="w-full rounded-md border border-neutral-300 px-4 py-3 text-sm font-medium text-neutral-900 hover:bg-neutral-50 disabled:opacity-50 dark:border-neutral-700 dark:text-neutral-100 dark:hover:bg-neutral-800"
+      >
+        {loading ? "Redirecting..." : `Subscribe — $${price}/mo`}
       </button>
       {error && (
         <p className="mt-2 text-xs text-red-600 dark:text-red-400">{error}</p>

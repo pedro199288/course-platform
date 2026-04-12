@@ -1,6 +1,8 @@
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useRouter } from "@tanstack/react-router";
+import { useState } from "react";
 import { getStudentDashboardFn } from "#/lib/dashboard-actions.ts";
 import { getStudentCertificatesFn } from "#/lib/certificate-actions.ts";
+import { getSubscriptionStatusFn, cancelSubscriptionFn } from "#/lib/checkout-actions.ts";
 import { getSessionFn } from "#/lib/auth-session.ts";
 
 export const Route = createFileRoute("/dashboard/")({
@@ -11,17 +13,18 @@ export const Route = createFileRoute("/dashboard/")({
     }
   },
   loader: async () => {
-    const [dashboard, certMap] = await Promise.all([
+    const [dashboard, certMap, subscriptionStatus] = await Promise.all([
       getStudentDashboardFn(),
       getStudentCertificatesFn(),
+      getSubscriptionStatusFn().catch(() => ({ hasSubscription: false as const })),
     ]);
-    return { ...dashboard, certMap };
+    return { ...dashboard, certMap, subscriptionStatus };
   },
   component: StudentDashboard,
 });
 
 function StudentDashboard() {
-  const { courses, hasSubscription, certMap } = Route.useLoaderData();
+  const { courses, hasSubscription, certMap, subscriptionStatus } = Route.useLoaderData();
 
   return (
     <main className="page-wrap px-4 py-10">
@@ -34,6 +37,14 @@ function StudentDashboard() {
             ? "You have an active subscription — all courses are available."
             : `${courses.length} enrolled course${courses.length !== 1 ? "s" : ""}`}
         </p>
+
+        {subscriptionStatus.hasSubscription && "status" in subscriptionStatus && (
+          <SubscriptionBanner
+            status={subscriptionStatus.status}
+            periodEnd={subscriptionStatus.currentPeriodEnd}
+            canceledAt={subscriptionStatus.canceledAt}
+          />
+        )}
 
         {courses.length === 0 ? (
           <div className="mt-12 text-center">
@@ -173,6 +184,66 @@ function CourseCard({
             </span>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function SubscriptionBanner({
+  status,
+  periodEnd,
+  canceledAt,
+}: {
+  status: string;
+  periodEnd: string | null;
+  canceledAt: string | null;
+}) {
+  const router = useRouter();
+  const [canceling, setCanceling] = useState(false);
+
+  const periodEndDate = periodEnd ? new Date(periodEnd) : null;
+  const isCanceled = status === "canceled" || !!canceledAt;
+
+  async function handleCancel() {
+    if (!confirm("Cancel your subscription? You'll keep access until the end of the billing period.")) return;
+    setCanceling(true);
+    try {
+      await cancelSubscriptionFn();
+      void router.invalidate();
+    } catch {
+      alert("Failed to cancel subscription");
+    } finally {
+      setCanceling(false);
+    }
+  }
+
+  return (
+    <div className="mt-4 rounded-lg border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-sm font-medium">
+            {isCanceled ? "Subscription ending" : "Active subscription"}
+          </div>
+          <div className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
+            {isCanceled && periodEndDate
+              ? `Access until ${periodEndDate.toLocaleDateString()}`
+              : periodEndDate
+                ? `Renews ${periodEndDate.toLocaleDateString()}`
+                : status === "past_due"
+                  ? "Payment past due"
+                  : "Monthly access to all courses"}
+          </div>
+        </div>
+        {!isCanceled && status === "active" && (
+          <button
+            type="button"
+            onClick={() => void handleCancel()}
+            disabled={canceling}
+            className="rounded-md border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-600 hover:bg-neutral-100 disabled:opacity-50 dark:border-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800"
+          >
+            {canceling ? "Canceling..." : "Cancel subscription"}
+          </button>
+        )}
       </div>
     </div>
   );

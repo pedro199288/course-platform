@@ -3,6 +3,7 @@ import { db } from "#/db/index.ts";
 import {
   payments,
   enrollments,
+  subscriptions,
   courses,
   tenants,
   users,
@@ -46,6 +47,15 @@ export async function processWebhookEvent(event: WebhookJobData): Promise<void> 
       break;
     case "charge.refunded":
       await handleChargeRefunded(event.data);
+      break;
+    case "customer.subscription.created":
+      await handleSubscriptionCreated(event.data);
+      break;
+    case "customer.subscription.updated":
+      await handleSubscriptionUpdated(event.data);
+      break;
+    case "customer.subscription.deleted":
+      await handleSubscriptionDeleted(event.data);
       break;
     default:
       // Ignore unhandled event types
@@ -187,4 +197,113 @@ async function handleChargeRefunded(
         isNull(enrollments.revokedAt),
       ),
     );
+}
+
+// ---------------------------------------------------------------------------
+// customer.subscription.created → create subscription record
+// ---------------------------------------------------------------------------
+
+async function handleSubscriptionCreated(
+  data: Record<string, unknown>,
+): Promise<void> {
+  const subscriptionId = data.id as string;
+  const metadata = data.metadata as {
+    tenantId?: string;
+    userId?: string;
+  };
+  if (!metadata?.tenantId || !metadata?.userId) {
+    throw new Error("Missing metadata in subscription");
+  }
+
+  const status = data.status as string;
+  const currentPeriod = data.current_period_start as number | undefined;
+  const currentPeriodEnd = data.current_period_end as number | undefined;
+
+  // Idempotency: skip if subscription record already exists
+  const [existing] = await db
+    .select({ id: subscriptions.id })
+    .from(subscriptions)
+    .where(eq(subscriptions.stripeSubscriptionId, subscriptionId));
+  if (existing) return;
+
+  await db.insert(subscriptions).values({
+    tenantId: metadata.tenantId,
+    userId: metadata.userId,
+    stripeSubscriptionId: subscriptionId,
+    status: mapSubscriptionStatus(status),
+    currentPeriodStart: currentPeriod ? new Date(currentPeriod * 1000) : null,
+    currentPeriodEnd: currentPeriodEnd ? new Date(currentPeriodEnd * 1000) : null,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// customer.subscription.updated → update status + period
+// ---------------------------------------------------------------------------
+
+async function handleSubscriptionUpdated(
+  data: Record<string, unknown>,
+): Promise<void> {
+  const subscriptionId = data.id as string;
+  const status = data.status as string;
+  const currentPeriodEnd = data.current_period_end as number | undefined;
+  const cancelAt = data.cancel_at as number | null | undefined;
+  const canceledAt = data.canceled_at as number | null | undefined;
+
+  const [existing] = await db
+    .select({ id: subscriptions.id })
+    .from(subscriptions)
+    .where(eq(subscriptions.stripeSubscriptionId, subscriptionId));
+
+  if (!existing) {
+    // Subscription not in our DB — might be from a different source; ignore
+    return;
+  }
+
+  await db
+    .update(subscriptions)
+    .set({
+      status: mapSubscriptionStatus(status),
+      currentPeriodEnd: currentPeriodEnd ? new Date(currentPeriodEnd * 1000) : undefined,
+      canceledAt: canceledAt ? new Date(canceledAt * 1000) : cancelAt ? new Date(cancelAt * 1000) : undefined,
+    })
+    .where(eq(subscriptions.stripeSubscriptionId, subscriptionId));
+}
+
+// ---------------------------------------------------------------------------
+// customer.subscription.deleted → mark subscription canceled
+// ---------------------------------------------------------------------------
+
+async function handleSubscriptionDeleted(
+  data: Record<string, unknown>,
+): Promise<void> {
+  const subscriptionId = data.id as string;
+
+  await db
+    .update(subscriptions)
+    .set({
+      status: "canceled",
+      canceledAt: new Date(),
+    })
+    .where(eq(subscriptions.stripeSubscriptionId, subscriptionId));
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function mapSubscriptionStatus(
+  stripeStatus: string,
+): "active" | "canceled" | "past_due" | "incomplete" {
+  switch (stripeStatus) {
+    case "active":
+    case "trialing":
+      return "active";
+    case "canceled":
+      return "canceled";
+    case "past_due":
+    case "unpaid":
+      return "past_due";
+    default:
+      return "incomplete";
+  }
 }

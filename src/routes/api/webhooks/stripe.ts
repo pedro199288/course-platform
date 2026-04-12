@@ -47,7 +47,7 @@ export const Route = createFileRoute("/api/webhooks/stripe")({
         }
 
         // Dispatch to background job queue for async processing
-        await dispatchWebhookEvent(event.type, event.data.object as Record<string, unknown>);
+        await dispatchWebhookEvent(event.type, event.data.object as unknown as Record<string, unknown>);
 
         return new Response(JSON.stringify({ received: true }), {
           status: 200,
