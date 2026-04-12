@@ -1,5 +1,7 @@
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
+import type { QuizQuestion } from "#/lib/rich-text/types.ts";
+import { isQuizContent } from "#/lib/rich-text/types.ts";
 import {
   getCourseByIdFn,
   updateCourseFn,
@@ -242,13 +244,25 @@ function ModuleItem({ module: mod }: { module: Module & { lessons: Lesson[] } })
     void router.invalidate();
   }
 
+  const [newLessonType, setNewLessonType] = useState<"text" | "quiz">("text");
+
   async function handleAddLesson(e: React.FormEvent) {
     e.preventDefault();
     if (!newLessonTitle.trim()) return;
     setAddingLesson(true);
     try {
-      await createLessonFn({ data: { moduleId: mod.id, title: newLessonTitle.trim() } });
+      await createLessonFn({
+        data: {
+          moduleId: mod.id,
+          title: newLessonTitle.trim(),
+          type: newLessonType,
+          content: newLessonType === "quiz"
+            ? { type: "quiz", questions: [] } as Record<string, unknown>
+            : undefined,
+        },
+      });
       setNewLessonTitle("");
+      setNewLessonType("text");
       void router.invalidate();
     } catch {
       alert("Failed to add lesson");
@@ -294,6 +308,14 @@ function ModuleItem({ module: mod }: { module: Module & { lessons: Lesson[] } })
             onChange={(e) => setNewLessonTitle(e.target.value)}
             className="flex-1 rounded-md border border-dashed border-neutral-300 bg-white px-2 py-1 text-sm outline-none focus:border-neutral-500 dark:border-neutral-700 dark:bg-neutral-900"
           />
+          <select
+            value={newLessonType}
+            onChange={(e) => setNewLessonType(e.target.value as "text" | "quiz")}
+            className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-xs dark:border-neutral-700 dark:bg-neutral-900"
+          >
+            <option value="text">Text</option>
+            <option value="quiz">Quiz</option>
+          </select>
           <button
             type="submit"
             disabled={addingLesson || !newLessonTitle.trim()}
@@ -317,14 +339,30 @@ function LessonItem({ lesson }: { lesson: Lesson }) {
       : typeof lesson.content === "string" ? lesson.content : "",
   );
 
+  // Quiz editing state
+  const quizContent = isQuizContent(lesson.content) ? lesson.content : null;
+  const [questions, setQuestions] = useState<QuizQuestion[]>(
+    quizContent?.questions ?? [],
+  );
+
   async function handleSave() {
-    await updateLessonFn({
-      data: {
-        lessonId: lesson.id,
-        title: title.trim() || undefined,
-        content: content ? { text: content } : undefined,
-      },
-    });
+    if (lesson.type === "quiz") {
+      await updateLessonFn({
+        data: {
+          lessonId: lesson.id,
+          title: title.trim() || undefined,
+          content: { type: "quiz", questions } as Record<string, unknown>,
+        },
+      });
+    } else {
+      await updateLessonFn({
+        data: {
+          lessonId: lesson.id,
+          title: title.trim() || undefined,
+          content: content ? { text: content } : undefined,
+        },
+      });
+    }
     setEditing(false);
     void router.invalidate();
   }
@@ -333,6 +371,26 @@ function LessonItem({ lesson }: { lesson: Lesson }) {
     if (!confirm("Delete this lesson?")) return;
     await deleteLessonFn({ data: { lessonId: lesson.id } });
     void router.invalidate();
+  }
+
+  function addQuestion() {
+    setQuestions((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        question: "",
+        options: ["", ""],
+        correctOption: 0,
+      },
+    ]);
+  }
+
+  function updateQuestion(index: number, updated: QuizQuestion) {
+    setQuestions((prev) => prev.map((q, i) => (i === index ? updated : q)));
+  }
+
+  function removeQuestion(index: number) {
+    setQuestions((prev) => prev.filter((_, i) => i !== index));
   }
 
   if (editing) {
@@ -345,13 +403,36 @@ function LessonItem({ lesson }: { lesson: Lesson }) {
           className="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-900"
           placeholder="Lesson title"
         />
-        <textarea
-          rows={4}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          className="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-          placeholder="Lesson content (plain text for now)"
-        />
+
+        {lesson.type === "quiz" ? (
+          <div className="space-y-3">
+            {questions.map((q, qi) => (
+              <QuizQuestionEditor
+                key={q.id}
+                question={q}
+                index={qi}
+                onChange={(updated) => updateQuestion(qi, updated)}
+                onRemove={() => removeQuestion(qi)}
+              />
+            ))}
+            <button
+              type="button"
+              onClick={addQuestion}
+              className="rounded-md border border-dashed border-neutral-300 px-3 py-1.5 text-xs text-neutral-600 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800"
+            >
+              + Add question
+            </button>
+          </div>
+        ) : (
+          <textarea
+            rows={4}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            className="w-full rounded-md border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+            placeholder="Lesson content (plain text for now)"
+          />
+        )}
+
         <div className="flex gap-2">
           <button type="button" onClick={() => void handleSave()} className="rounded-md bg-neutral-900 px-2 py-1 text-xs font-medium text-white hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200">Save</button>
           <button type="button" onClick={() => setEditing(false)} className="text-xs text-neutral-400 hover:underline">Cancel</button>
@@ -365,11 +446,108 @@ function LessonItem({ lesson }: { lesson: Lesson }) {
       <div className="flex items-center gap-2">
         <span className="text-xs text-neutral-400">{lesson.type}</span>
         <span className="text-sm">{lesson.title}</span>
+        {lesson.type === "quiz" && quizContent && (
+          <span className="text-xs text-neutral-400">
+            ({quizContent.questions.length} question{quizContent.questions.length !== 1 ? "s" : ""})
+          </span>
+        )}
       </div>
       <div className="flex gap-2">
         <button type="button" onClick={() => setEditing(true)} className="text-xs text-neutral-500 hover:underline">Edit</button>
         <button type="button" onClick={() => void handleDelete()} className="text-xs text-red-500 hover:underline">Delete</button>
       </div>
+    </div>
+  );
+}
+
+function QuizQuestionEditor({
+  question,
+  index,
+  onChange,
+  onRemove,
+}: {
+  question: QuizQuestion;
+  index: number;
+  onChange: (q: QuizQuestion) => void;
+  onRemove: () => void;
+}) {
+  function updateOption(optionIndex: number, value: string) {
+    const newOptions = [...question.options];
+    newOptions[optionIndex] = value;
+    onChange({ ...question, options: newOptions });
+  }
+
+  function addOption() {
+    onChange({ ...question, options: [...question.options, ""] });
+  }
+
+  function removeOption(optionIndex: number) {
+    if (question.options.length <= 2) return;
+    const newOptions = question.options.filter((_, i) => i !== optionIndex);
+    const newCorrect =
+      question.correctOption === optionIndex
+        ? 0
+        : question.correctOption > optionIndex
+          ? question.correctOption - 1
+          : question.correctOption;
+    onChange({ ...question, options: newOptions, correctOption: newCorrect });
+  }
+
+  return (
+    <div className="rounded-md border border-neutral-200 p-2 dark:border-neutral-700">
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-xs font-medium text-neutral-500">Question {index + 1}</span>
+        <button
+          type="button"
+          onClick={onRemove}
+          className="text-xs text-red-500 hover:underline"
+        >
+          Remove
+        </button>
+      </div>
+      <input
+        type="text"
+        value={question.question}
+        onChange={(e) => onChange({ ...question, question: e.target.value })}
+        className="mb-2 w-full rounded-md border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+        placeholder="Question text"
+      />
+      <div className="space-y-1">
+        {question.options.map((opt, oi) => (
+          <div key={oi} className="flex items-center gap-2">
+            <input
+              type="radio"
+              name={`correct-${question.id}`}
+              checked={question.correctOption === oi}
+              onChange={() => onChange({ ...question, correctOption: oi })}
+              title="Mark as correct answer"
+            />
+            <input
+              type="text"
+              value={opt}
+              onChange={(e) => updateOption(oi, e.target.value)}
+              className="flex-1 rounded-md border border-neutral-300 px-2 py-1 text-xs dark:border-neutral-700 dark:bg-neutral-900"
+              placeholder={`Option ${oi + 1}`}
+            />
+            {question.options.length > 2 && (
+              <button
+                type="button"
+                onClick={() => removeOption(oi)}
+                className="text-xs text-red-400 hover:text-red-600"
+              >
+                x
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={addOption}
+        className="mt-1 text-xs text-neutral-500 hover:underline"
+      >
+        + Add option
+      </button>
     </div>
   );
 }

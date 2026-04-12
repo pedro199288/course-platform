@@ -2,14 +2,28 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { getLessonFn } from "#/lib/lesson-actions.ts";
 import { markLessonCompleteFn } from "#/lib/progress-actions.ts";
+import { submitQuizFn, getQuizResultFn } from "#/lib/quiz-actions.ts";
+import { isQuizContent } from "#/lib/rich-text/types.ts";
+import type { QuizContent } from "#/lib/rich-text/types.ts";
+import type { QuizAnswer } from "#/db/schema/quiz-results.ts";
 
 export const Route = createFileRoute(
   "/courses/$courseSlug/lessons/$lessonId",
 )({
   loader: async ({ params }) => {
-    return getLessonFn({
+    const lessonData = await getLessonFn({
       data: { courseSlug: params.courseSlug, lessonId: params.lessonId },
     });
+    // Fetch quiz result if this is a quiz lesson
+    let quizResult: { score: number; totalQuestions: number; answers: QuizAnswer[] } | null = null;
+    if (lessonData.lesson.type === "quiz") {
+      try {
+        quizResult = await getQuizResultFn({ data: { lessonId: params.lessonId } });
+      } catch {
+        // No result yet
+      }
+    }
+    return { ...lessonData, quizResult };
   },
   component: LessonViewerPage,
   errorComponent: LessonError,
@@ -78,10 +92,12 @@ function LessonViewerPage() {
     prevLesson,
     nextLesson,
     completedLessonIds,
+    quizResult: initialQuizResult,
   } = Route.useLoaderData();
 
   const content = lesson.content as { text?: string } | null;
   const completedSet = new Set(completedLessonIds);
+  const isQuiz = lesson.type === "quiz" && isQuizContent(lesson.content);
 
   const [isCompleted, setIsCompleted] = useState(
     completedSet.has(lesson.id),
@@ -180,49 +196,61 @@ function LessonViewerPage() {
             {lesson.title}
           </h1>
 
-          {/* Text content */}
-          <div className="prose dark:prose-invert mt-6 max-w-none">
-            {content?.text ? (
-              content.text.split("\n").map((paragraph, i) =>
-                paragraph.trim() ? (
-                  <p key={i}>{paragraph}</p>
+          {isQuiz ? (
+            <QuizViewer
+              quizContent={lesson.content as QuizContent}
+              courseSlug={course.slug}
+              lessonId={lesson.id}
+              initialResult={initialQuizResult}
+              onComplete={() => setIsCompleted(true)}
+            />
+          ) : (
+            <>
+              {/* Text content */}
+              <div className="prose dark:prose-invert mt-6 max-w-none">
+                {content?.text ? (
+                  content.text.split("\n").map((paragraph, i) =>
+                    paragraph.trim() ? (
+                      <p key={i}>{paragraph}</p>
+                    ) : (
+                      <br key={i} />
+                    ),
+                  )
                 ) : (
-                  <br key={i} />
-                ),
-              )
-            ) : (
-              <p className="text-neutral-500 dark:text-neutral-400 italic">
-                No content yet.
-              </p>
-            )}
-          </div>
-
-          {/* Mark as complete */}
-          <div className="mt-8">
-            {isCompleted ? (
-              <div className="inline-flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-4 py-2 text-sm font-medium text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
-                <svg
-                  viewBox="0 0 12 12"
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path d="M2 6l3 3 5-5" />
-                </svg>
-                Lesson completed
+                  <p className="text-neutral-500 dark:text-neutral-400 italic">
+                    No content yet.
+                  </p>
+                )}
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={handleMarkComplete}
-                disabled={isMarking}
-                className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
-              >
-                {isMarking ? "Marking..." : "Mark as complete"}
-              </button>
-            )}
-          </div>
+
+              {/* Mark as complete */}
+              <div className="mt-8">
+                {isCompleted ? (
+                  <div className="inline-flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-4 py-2 text-sm font-medium text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
+                    <svg
+                      viewBox="0 0 12 12"
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M2 6l3 3 5-5" />
+                    </svg>
+                    Lesson completed
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleMarkComplete}
+                    disabled={isMarking}
+                    className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
+                  >
+                    {isMarking ? "Marking..." : "Mark as complete"}
+                  </button>
+                )}
+              </div>
+            </>
+          )}
 
           {/* Prev / Next navigation */}
           <div className="mt-10 flex items-center justify-between border-t border-neutral-200 pt-6 dark:border-neutral-800">
@@ -264,5 +292,170 @@ function LessonViewerPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+function QuizViewer({
+  quizContent,
+  courseSlug,
+  lessonId,
+  initialResult,
+  onComplete,
+}: {
+  quizContent: QuizContent;
+  courseSlug: string;
+  lessonId: string;
+  initialResult: { score: number; totalQuestions: number; answers: QuizAnswer[] } | null;
+  onComplete: () => void;
+}) {
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, number>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [result, setResult] = useState<{
+    score: number;
+    totalQuestions: number;
+    answers: QuizAnswer[];
+  } | null>(initialResult);
+
+  const questions = quizContent.questions ?? [];
+
+  if (questions.length === 0) {
+    return (
+      <div className="mt-6">
+        <p className="text-neutral-500 dark:text-neutral-400 italic">
+          This quiz has no questions yet.
+        </p>
+      </div>
+    );
+  }
+
+  async function handleSubmit() {
+    const answers = questions.map((q) => ({
+      questionId: q.id,
+      selectedOption: selectedAnswers[q.id] ?? -1,
+    }));
+
+    // Check all questions answered
+    if (answers.some((a) => a.selectedOption === -1)) {
+      alert("Please answer all questions before submitting.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await submitQuizFn({
+        data: { courseSlug, lessonId, answers },
+      });
+      setResult({
+        score: res.score,
+        totalQuestions: res.totalQuestions,
+        answers: res.answers,
+      });
+      onComplete();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function handleRetake() {
+    setResult(null);
+    setSelectedAnswers({});
+  }
+
+  // Show results
+  if (result) {
+    const answerMap = new Map(result.answers.map((a) => [a.questionId, a]));
+    return (
+      <div className="mt-6 space-y-6">
+        <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900">
+          <div className="text-lg font-semibold">
+            Score: {result.score}/{result.totalQuestions}
+          </div>
+          <div className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+            {result.score === result.totalQuestions
+              ? "Perfect score!"
+              : `${Math.round((result.score / result.totalQuestions) * 100)}% correct`}
+          </div>
+        </div>
+
+        {questions.map((q, qi) => {
+          const answer = answerMap.get(q.id);
+          return (
+            <div key={q.id} className="space-y-2">
+              <div className="text-sm font-medium">
+                {qi + 1}. {q.question}
+              </div>
+              <div className="space-y-1 pl-4">
+                {q.options.map((opt, oi) => {
+                  const isSelected = answer?.selectedOption === oi;
+                  const isCorrect = q.correctOption === oi;
+                  let className = "flex items-center gap-2 rounded-md px-2 py-1 text-sm";
+                  if (isCorrect) {
+                    className += " bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400";
+                  } else if (isSelected && !answer?.correct) {
+                    className += " bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-400";
+                  }
+                  return (
+                    <div key={oi} className={className}>
+                      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-neutral-300 text-[10px] dark:border-neutral-600">
+                        {isCorrect ? "\u2713" : isSelected ? "\u2717" : ""}
+                      </span>
+                      {opt}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+
+        <button
+          type="button"
+          onClick={handleRetake}
+          className="rounded-md border border-neutral-300 px-4 py-2 text-sm font-medium hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+        >
+          Retake quiz
+        </button>
+      </div>
+    );
+  }
+
+  // Show quiz form
+  return (
+    <div className="mt-6 space-y-6">
+      {questions.map((q, qi) => (
+        <div key={q.id} className="space-y-2">
+          <div className="text-sm font-medium">
+            {qi + 1}. {q.question}
+          </div>
+          <div className="space-y-1 pl-4">
+            {q.options.map((opt, oi) => (
+              <label
+                key={oi}
+                className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
+              >
+                <input
+                  type="radio"
+                  name={`quiz-${q.id}`}
+                  checked={selectedAnswers[q.id] === oi}
+                  onChange={() =>
+                    setSelectedAnswers((prev) => ({ ...prev, [q.id]: oi }))
+                  }
+                />
+                {opt}
+              </label>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      <button
+        type="button"
+        onClick={() => void handleSubmit()}
+        disabled={submitting}
+        className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
+      >
+        {submitting ? "Submitting..." : "Submit quiz"}
+      </button>
+    </div>
   );
 }

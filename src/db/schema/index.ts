@@ -6,3 +6,4 @@ export * from "./enrollments.ts";
 export * from "./payments.ts";
 export * from "./certificates.ts";
 export * from "./audit-logs.ts";
+export * from "./quiz-results.ts";

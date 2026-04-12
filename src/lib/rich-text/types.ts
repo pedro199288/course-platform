@@ -25,10 +25,31 @@ export type RichTextDoc = {
   content?: RichTextNode[];
 };
 
+// Quiz content shape: multiple-choice questions stored on quiz-type lessons.
+export type QuizQuestion = {
+  id: string;
+  question: string;
+  options: string[];
+  correctOption: number; // index into options array
+};
+
+export type QuizContent = {
+  type: "quiz";
+  questions: QuizQuestion[];
+};
+
+export function isQuizContent(value: unknown): value is QuizContent {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    (value as { type?: unknown }).type === "quiz"
+  );
+}
+
 // Content stored on a lesson row. New rich text lessons store RichTextDoc.
 // The legacy plain-text shape { text: string } is still accepted so existing
 // rows keep working until they are edited.
-export type LessonContent = RichTextDoc | { text: string } | null;
+export type LessonContent = RichTextDoc | { text: string } | QuizContent | null;
 
 export function isRichTextDoc(value: unknown): value is RichTextDoc {
   return (

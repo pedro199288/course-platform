@@ -266,7 +266,7 @@ export const createLessonFn = createServerFn({ method: "POST" })
         moduleId: data.moduleId,
         title: data.title,
         type: data.type ?? "text",
-        content: data.content ?? null,
+        content: (data.content ?? null) as any,
         position: nextPosition,
       })
       .returning();
