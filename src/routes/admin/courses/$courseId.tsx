@@ -15,6 +15,7 @@ import {
   updateLessonFn,
   deleteLessonFn,
 } from "#/lib/course-actions.ts";
+import { getFileUploadUrlFn } from "#/lib/file-lessons.ts";
 
 interface Module {
   id: string;
@@ -244,7 +245,7 @@ function ModuleItem({ module: mod }: { module: Module & { lessons: Lesson[] } })
     void router.invalidate();
   }
 
-  const [newLessonType, setNewLessonType] = useState<"text" | "quiz">("text");
+  const [newLessonType, setNewLessonType] = useState<"text" | "quiz" | "file">("text");
 
   async function handleAddLesson(e: React.FormEvent) {
     e.preventDefault();
@@ -258,7 +259,9 @@ function ModuleItem({ module: mod }: { module: Module & { lessons: Lesson[] } })
           type: newLessonType,
           content: newLessonType === "quiz"
             ? { type: "quiz", questions: [] } as Record<string, unknown>
-            : undefined,
+            : newLessonType === "file"
+              ? { type: "file", filename: null, contentType: null } as Record<string, unknown>
+              : undefined,
         },
       });
       setNewLessonTitle("");
@@ -310,11 +313,12 @@ function ModuleItem({ module: mod }: { module: Module & { lessons: Lesson[] } })
           />
           <select
             value={newLessonType}
-            onChange={(e) => setNewLessonType(e.target.value as "text" | "quiz")}
+            onChange={(e) => setNewLessonType(e.target.value as "text" | "quiz" | "file")}
             className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-xs dark:border-neutral-700 dark:bg-neutral-900"
           >
             <option value="text">Text</option>
             <option value="quiz">Quiz</option>
+            <option value="file">File</option>
           </select>
           <button
             type="submit"
@@ -344,6 +348,39 @@ function LessonItem({ lesson }: { lesson: Lesson }) {
   const [questions, setQuestions] = useState<QuizQuestion[]>(
     quizContent?.questions ?? [],
   );
+
+  // File upload state
+  const fileContent = lesson.type === "file" && lesson.content && typeof lesson.content === "object" && "filename" in (lesson.content as Record<string, unknown>)
+    ? (lesson.content as { filename: string | null; contentType: string | null })
+    : null;
+  const [uploading, setUploading] = useState(false);
+  const [uploadedFilename, setUploadedFilename] = useState<string | null>(fileContent?.filename ?? null);
+
+  async function handleFileUpload(file: File) {
+    setUploading(true);
+    try {
+      const { uploadUrl } = await getFileUploadUrlFn({
+        data: {
+          lessonId: lesson.id,
+          filename: file.name,
+          contentType: file.type || "application/octet-stream",
+        },
+      });
+
+      await fetch(uploadUrl, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type || "application/octet-stream" },
+      });
+
+      setUploadedFilename(file.name);
+      void router.invalidate();
+    } catch {
+      alert("Failed to upload file");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   async function handleSave() {
     if (lesson.type === "quiz") {
@@ -423,6 +460,29 @@ function LessonItem({ lesson }: { lesson: Lesson }) {
               + Add question
             </button>
           </div>
+        ) : lesson.type === "file" ? (
+          <div className="space-y-2">
+            {uploadedFilename && (
+              <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
+                <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                  <path fillRule="evenodd" d="M15.621 4.379a3 3 0 00-4.242 0l-7 7a3 3 0 004.241 4.243h.001l.497-.5a.75.75 0 011.064 1.057l-.498.501a4.5 4.5 0 01-6.364-6.364l7-7a4.5 4.5 0 016.368 6.36l-3.455 3.553A2.625 2.625 0 119.52 9.52l3.45-3.451a.75.75 0 111.061 1.06l-3.45 3.451a1.125 1.125 0 001.587 1.595l3.454-3.553a3 3 0 000-4.242z" clipRule="evenodd" />
+                </svg>
+                {uploadedFilename}
+              </div>
+            )}
+            <label className={`flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-neutral-300 px-3 py-3 text-xs text-neutral-600 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800 ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
+              <input
+                type="file"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void handleFileUpload(file);
+                }}
+                disabled={uploading}
+              />
+              {uploading ? "Uploading..." : uploadedFilename ? "Replace file" : "Upload file"}
+            </label>
+          </div>
         ) : (
           <textarea
             rows={4}
@@ -449,6 +509,11 @@ function LessonItem({ lesson }: { lesson: Lesson }) {
         {lesson.type === "quiz" && quizContent && (
           <span className="text-xs text-neutral-400">
             ({quizContent.questions.length} question{quizContent.questions.length !== 1 ? "s" : ""})
+          </span>
+        )}
+        {lesson.type === "file" && uploadedFilename && (
+          <span className="text-xs text-neutral-400">
+            ({uploadedFilename})
           </span>
         )}
       </div>

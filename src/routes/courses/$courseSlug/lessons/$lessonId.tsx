@@ -3,6 +3,7 @@ import { useState } from "react";
 import { getLessonFn } from "#/lib/lesson-actions.ts";
 import { markLessonCompleteFn } from "#/lib/progress-actions.ts";
 import { submitQuizFn, getQuizResultFn } from "#/lib/quiz-actions.ts";
+import { getFileDownloadUrlFn } from "#/lib/file-lessons.ts";
 import { isQuizContent } from "#/lib/rich-text/types.ts";
 import type { QuizContent } from "#/lib/rich-text/types.ts";
 import type { QuizAnswer } from "#/db/schema/quiz-results.ts";
@@ -95,9 +96,10 @@ function LessonViewerPage() {
     quizResult: initialQuizResult,
   } = Route.useLoaderData();
 
-  const content = lesson.content as { text?: string } | null;
+  const content = lesson.content as { text?: string; type?: string; filename?: string } | null;
   const completedSet = new Set(completedLessonIds);
   const isQuiz = lesson.type === "quiz" && isQuizContent(lesson.content);
+  const isFile = lesson.type === "file";
 
   const [isCompleted, setIsCompleted] = useState(
     completedSet.has(lesson.id),
@@ -204,6 +206,40 @@ function LessonViewerPage() {
               initialResult={initialQuizResult}
               onComplete={() => setIsCompleted(true)}
             />
+          ) : isFile ? (
+            <>
+              <FileDownloader
+                lessonId={lesson.id}
+                filename={content?.filename}
+              />
+
+              {/* Mark as complete */}
+              <div className="mt-8">
+                {isCompleted ? (
+                  <div className="inline-flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-4 py-2 text-sm font-medium text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
+                    <svg
+                      viewBox="0 0 12 12"
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M2 6l3 3 5-5" />
+                    </svg>
+                    Lesson completed
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleMarkComplete}
+                    disabled={isMarking}
+                    className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
+                  >
+                    {isMarking ? "Marking..." : "Mark as complete"}
+                  </button>
+                )}
+              </div>
+            </>
           ) : (
             <>
               {/* Text content */}
@@ -456,6 +492,60 @@ function QuizViewer({
       >
         {submitting ? "Submitting..." : "Submit quiz"}
       </button>
+    </div>
+  );
+}
+
+function FileDownloader({
+  lessonId,
+  filename,
+}: {
+  lessonId: string;
+  filename?: string;
+}) {
+  const [downloading, setDownloading] = useState(false);
+
+  async function handleDownload() {
+    setDownloading(true);
+    try {
+      const result = await getFileDownloadUrlFn({ data: { lessonId } });
+      // Open the signed URL to trigger download
+      window.open(result.url, "_blank");
+    } catch {
+      alert("Failed to get download link");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  return (
+    <div className="mt-6">
+      <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-6 dark:border-neutral-800 dark:bg-neutral-900">
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-neutral-200 dark:bg-neutral-800">
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-6 w-6 text-neutral-600 dark:text-neutral-400">
+              <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
+              <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <div className="text-sm font-medium">
+              {filename ?? "Downloadable file"}
+            </div>
+            <div className="text-xs text-neutral-500 dark:text-neutral-400">
+              Click to download
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => void handleDownload()}
+            disabled={downloading}
+            className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
+          >
+            {downloading ? "Preparing..." : "Download"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

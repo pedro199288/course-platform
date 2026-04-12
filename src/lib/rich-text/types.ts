@@ -46,10 +46,25 @@ export function isQuizContent(value: unknown): value is QuizContent {
   );
 }
 
+// File content shape: metadata for downloadable file lessons.
+export type FileContent = {
+  type: "file";
+  filename: string | null;
+  contentType: string | null;
+};
+
+export function isFileContent(value: unknown): value is FileContent {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    (value as { type?: unknown }).type === "file"
+  );
+}
+
 // Content stored on a lesson row. New rich text lessons store RichTextDoc.
 // The legacy plain-text shape { text: string } is still accepted so existing
 // rows keep working until they are edited.
-export type LessonContent = RichTextDoc | { text: string } | QuizContent | null;
+export type LessonContent = RichTextDoc | { text: string } | QuizContent | FileContent | null;
 
 export function isRichTextDoc(value: unknown): value is RichTextDoc {
   return (
