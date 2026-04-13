@@ -31,7 +31,7 @@ export const Route = createFileRoute("/courses/$courseSlug/lessons/$lessonId")({
 function LessonError({ error }: { error: Error }) {
   const isNotEnrolled = error.message === "Not enrolled";
   const isUnauthorized = error.message === "Unauthorized";
-  const isLocked = error.message === "Lesson locked";
+  const isLocked = error.message === "Lesson locked" || error.message.startsWith("Lesson locked: ");
 
   if (isUnauthorized) {
     return (
@@ -53,12 +53,15 @@ function LessonError({ error }: { error: Error }) {
   }
 
   if (isLocked) {
+    const dripMessage = error.message.startsWith("Lesson locked: ")
+      ? error.message.slice("Lesson locked: ".length)
+      : null;
     return (
       <main className="page-wrap px-4 py-10">
         <div className="mx-auto max-w-lg text-center">
           <h1 className="text-2xl font-bold">Lesson locked</h1>
           <p className="mt-2 text-neutral-600 dark:text-neutral-400">
-            Complete the previous lesson first to unlock this one.
+            {dripMessage ?? "Complete the previous lesson first to unlock this one."}
           </p>
         </div>
       </main>
@@ -104,6 +107,7 @@ function LessonViewerPage() {
     nextLesson,
     completedLessonIds,
     lockedLessonIds,
+    unlockInfo,
     quizResult: initialQuizResult,
   } = Route.useLoaderData();
 
@@ -156,6 +160,7 @@ function LessonViewerPage() {
                       const isLocked = lockedSet.has(l.id);
 
                       if (isLocked) {
+                        const lockHint = unlockInfo?.[l.id];
                         return (
                           <li key={l.id}>
                             <span className="flex items-center gap-2 px-4 py-2 text-sm text-neutral-400 dark:text-neutral-500">
@@ -169,6 +174,11 @@ function LessonViewerPage() {
                                 </svg>
                               </span>
                               <span className="truncate">{l.title}</span>
+                              {lockHint && (
+                                <span className="ml-auto shrink-0 text-[10px] text-amber-600 dark:text-amber-400">
+                                  {lockHint}
+                                </span>
+                              )}
                             </span>
                           </li>
                         );

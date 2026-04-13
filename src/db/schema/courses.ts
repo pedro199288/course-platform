@@ -63,6 +63,8 @@ export const modules = pgTable(
       .references(() => courses.id, { onDelete: "cascade" }),
     title: text().notNull(),
     position: integer().notNull().default(0),
+    availableAfterDays: integer("available_after_days"),
+    availableFromDate: timestamp("available_from_date"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -86,6 +88,8 @@ export const lessons = pgTable(
     videoUploadStatus: videoUploadStatus("video_upload_status"),
     fileUrl: text("file_url"),
     position: integer().notNull().default(0),
+    availableAfterDays: integer("available_after_days"),
+    availableFromDate: timestamp("available_from_date"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

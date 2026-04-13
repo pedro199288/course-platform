@@ -119,12 +119,14 @@ export const getLessonFn = createServerFn({ method: "GET" })
       throw new Error("Lesson not found");
     }
 
-    // Load full curriculum for navigation
+    // Load full curriculum for navigation (with drip fields)
     const courseModules = await db
       .select({
         id: modules.id,
         title: modules.title,
         position: modules.position,
+        availableAfterDays: modules.availableAfterDays,
+        availableFromDate: modules.availableFromDate,
       })
       .from(modules)
       .where(eq(modules.courseId, course.id))
@@ -138,6 +140,8 @@ export const getLessonFn = createServerFn({ method: "GET" })
             title: lessons.title,
             type: lessons.type,
             position: lessons.position,
+            availableAfterDays: lessons.availableAfterDays,
+            availableFromDate: lessons.availableFromDate,
           })
           .from(lessons)
           .where(eq(lessons.moduleId, m.id))
@@ -170,28 +174,93 @@ export const getLessonFn = createServerFn({ method: "GET" })
     const completedSet = new Set(completedLessonIds);
 
     // Sequential progression gating: check all previous lessons are completed
-    const lockedLessonIds = course.sequentialProgress
+    const sequentialLockedIds = course.sequentialProgress
       ? computeLockedLessonIds(
           allLessons.map((l) => l.id),
           completedSet,
         )
       : [];
 
+    // Drip content gating: check time-based availability
+    // Fetch enrollment date for availableAfterDays calculations
+    const [enrollment] = await db
+      .select({ enrolledAt: enrollments.enrolledAt })
+      .from(enrollments)
+      .where(
+        and(
+          eq(enrollments.userId, user.id),
+          eq(enrollments.courseId, course.id),
+          eq(enrollments.tenantId, tenant.id),
+          isNull(enrollments.revokedAt),
+        ),
+      );
+    const enrolledAt = enrollment?.enrolledAt ?? null;
+
+    // Build module drip map for inheritance
+    const moduleDripMap = new Map(
+      courseModules.map((m) => [
+        m.id,
+        {
+          availableAfterDays: m.availableAfterDays,
+          availableFromDate: m.availableFromDate,
+        },
+      ]),
+    );
+
+    // Build lesson-to-module mapping from curriculum
+    const lessonModuleMap = new Map<string, string>();
+    for (const m of curriculum) {
+      for (const l of m.lessons) {
+        lessonModuleMap.set(l.id, m.id);
+      }
+    }
+
+    const now = new Date();
+    const dripResult = computeDripLockedLessonIds(
+      allLessons.map((l) => ({
+        id: l.id,
+        availableAfterDays: l.availableAfterDays,
+        availableFromDate: l.availableFromDate,
+      })),
+      lessonModuleMap,
+      moduleDripMap,
+      enrolledAt,
+      now,
+    );
+
+    // Merge both lock sets
+    const sequentialSet = new Set(sequentialLockedIds);
+    const lockedLessonIds = [
+      ...new Set([...sequentialLockedIds, ...dripResult.lockedIds]),
+    ];
+
     // Block access if the requested lesson is locked
-    if (lockedLessonIds.includes(data.lessonId)) {
+    if (sequentialSet.has(data.lessonId)) {
       throw new Error("Lesson locked");
+    }
+    if (dripResult.lockedIds.includes(data.lessonId)) {
+      const info = dripResult.unlockInfo.get(data.lessonId);
+      throw new Error(info ? `Lesson locked: ${info}` : "Lesson locked");
     }
 
     // Prev/next navigation — for sequential courses, "next" points to first incomplete
+    const lockedSet = new Set(lockedLessonIds);
     const prevLesson = currentIndex > 0 ? allLessons[currentIndex - 1] : null;
     let nextLesson: (typeof allLessons)[number] | null = null;
     if (course.sequentialProgress) {
-      // Next = first lesson not yet completed (after or including current+1)
       nextLesson =
-        allLessons.find((l, i) => i > currentIndex && !completedSet.has(l.id)) ??
+        allLessons.find((l, i) => i > currentIndex && !completedSet.has(l.id) && !lockedSet.has(l.id)) ??
         (currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null);
     } else {
-      nextLesson = currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null;
+      nextLesson =
+        allLessons.find((l, i) => i > currentIndex && !lockedSet.has(l.id)) ??
+        (currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null);
+    }
+
+    // Build unlock info map for UI (only for locked lessons)
+    const unlockInfoRecord: Record<string, string> = {};
+    for (const [id, info] of dripResult.unlockInfo) {
+      unlockInfoRecord[id] = info;
     }
 
     return {
@@ -209,6 +278,7 @@ export const getLessonFn = createServerFn({ method: "GET" })
       nextLesson,
       completedLessonIds,
       lockedLessonIds,
+      unlockInfo: unlockInfoRecord,
     };
   });
 
@@ -227,6 +297,69 @@ export function computeLockedLessonIds(
     }
   }
   return [];
+}
+
+/**
+ * Compute which lessons are locked by drip content rules.
+ * A lesson is locked if:
+ *   - Its own availableAfterDays hasn't elapsed since enrollment
+ *   - Its own availableFromDate hasn't been reached
+ *   - Its parent module's drip settings haven't been met
+ * Module-level drip applies to all lessons within the module.
+ */
+export function computeDripLockedLessonIds(
+  allLessons: { id: string; availableAfterDays: number | null; availableFromDate: Date | null }[],
+  lessonModuleMap: Map<string, string>,
+  moduleDripMap: Map<string, { availableAfterDays: number | null; availableFromDate: Date | null }>,
+  enrolledAt: Date | null,
+  now: Date,
+): { lockedIds: string[]; unlockInfo: Map<string, string> } {
+  const lockedIds: string[] = [];
+  const unlockInfo = new Map<string, string>();
+
+  for (const lesson of allLessons) {
+    const moduleId = lessonModuleMap.get(lesson.id);
+    const moduleDrip = moduleId ? moduleDripMap.get(moduleId) : undefined;
+
+    // Collect all unlock dates that must be met
+    const unlockDates: Date[] = [];
+
+    // Module-level drip
+    if (moduleDrip?.availableAfterDays != null && enrolledAt) {
+      const unlockDate = new Date(enrolledAt.getTime() + moduleDrip.availableAfterDays * 86400000);
+      unlockDates.push(unlockDate);
+    }
+    if (moduleDrip?.availableFromDate != null) {
+      unlockDates.push(moduleDrip.availableFromDate);
+    }
+
+    // Lesson-level drip
+    if (lesson.availableAfterDays != null && enrolledAt) {
+      const unlockDate = new Date(enrolledAt.getTime() + lesson.availableAfterDays * 86400000);
+      unlockDates.push(unlockDate);
+    }
+    if (lesson.availableFromDate != null) {
+      unlockDates.push(lesson.availableFromDate);
+    }
+
+    if (unlockDates.length === 0) continue;
+
+    // Lesson is locked if ANY unlock date is in the future
+    const latestUnlock = new Date(Math.max(...unlockDates.map((d) => d.getTime())));
+    if (latestUnlock > now) {
+      lockedIds.push(lesson.id);
+      const daysLeft = Math.ceil((latestUnlock.getTime() - now.getTime()) / 86400000);
+      if (daysLeft <= 0) {
+        unlockInfo.set(lesson.id, "Available soon");
+      } else if (daysLeft === 1) {
+        unlockInfo.set(lesson.id, "Unlocks tomorrow");
+      } else {
+        unlockInfo.set(lesson.id, `Unlocks in ${daysLeft} days`);
+      }
+    }
+  }
+
+  return { lockedIds, unlockInfo };
 }
 
 /**

@@ -22,6 +22,8 @@ interface Module {
   courseId: string;
   title: string;
   position: number;
+  availableAfterDays: number | null;
+  availableFromDate: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,6 +35,8 @@ interface Lesson {
   type: "video" | "text" | "quiz" | "file";
   content: unknown;
   position: number;
+  availableAfterDays: number | null;
+  availableFromDate: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -300,12 +304,25 @@ function ModuleItem({ module: mod }: { module: Module & { lessons: Lesson[] } })
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(mod.title);
+  const [availableAfterDays, setAvailableAfterDays] = useState(
+    mod.availableAfterDays?.toString() ?? "",
+  );
+  const [availableFromDate, setAvailableFromDate] = useState(
+    mod.availableFromDate ? new Date(mod.availableFromDate).toISOString().slice(0, 10) : "",
+  );
   const [newLessonTitle, setNewLessonTitle] = useState("");
   const [addingLesson, setAddingLesson] = useState(false);
 
   async function handleSave() {
     if (!title.trim()) return;
-    await updateModuleFn({ data: { moduleId: mod.id, title: title.trim() } });
+    await updateModuleFn({
+      data: {
+        moduleId: mod.id,
+        title: title.trim(),
+        availableAfterDays: availableAfterDays ? parseInt(availableAfterDays, 10) : null,
+        availableFromDate: availableFromDate || null,
+      },
+    });
     setEditing(false);
     void router.invalidate();
   }
@@ -350,44 +367,75 @@ function ModuleItem({ module: mod }: { module: Module & { lessons: Lesson[] } })
     <div className="rounded-lg border border-neutral-200 dark:border-neutral-800">
       <div className="flex items-center justify-between border-b border-neutral-200 p-3 dark:border-neutral-800">
         {editing ? (
-          <div className="flex flex-1 gap-2">
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="flex-1 rounded-md border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void handleSave();
-                if (e.key === "Escape") setEditing(false);
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => void handleSave()}
-              className="text-xs text-neutral-600 hover:underline dark:text-neutral-400"
-            >
-              Save
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setEditing(false);
-                setTitle(mod.title);
-              }}
-              className="text-xs text-neutral-400 hover:underline"
-            >
-              Cancel
-            </button>
+          <div className="flex-1 space-y-2">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="flex-1 rounded-md border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void handleSave();
+                  if (e.key === "Escape") setEditing(false);
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => void handleSave()}
+                className="text-xs text-neutral-600 hover:underline dark:text-neutral-400"
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditing(false);
+                  setTitle(mod.title);
+                }}
+                className="text-xs text-neutral-400 hover:underline"
+              >
+                Cancel
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <div className="flex items-center gap-1">
+                <label className="text-xs text-neutral-500">Drip (days):</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={availableAfterDays}
+                  onChange={(e) => setAvailableAfterDays(e.target.value)}
+                  placeholder="—"
+                  className="w-16 rounded-md border border-neutral-300 px-1.5 py-0.5 text-xs dark:border-neutral-700 dark:bg-neutral-900"
+                />
+              </div>
+              <div className="flex items-center gap-1">
+                <label className="text-xs text-neutral-500">Available from:</label>
+                <input
+                  type="date"
+                  value={availableFromDate}
+                  onChange={(e) => setAvailableFromDate(e.target.value)}
+                  className="rounded-md border border-neutral-300 px-1.5 py-0.5 text-xs dark:border-neutral-700 dark:bg-neutral-900"
+                />
+              </div>
+            </div>
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={() => setEditing(true)}
-            className="text-sm font-medium hover:underline"
-          >
-            {mod.title}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="text-sm font-medium hover:underline"
+            >
+              {mod.title}
+            </button>
+            {(mod.availableAfterDays != null || mod.availableFromDate != null) && (
+              <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                Drip
+              </span>
+            )}
+          </div>
         )}
         <button
           type="button"
@@ -437,6 +485,14 @@ function LessonItem({ lesson }: { lesson: Lesson }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(lesson.title);
+  const [lessonAvailableAfterDays, setLessonAvailableAfterDays] = useState(
+    lesson.availableAfterDays?.toString() ?? "",
+  );
+  const [lessonAvailableFromDate, setLessonAvailableFromDate] = useState(
+    lesson.availableFromDate
+      ? new Date(lesson.availableFromDate).toISOString().slice(0, 10)
+      : "",
+  );
   const [content, setContent] = useState(
     lesson.content &&
       typeof lesson.content === "object" &&
@@ -491,12 +547,19 @@ function LessonItem({ lesson }: { lesson: Lesson }) {
   }
 
   async function handleSave() {
+    const dripData = {
+      availableAfterDays: lessonAvailableAfterDays
+        ? parseInt(lessonAvailableAfterDays, 10)
+        : null,
+      availableFromDate: lessonAvailableFromDate || null,
+    };
     if (lesson.type === "quiz") {
       await updateLessonFn({
         data: {
           lessonId: lesson.id,
           title: title.trim() || undefined,
           content: { type: "quiz", questions } as Record<string, unknown>,
+          ...dripData,
         },
       });
     } else {
@@ -505,6 +568,7 @@ function LessonItem({ lesson }: { lesson: Lesson }) {
           lessonId: lesson.id,
           title: title.trim() || undefined,
           content: content ? { text: content } : undefined,
+          ...dripData,
         },
       });
     }
@@ -608,6 +672,29 @@ function LessonItem({ lesson }: { lesson: Lesson }) {
         )}
 
         <div className="flex gap-2">
+          <div className="flex items-center gap-1">
+            <label className="text-xs text-neutral-500">Drip (days):</label>
+            <input
+              type="number"
+              min="0"
+              value={lessonAvailableAfterDays}
+              onChange={(e) => setLessonAvailableAfterDays(e.target.value)}
+              placeholder="—"
+              className="w-16 rounded-md border border-neutral-300 px-1.5 py-0.5 text-xs dark:border-neutral-700 dark:bg-neutral-900"
+            />
+          </div>
+          <div className="flex items-center gap-1">
+            <label className="text-xs text-neutral-500">Available from:</label>
+            <input
+              type="date"
+              value={lessonAvailableFromDate}
+              onChange={(e) => setLessonAvailableFromDate(e.target.value)}
+              className="rounded-md border border-neutral-300 px-1.5 py-0.5 text-xs dark:border-neutral-700 dark:bg-neutral-900"
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-2">
           <button
             type="button"
             onClick={() => void handleSave()}
@@ -632,6 +719,11 @@ function LessonItem({ lesson }: { lesson: Lesson }) {
       <div className="flex items-center gap-2">
         <span className="text-xs text-neutral-400">{lesson.type}</span>
         <span className="text-sm">{lesson.title}</span>
+        {(lesson.availableAfterDays != null || lesson.availableFromDate != null) && (
+          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+            Drip
+          </span>
+        )}
         {lesson.type === "quiz" && quizContent && (
           <span className="text-xs text-neutral-400">
             ({quizContent.questions.length} question{quizContent.questions.length !== 1 ? "s" : ""})

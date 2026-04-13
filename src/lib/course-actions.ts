@@ -168,7 +168,15 @@ export const createModuleFn = createServerFn({ method: "POST" })
   });
 
 export const updateModuleFn = createServerFn({ method: "POST" })
-  .inputValidator((d: { moduleId: string; title?: string; position?: number }) => d)
+  .inputValidator(
+    (d: {
+      moduleId: string;
+      title?: string;
+      position?: number;
+      availableAfterDays?: number | null;
+      availableFromDate?: string | null;
+    }) => d,
+  )
   .handler(async ({ data }) => {
     const user = await requireAdmin();
     // Verify module's course belongs to tenant
@@ -187,6 +195,9 @@ export const updateModuleFn = createServerFn({ method: "POST" })
     const setValues: Record<string, unknown> = {};
     if (data.title !== undefined) setValues.title = data.title;
     if (data.position !== undefined) setValues.position = data.position;
+    if (data.availableAfterDays !== undefined) setValues.availableAfterDays = data.availableAfterDays;
+    if (data.availableFromDate !== undefined)
+      setValues.availableFromDate = data.availableFromDate ? new Date(data.availableFromDate) : null;
 
     const [mod] = await db
       .update(modules)
@@ -295,6 +306,8 @@ export const updateLessonFn = createServerFn({ method: "POST" })
       content?: Record<string, unknown> | null;
       type?: "video" | "text" | "quiz" | "file";
       position?: number;
+      availableAfterDays?: number | null;
+      availableFromDate?: string | null;
     }) => d,
   )
   .handler(async ({ data }) => {
@@ -322,6 +335,9 @@ export const updateLessonFn = createServerFn({ method: "POST" })
     if (data.content !== undefined) setValues.content = data.content;
     if (data.type !== undefined) setValues.type = data.type;
     if (data.position !== undefined) setValues.position = data.position;
+    if (data.availableAfterDays !== undefined) setValues.availableAfterDays = data.availableAfterDays;
+    if (data.availableFromDate !== undefined)
+      setValues.availableFromDate = data.availableFromDate ? new Date(data.availableFromDate) : null;
 
     const [lesson] = await db
       .update(lessons)
