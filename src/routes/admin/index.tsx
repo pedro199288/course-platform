@@ -156,6 +156,18 @@ function AdminDashboard() {
         </div>
       )}
 
+      {/* Analytics Link */}
+      {metrics.totalCourses > 0 && (
+        <div>
+          <Link
+            to="/admin/analytics"
+            className="inline-flex items-center gap-2 rounded-md border border-neutral-200 px-4 py-2 text-sm font-medium hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-800/50"
+          >
+            View Engagement Analytics
+          </Link>
+        </div>
+      )}
+
       {/* Subscription Pricing */}
       <SubscriptionPricing currentPrice={subscriptionPricing.subscriptionPrice} />
 

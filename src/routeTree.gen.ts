@@ -28,6 +28,7 @@ import { Route as CheckoutSuccessRouteImport } from './routes/checkout/success'
 import { Route as CheckoutCancelRouteImport } from './routes/checkout/cancel'
 import { Route as CertificatesCertificateIdRouteImport } from './routes/certificates/$certificateId'
 import { Route as AdminOnboardingRouteImport } from './routes/admin/onboarding'
+import { Route as AdminAnalyticsRouteImport } from './routes/admin/analytics'
 import { Route as PlatformAdminTenantsIndexRouteImport } from './routes/platform-admin/tenants/index'
 import { Route as PlatformAdminPlansIndexRouteImport } from './routes/platform-admin/plans/index'
 import { Route as AdminCoursesIndexRouteImport } from './routes/admin/courses/index'
@@ -137,6 +138,11 @@ const AdminOnboardingRoute = AdminOnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const PlatformAdminTenantsIndexRoute =
   PlatformAdminTenantsIndexRouteImport.update({
     id: '/tenants/',
@@ -213,6 +219,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/onboarding': typeof AdminOnboardingRoute
   '/certificates/$certificateId': typeof CertificatesCertificateIdRoute
   '/checkout/cancel': typeof CheckoutCancelRoute
@@ -244,6 +251,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/onboarding': typeof AdminOnboardingRoute
   '/certificates/$certificateId': typeof CertificatesCertificateIdRoute
   '/checkout/cancel': typeof CheckoutCancelRoute
@@ -278,6 +286,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/onboarding': typeof AdminOnboardingRoute
   '/certificates/$certificateId': typeof CertificatesCertificateIdRoute
   '/checkout/cancel': typeof CheckoutCancelRoute
@@ -313,6 +322,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-password'
     | '/verify-email'
+    | '/admin/analytics'
     | '/admin/onboarding'
     | '/certificates/$certificateId'
     | '/checkout/cancel'
@@ -344,6 +354,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-password'
     | '/verify-email'
+    | '/admin/analytics'
     | '/admin/onboarding'
     | '/certificates/$certificateId'
     | '/checkout/cancel'
@@ -377,6 +388,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-password'
     | '/verify-email'
+    | '/admin/analytics'
     | '/admin/onboarding'
     | '/certificates/$certificateId'
     | '/checkout/cancel'
@@ -557,6 +569,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminOnboardingRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/analytics': {
+      id: '/admin/analytics'
+      path: '/analytics'
+      fullPath: '/admin/analytics'
+      preLoaderRoute: typeof AdminAnalyticsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/platform-admin/tenants/': {
       id: '/platform-admin/tenants/'
       path: '/tenants'
@@ -645,6 +664,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteRouteChildren {
+  AdminAnalyticsRoute: typeof AdminAnalyticsRoute
   AdminOnboardingRoute: typeof AdminOnboardingRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminCoursesCourseIdRoute: typeof AdminCoursesCourseIdRoute
@@ -653,6 +673,7 @@ interface AdminRouteRouteChildren {
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminAnalyticsRoute: AdminAnalyticsRoute,
   AdminOnboardingRoute: AdminOnboardingRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminCoursesCourseIdRoute: AdminCoursesCourseIdRoute,
