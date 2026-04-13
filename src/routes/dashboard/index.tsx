@@ -4,6 +4,7 @@ import { getStudentDashboardFn } from "#/lib/dashboard-actions.ts";
 import { getStudentCertificatesFn } from "#/lib/certificate-actions.ts";
 import { getSubscriptionStatusFn, cancelSubscriptionFn } from "#/lib/checkout-actions.ts";
 import { getSessionFn } from "#/lib/auth-session.ts";
+import { getRecentAnnouncementsFn } from "#/lib/announcement-actions.ts";
 
 export const Route = createFileRoute("/dashboard/")({
   beforeLoad: async () => {
@@ -13,18 +14,19 @@ export const Route = createFileRoute("/dashboard/")({
     }
   },
   loader: async () => {
-    const [dashboard, certMap, subscriptionStatus] = await Promise.all([
+    const [dashboard, certMap, subscriptionStatus, recentAnnouncements] = await Promise.all([
       getStudentDashboardFn(),
       getStudentCertificatesFn(),
       getSubscriptionStatusFn().catch(() => ({ hasSubscription: false as const })),
+      getRecentAnnouncementsFn().catch(() => []),
     ]);
-    return { ...dashboard, certMap, subscriptionStatus };
+    return { ...dashboard, certMap, subscriptionStatus, recentAnnouncements };
   },
   component: StudentDashboard,
 });
 
 function StudentDashboard() {
-  const { courses, hasSubscription, certMap, subscriptionStatus } = Route.useLoaderData();
+  const { courses, hasSubscription, certMap, subscriptionStatus, recentAnnouncements } = Route.useLoaderData();
 
   return (
     <main className="page-wrap px-4 py-10">
@@ -42,6 +44,32 @@ function StudentDashboard() {
             periodEnd={subscriptionStatus.currentPeriodEnd}
             canceledAt={subscriptionStatus.canceledAt}
           />
+        )}
+
+        {recentAnnouncements.length > 0 && (
+          <div className="mt-6 rounded-lg border border-neutral-200 dark:border-neutral-800">
+            <div className="border-b border-neutral-200 px-4 py-3 dark:border-neutral-800">
+              <h2 className="text-sm font-semibold">Recent Announcements</h2>
+            </div>
+            <ul className="divide-y divide-neutral-100 dark:divide-neutral-800">
+              {recentAnnouncements.map((a) => (
+                <li key={a.id} className="px-4 py-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-sm font-medium">{a.title}</h3>
+                    <span className="shrink-0 text-xs text-neutral-400 dark:text-neutral-500">
+                      {new Date(a.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                    {a.courseTitle}
+                  </p>
+                  <p className="mt-1 text-sm text-neutral-600 line-clamp-2 dark:text-neutral-400">
+                    {a.body}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
 
         {courses.length === 0 ? (

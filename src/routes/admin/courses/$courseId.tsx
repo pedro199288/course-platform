@@ -16,6 +16,11 @@ import {
   deleteLessonFn,
 } from "#/lib/course-actions.ts";
 import { getFileUploadUrlFn } from "#/lib/file-lessons.ts";
+import {
+  listAnnouncementsFn,
+  createAnnouncementFn,
+  deleteAnnouncementFn,
+} from "#/lib/announcement-actions.ts";
 
 interface Module {
   id: string;
@@ -52,13 +57,14 @@ export const Route = createFileRoute("/admin/courses/$courseId")({
         return { ...mod, lessons: modLessons };
       }),
     );
-    return { course, modules: modulesWithLessons };
+    const courseAnnouncements = await listAnnouncementsFn({ data: { courseId: params.courseId } });
+    return { course, modules: modulesWithLessons, announcements: courseAnnouncements };
   },
   component: CourseDetailPage,
 });
 
 function CourseDetailPage() {
-  const { course: initialCourse, modules: initialModules } = Route.useLoaderData();
+  const { course: initialCourse, modules: initialModules, announcements: initialAnnouncements } = Route.useLoaderData();
   const navigate = useNavigate();
   const router = useRouter();
 
@@ -244,6 +250,182 @@ function CourseDetailPage() {
         <h2 className="text-lg font-semibold">Curriculum</h2>
         <ModulesList courseId={initialCourse.id} initialModules={initialModules} />
       </div>
+
+      {/* Announcements */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold">Announcements</h2>
+        <AnnouncementsSection courseId={initialCourse.id} announcements={initialAnnouncements} />
+      </div>
+    </div>
+  );
+}
+
+interface Announcement {
+  id: string;
+  tenantId: string;
+  courseId: string;
+  title: string;
+  body: string;
+  emailSent: boolean;
+  createdAt: Date;
+}
+
+function AnnouncementsSection({
+  courseId,
+  announcements,
+}: {
+  courseId: string;
+  announcements: Announcement[];
+}) {
+  const router = useRouter();
+  const [showForm, setShowForm] = useState(false);
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [sendEmail, setSendEmail] = useState(false);
+  const [posting, setPosting] = useState(false);
+
+  async function handlePost(e: React.FormEvent) {
+    e.preventDefault();
+    if (!title.trim() || !body.trim()) return;
+    if (sendEmail && !confirm("This will send an email to all enrolled students. Continue?")) return;
+    setPosting(true);
+    try {
+      await createAnnouncementFn({
+        data: { courseId, title: title.trim(), body: body.trim(), sendEmail },
+      });
+      setTitle("");
+      setBody("");
+      setSendEmail(false);
+      setShowForm(false);
+      void router.invalidate();
+    } catch {
+      alert("Failed to post announcement");
+    } finally {
+      setPosting(false);
+    }
+  }
+
+  async function handleDelete(announcementId: string) {
+    if (!confirm("Delete this announcement?")) return;
+    await deleteAnnouncementFn({ data: { announcementId } });
+    void router.invalidate();
+  }
+
+  return (
+    <div className="space-y-3">
+      {!showForm && (
+        <button
+          type="button"
+          onClick={() => setShowForm(true)}
+          className="rounded-md border border-dashed border-neutral-300 px-3 py-2 text-sm text-neutral-600 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800"
+        >
+          + New announcement
+        </button>
+      )}
+
+      {showForm && (
+        <form
+          onSubmit={(e) => void handlePost(e)}
+          className="space-y-3 rounded-lg border border-neutral-200 p-4 dark:border-neutral-800"
+        >
+          <div className="space-y-1.5">
+            <label htmlFor="ann-title" className="block text-sm font-medium">
+              Title
+            </label>
+            <input
+              id="ann-title"
+              type="text"
+              required
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Announcement title"
+              className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 dark:border-neutral-700 dark:bg-neutral-900"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="ann-body" className="block text-sm font-medium">
+              Body
+            </label>
+            <textarea
+              id="ann-body"
+              rows={4}
+              required
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              placeholder="Write your announcement..."
+              className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 dark:border-neutral-700 dark:bg-neutral-900"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              id="ann-email"
+              type="checkbox"
+              checked={sendEmail}
+              onChange={(e) => setSendEmail(e.target.checked)}
+              className="rounded border-neutral-300"
+            />
+            <label htmlFor="ann-email" className="text-sm text-neutral-600 dark:text-neutral-400">
+              Also send by email to all enrolled students
+            </label>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={posting || !title.trim() || !body.trim()}
+              className="rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
+            >
+              {posting ? "Posting..." : "Post announcement"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowForm(false);
+                setTitle("");
+                setBody("");
+                setSendEmail(false);
+              }}
+              className="text-sm text-neutral-400 hover:underline"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+
+      {announcements.length === 0 && !showForm && (
+        <p className="text-sm text-neutral-500 dark:text-neutral-400">No announcements yet.</p>
+      )}
+
+      {announcements.map((ann) => (
+        <div
+          key={ann.id}
+          className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800"
+        >
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className="text-sm font-semibold">{ann.title}</h3>
+              <p className="mt-1 text-sm text-neutral-600 whitespace-pre-wrap dark:text-neutral-400">
+                {ann.body}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void handleDelete(ann.id)}
+              className="ml-4 text-xs text-red-500 hover:underline"
+            >
+              Delete
+            </button>
+          </div>
+          <div className="mt-2 flex items-center gap-3 text-xs text-neutral-400">
+            <span>{new Date(ann.createdAt).toLocaleDateString()}</span>
+            {ann.emailSent && (
+              <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                Emailed
+              </span>
+            )}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

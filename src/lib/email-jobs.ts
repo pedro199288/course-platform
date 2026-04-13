@@ -125,3 +125,31 @@ export async function enqueueCertificateDelivery(opts: {
     from: opts.from,
   });
 }
+
+/**
+ * Enqueue a course announcement email.
+ */
+export async function enqueueAnnouncementEmail(opts: {
+  to: string;
+  studentName: string;
+  courseName: string;
+  schoolName: string;
+  announcementTitle: string;
+  announcementBody: string;
+  from?: string;
+}): Promise<string | null> {
+  const { renderCourseAnnouncement } = await import("./email-templates/course-announcement.tsx");
+  const html = await renderCourseAnnouncement({
+    studentName: opts.studentName,
+    courseName: opts.courseName,
+    schoolName: opts.schoolName,
+    announcementTitle: opts.announcementTitle,
+    announcementBody: opts.announcementBody,
+  });
+  return enqueueEmail({
+    to: opts.to,
+    subject: `${opts.announcementTitle} — ${opts.courseName}`,
+    html,
+    from: opts.from,
+  });
+}

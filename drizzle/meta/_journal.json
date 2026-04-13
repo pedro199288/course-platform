@@ -64,6 +64,13 @@
       "when": 1776104165944,
       "tag": "0009_even_zarek",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1776105251195,
+      "tag": "0010_announcements",
+      "breakpoints": true
     }
   ]
 }

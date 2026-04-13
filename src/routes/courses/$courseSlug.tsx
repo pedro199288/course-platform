@@ -8,6 +8,7 @@ import {
   getSubscriptionStatusFn,
 } from "#/lib/checkout-actions.ts";
 import { checkEnrollmentFn } from "#/lib/lesson-actions.ts";
+import { getCourseAnnouncementsFn } from "#/lib/announcement-actions.ts";
 
 export const Route = createFileRoute("/courses/$courseSlug")({
   loader: async ({ params }) => {
@@ -23,13 +24,17 @@ export const Route = createFileRoute("/courses/$courseSlug")({
           getSubscriptionStatusFn().catch(() => ({ hasSubscription: false as const })),
         ])
       : [{ enrolled: false }, { hasSubscription: false as const }];
-    return { ...data, session, enrolled: enrollment.enrolled, subscriptionStatus };
+    const hasAccess = enrollment.enrolled || (subscriptionStatus.hasSubscription && "status" in subscriptionStatus && subscriptionStatus.status === "active");
+    const courseAnnouncements = hasAccess
+      ? await getCourseAnnouncementsFn({ data: { courseSlug: params.courseSlug } }).catch(() => [])
+      : [];
+    return { ...data, session, enrolled: enrollment.enrolled, subscriptionStatus, courseAnnouncements };
   },
   component: CourseDetailPage,
 });
 
 function CourseDetailPage() {
-  const { tenant, course, curriculum, session, enrolled, subscriptionStatus } =
+  const { tenant, course, curriculum, session, enrolled, subscriptionStatus, courseAnnouncements } =
     Route.useLoaderData();
   const hasActiveSubscription =
     subscriptionStatus.hasSubscription &&
@@ -128,6 +133,31 @@ function CourseDetailPage() {
               </div>
             )}
           </div>
+
+          {/* Announcements (enrolled students only) */}
+          {courseAnnouncements.length > 0 && (
+            <div className="mt-8">
+              <h2 className="text-xl font-semibold">Announcements</h2>
+              <div className="mt-4 space-y-4">
+                {courseAnnouncements.map((a) => (
+                  <div
+                    key={a.id}
+                    className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800"
+                  >
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium">{a.title}</h3>
+                      <span className="text-xs text-neutral-400 dark:text-neutral-500">
+                        {new Date(a.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm text-neutral-600 whitespace-pre-wrap dark:text-neutral-400">
+                      {a.body}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Sidebar: pricing + CTA */}
