@@ -9,6 +9,7 @@ import {
   enrollments,
   subscriptions,
 } from "#/db/schema/index.ts";
+import { users } from "#/db/schema/auth.ts";
 import { processWebhookEvent } from "#/lib/webhook-actions.ts";
 
 // Mock email to prevent Resend API calls
@@ -65,18 +66,49 @@ describe("subscriptions", () => {
       .returning();
     moduleId = mod.id;
 
-    await db
-      .insert(lessons)
-      .values({ moduleId, title: "Lesson 1", type: "text", position: 0 });
+    await db.insert(lessons).values({ moduleId, title: "Lesson 1", type: "text", position: 0 });
+
+    // Create test users for FK constraints
+    await db.insert(users).values([
+      { id: userId, tenantId, name: "Sub User", email: `sub-user-${Date.now()}@example.com` },
+      {
+        id: otherUserId,
+        tenantId,
+        name: "Other User",
+        email: `other-user-${Date.now()}@example.com`,
+      },
+    ]);
   });
 
   afterAll(async () => {
-    await db.delete(subscriptions).where(eq(subscriptions.tenantId, tenantId)).catch(() => {});
-    await db.delete(enrollments).where(eq(enrollments.tenantId, tenantId)).catch(() => {});
-    await db.delete(lessons).where(eq(lessons.moduleId, moduleId)).catch(() => {});
-    await db.delete(modules).where(eq(modules.courseId, courseId)).catch(() => {});
-    await db.delete(courses).where(eq(courses.tenantId, tenantId)).catch(() => {});
-    await db.delete(tenants).where(eq(tenants.subdomain, subdomain)).catch(() => {});
+    await db
+      .delete(subscriptions)
+      .where(eq(subscriptions.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(enrollments)
+      .where(eq(enrollments.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(lessons)
+      .where(eq(lessons.moduleId, moduleId))
+      .catch(() => {});
+    await db
+      .delete(modules)
+      .where(eq(modules.courseId, courseId))
+      .catch(() => {});
+    await db
+      .delete(users)
+      .where(eq(users.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(courses)
+      .where(eq(courses.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(tenants)
+      .where(eq(tenants.subdomain, subdomain))
+      .catch(() => {});
   });
 
   // ── Subscription creation via webhook ─────────────────
@@ -201,12 +233,7 @@ describe("subscriptions", () => {
     const enrollmentResult = await db
       .select()
       .from(enrollments)
-      .where(
-        and(
-          eq(enrollments.userId, userId),
-          eq(enrollments.courseId, courseId),
-        ),
-      );
+      .where(and(eq(enrollments.userId, userId), eq(enrollments.courseId, courseId)));
     expect(enrollmentResult.length).toBe(0);
 
     // But subscription is active
@@ -254,12 +281,7 @@ describe("subscriptions", () => {
     const subs = await db
       .select()
       .from(subscriptions)
-      .where(
-        and(
-          eq(subscriptions.userId, userId),
-          eq(subscriptions.tenantId, otherTenant.id),
-        ),
-      );
+      .where(and(eq(subscriptions.userId, userId), eq(subscriptions.tenantId, otherTenant.id)));
     expect(subs.length).toBe(0);
 
     await db.delete(tenants).where(eq(tenants.id, otherTenant.id));
@@ -286,12 +308,7 @@ describe("subscriptions", () => {
     const [enrollment] = await db
       .select()
       .from(enrollments)
-      .where(
-        and(
-          eq(enrollments.userId, otherUserId),
-          eq(enrollments.courseId, courseId),
-        ),
-      );
+      .where(and(eq(enrollments.userId, otherUserId), eq(enrollments.courseId, courseId)));
     expect(enrollment).toBeDefined();
 
     // First user has access via subscription (reactivate)

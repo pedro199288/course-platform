@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vite-plus/test";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { db } from "#/db/index.ts";
 import {
   tenants,
@@ -10,6 +10,7 @@ import {
   lessonProgress,
   subscriptions,
 } from "#/db/schema/index.ts";
+import { users } from "#/db/schema/auth.ts";
 import { findNextLesson } from "#/lib/dashboard-actions.ts";
 
 // Mock email to prevent Resend API calls
@@ -22,16 +23,13 @@ describe("student dashboard", () => {
   let tenantId: string;
   let course1Id: string;
   let course2Id: string;
-  let draftCourseId: string;
   let module1Id: string;
   let module2Id: string;
   let lesson1Id: string;
   let lesson2Id: string;
   let lesson3Id: string;
   let course2Module1Id: string;
-  let course2Lesson1Id: string;
   const userId = crypto.randomUUID();
-  const otherUserId = crypto.randomUUID();
 
   beforeAll(async () => {
     // Create tenant
@@ -103,14 +101,11 @@ describe("student dashboard", () => {
       .returning();
     course2Module1Id = c2mod.id;
 
-    const [c2l1] = await db
+    await db
       .insert(lessons)
-      .values({ moduleId: course2Module1Id, title: "C2 Lesson 1", type: "text", position: 0 })
-      .returning();
-    course2Lesson1Id = c2l1.id;
-
+      .values({ moduleId: course2Module1Id, title: "C2 Lesson 1", type: "text", position: 0 });
     // Create a draft course (should not appear in dashboard)
-    const [draft] = await db
+    await db
       .insert(courses)
       .values({
         tenantId,
@@ -120,7 +115,14 @@ describe("student dashboard", () => {
         price: "9.99",
       })
       .returning();
-    draftCourseId = draft.id;
+
+    // Create test user
+    await db.insert(users).values({
+      id: userId,
+      tenantId,
+      name: "Dashboard Test User",
+      email: `dashboard-test-${Date.now()}@example.com`,
+    });
 
     // Enroll user in course 1
     await db.insert(enrollments).values({
@@ -140,16 +142,50 @@ describe("student dashboard", () => {
   });
 
   afterAll(async () => {
-    await db.delete(lessonProgress).where(eq(lessonProgress.tenantId, tenantId)).catch(() => {});
-    await db.delete(subscriptions).where(eq(subscriptions.tenantId, tenantId)).catch(() => {});
-    await db.delete(enrollments).where(eq(enrollments.tenantId, tenantId)).catch(() => {});
-    await db.delete(lessons).where(eq(lessons.moduleId, module1Id)).catch(() => {});
-    await db.delete(lessons).where(eq(lessons.moduleId, module2Id)).catch(() => {});
-    await db.delete(lessons).where(eq(lessons.moduleId, course2Module1Id)).catch(() => {});
-    await db.delete(modules).where(eq(modules.courseId, course1Id)).catch(() => {});
-    await db.delete(modules).where(eq(modules.courseId, course2Id)).catch(() => {});
-    await db.delete(courses).where(eq(courses.tenantId, tenantId)).catch(() => {});
-    await db.delete(tenants).where(eq(tenants.subdomain, subdomain)).catch(() => {});
+    await db
+      .delete(lessonProgress)
+      .where(eq(lessonProgress.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(subscriptions)
+      .where(eq(subscriptions.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(enrollments)
+      .where(eq(enrollments.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(lessons)
+      .where(eq(lessons.moduleId, module1Id))
+      .catch(() => {});
+    await db
+      .delete(lessons)
+      .where(eq(lessons.moduleId, module2Id))
+      .catch(() => {});
+    await db
+      .delete(lessons)
+      .where(eq(lessons.moduleId, course2Module1Id))
+      .catch(() => {});
+    await db
+      .delete(modules)
+      .where(eq(modules.courseId, course1Id))
+      .catch(() => {});
+    await db
+      .delete(modules)
+      .where(eq(modules.courseId, course2Id))
+      .catch(() => {});
+    await db
+      .delete(users)
+      .where(eq(users.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(courses)
+      .where(eq(courses.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(tenants)
+      .where(eq(tenants.subdomain, subdomain))
+      .catch(() => {});
   });
 
   // ── Enrollment queries ──────────────────────────
@@ -158,12 +194,7 @@ describe("student dashboard", () => {
     const userEnrollments = await db
       .select({ courseId: enrollments.courseId })
       .from(enrollments)
-      .where(
-        and(
-          eq(enrollments.userId, userId),
-          eq(enrollments.tenantId, tenantId),
-        ),
-      );
+      .where(and(eq(enrollments.userId, userId), eq(enrollments.tenantId, tenantId)));
 
     expect(userEnrollments.length).toBe(1);
     expect(userEnrollments[0].courseId).toBe(course1Id);
@@ -179,12 +210,7 @@ describe("student dashboard", () => {
     await db
       .update(enrollments)
       .set({ revokedAt: new Date() })
-      .where(
-        and(
-          eq(enrollments.userId, userId),
-          eq(enrollments.courseId, course2Id),
-        ),
-      );
+      .where(and(eq(enrollments.userId, userId), eq(enrollments.courseId, course2Id)));
 
     const activeEnrollments = await db
       .select({ courseId: enrollments.courseId })
@@ -193,7 +219,7 @@ describe("student dashboard", () => {
         and(
           eq(enrollments.userId, userId),
           eq(enrollments.tenantId, tenantId),
-          eq(enrollments.revokedAt, null!),
+          isNull(enrollments.revokedAt),
         ),
       );
 
@@ -204,12 +230,7 @@ describe("student dashboard", () => {
     // Clean up revoked enrollment
     await db
       .delete(enrollments)
-      .where(
-        and(
-          eq(enrollments.userId, userId),
-          eq(enrollments.courseId, course2Id),
-        ),
-      );
+      .where(and(eq(enrollments.userId, userId), eq(enrollments.courseId, course2Id)));
   });
 
   it("isolates enrollments by tenant", async () => {
@@ -221,12 +242,7 @@ describe("student dashboard", () => {
     const otherEnrollments = await db
       .select({ courseId: enrollments.courseId })
       .from(enrollments)
-      .where(
-        and(
-          eq(enrollments.userId, userId),
-          eq(enrollments.tenantId, otherTenant.id),
-        ),
-      );
+      .where(and(eq(enrollments.userId, userId), eq(enrollments.tenantId, otherTenant.id)));
 
     expect(otherEnrollments.length).toBe(0);
 

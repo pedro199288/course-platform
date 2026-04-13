@@ -10,6 +10,7 @@ import {
   lessonProgress,
   certificates,
 } from "#/db/schema/index.ts";
+import { users } from "#/db/schema/auth.ts";
 import { checkAndIssueCertificate } from "#/lib/certificate-actions.ts";
 
 // Mock email to prevent Resend API calls
@@ -88,6 +89,14 @@ describe("certificates", () => {
       .returning();
     lesson2Id = l2.id;
 
+    // Create test user
+    await db.insert(users).values({
+      id: userId,
+      tenantId,
+      name: "Cert Test User",
+      email: `cert-test-${Date.now()}@example.com`,
+    });
+
     // Enroll the user
     await db.insert(enrollments).values({
       tenantId,
@@ -116,6 +125,10 @@ describe("certificates", () => {
     await db
       .delete(modules)
       .where(eq(modules.courseId, courseId))
+      .catch(() => {});
+    await db
+      .delete(users)
+      .where(eq(users.tenantId, tenantId))
       .catch(() => {});
     await db
       .delete(courses)
@@ -213,11 +226,7 @@ describe("certificates", () => {
       position: 0,
     });
 
-    const result = await checkAndIssueCertificate(
-      userId,
-      emptyCourse.id,
-      tenantId,
-    );
+    const result = await checkAndIssueCertificate(userId, emptyCourse.id, tenantId);
     expect(result.issued).toBe(false);
 
     // Cleanup
@@ -259,11 +268,7 @@ describe("certificates", () => {
       })
       .returning();
 
-    const result = await checkAndIssueCertificate(
-      userId,
-      noModCourse.id,
-      tenantId,
-    );
+    const result = await checkAndIssueCertificate(userId, noModCourse.id, tenantId);
     expect(result.issued).toBe(false);
 
     // Cleanup

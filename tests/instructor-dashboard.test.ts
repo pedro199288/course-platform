@@ -1,12 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vite-plus/test";
 import { eq, and, sql } from "drizzle-orm";
 import { db } from "#/db/index.ts";
-import {
-  tenants,
-  courses,
-  enrollments,
-  payments,
-} from "#/db/schema/index.ts";
+import { tenants, courses, enrollments, payments } from "#/db/schema/index.ts";
 import { users } from "#/db/schema/auth.ts";
 
 // Mock email to prevent Resend API calls
@@ -78,6 +73,18 @@ describe("instructor dashboard", () => {
       })
       .returning();
     draftCourseId = draft.id;
+
+    // Create test users
+    await db.insert(users).values([
+      { id: studentId1, tenantId, name: "Student 1", email: `student1-${Date.now()}@example.com` },
+      { id: studentId2, tenantId, name: "Student 2", email: `student2-${Date.now()}@example.com` },
+      {
+        id: studentId3,
+        tenantId: otherTenantId,
+        name: "Student 3",
+        email: `student3-${Date.now()}@example.com`,
+      },
+    ]);
 
     // Enroll students in published course A
     await db.insert(enrollments).values([
@@ -153,14 +160,46 @@ describe("instructor dashboard", () => {
   });
 
   afterAll(async () => {
-    await db.delete(payments).where(eq(payments.tenantId, tenantId)).catch(() => {});
-    await db.delete(payments).where(eq(payments.tenantId, otherTenantId)).catch(() => {});
-    await db.delete(enrollments).where(eq(enrollments.tenantId, tenantId)).catch(() => {});
-    await db.delete(enrollments).where(eq(enrollments.tenantId, otherTenantId)).catch(() => {});
-    await db.delete(courses).where(eq(courses.tenantId, tenantId)).catch(() => {});
-    await db.delete(courses).where(eq(courses.tenantId, otherTenantId)).catch(() => {});
-    await db.delete(tenants).where(eq(tenants.id, tenantId)).catch(() => {});
-    await db.delete(tenants).where(eq(tenants.id, otherTenantId)).catch(() => {});
+    await db
+      .delete(payments)
+      .where(eq(payments.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(payments)
+      .where(eq(payments.tenantId, otherTenantId))
+      .catch(() => {});
+    await db
+      .delete(enrollments)
+      .where(eq(enrollments.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(enrollments)
+      .where(eq(enrollments.tenantId, otherTenantId))
+      .catch(() => {});
+    await db
+      .delete(users)
+      .where(eq(users.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(users)
+      .where(eq(users.tenantId, otherTenantId))
+      .catch(() => {});
+    await db
+      .delete(courses)
+      .where(eq(courses.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(courses)
+      .where(eq(courses.tenantId, otherTenantId))
+      .catch(() => {});
+    await db
+      .delete(tenants)
+      .where(eq(tenants.id, tenantId))
+      .catch(() => {});
+    await db
+      .delete(tenants)
+      .where(eq(tenants.id, otherTenantId))
+      .catch(() => {});
   });
 
   // ── Course counts ──────────────────────────
@@ -191,12 +230,7 @@ describe("instructor dashboard", () => {
         count: sql<number>`count(distinct ${enrollments.userId})::int`,
       })
       .from(enrollments)
-      .where(
-        and(
-          eq(enrollments.tenantId, tenantId),
-          sql`${enrollments.revokedAt} is null`,
-        ),
-      );
+      .where(and(eq(enrollments.tenantId, tenantId), sql`${enrollments.revokedAt} is null`));
 
     // studentId1 and studentId2 are enrolled (studentId1 in 2 courses, but counted once)
     expect(result.count).toBe(2);
@@ -228,10 +262,7 @@ describe("instructor dashboard", () => {
       .from(courses)
       .leftJoin(
         enrollments,
-        and(
-          eq(courses.id, enrollments.courseId),
-          sql`${enrollments.revokedAt} is null`,
-        ),
+        and(eq(courses.id, enrollments.courseId), sql`${enrollments.revokedAt} is null`),
       )
       .where(eq(courses.tenantId, tenantId))
       .groupBy(courses.id, courses.title);
@@ -308,24 +339,14 @@ describe("instructor dashboard", () => {
         count: sql<number>`count(distinct ${enrollments.userId})::int`,
       })
       .from(enrollments)
-      .where(
-        and(
-          eq(enrollments.tenantId, tenantId),
-          sql`${enrollments.revokedAt} is null`,
-        ),
-      );
+      .where(and(eq(enrollments.tenantId, tenantId), sql`${enrollments.revokedAt} is null`));
 
     const [otherResult] = await db
       .select({
         count: sql<number>`count(distinct ${enrollments.userId})::int`,
       })
       .from(enrollments)
-      .where(
-        and(
-          eq(enrollments.tenantId, otherTenantId),
-          sql`${enrollments.revokedAt} is null`,
-        ),
-      );
+      .where(and(eq(enrollments.tenantId, otherTenantId), sql`${enrollments.revokedAt} is null`));
 
     expect(result.count).toBe(2);
     expect(otherResult.count).toBe(1);
@@ -338,24 +359,14 @@ describe("instructor dashboard", () => {
     await db
       .update(enrollments)
       .set({ revokedAt: new Date() })
-      .where(
-        and(
-          eq(enrollments.userId, studentId2),
-          eq(enrollments.courseId, publishedCourseId),
-        ),
-      );
+      .where(and(eq(enrollments.userId, studentId2), eq(enrollments.courseId, publishedCourseId)));
 
     const [result] = await db
       .select({
         count: sql<number>`count(distinct ${enrollments.userId})::int`,
       })
       .from(enrollments)
-      .where(
-        and(
-          eq(enrollments.tenantId, tenantId),
-          sql`${enrollments.revokedAt} is null`,
-        ),
-      );
+      .where(and(eq(enrollments.tenantId, tenantId), sql`${enrollments.revokedAt} is null`));
 
     // Only studentId1 remains active
     expect(result.count).toBe(1);
@@ -364,11 +375,6 @@ describe("instructor dashboard", () => {
     await db
       .update(enrollments)
       .set({ revokedAt: null })
-      .where(
-        and(
-          eq(enrollments.userId, studentId2),
-          eq(enrollments.courseId, publishedCourseId),
-        ),
-      );
+      .where(and(eq(enrollments.userId, studentId2), eq(enrollments.courseId, publishedCourseId)));
   });
 });

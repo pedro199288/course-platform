@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-import { eq, and, asc, isNull, or, inArray } from "drizzle-orm";
+import { eq, and, asc, isNull, inArray } from "drizzle-orm";
 import { db } from "#/db/index.ts";
 import {
   courses,
@@ -19,8 +19,7 @@ import { extractSubdomain } from "#/middleware/tenant.ts";
  */
 async function requireTenant() {
   const request = getRequest();
-  const host =
-    request.headers.get("x-tenant") ?? request.headers.get("host") ?? "";
+  const host = request.headers.get("x-tenant") ?? request.headers.get("host") ?? "";
   const subdomain = extractSubdomain(host);
   if (!subdomain) throw new Error("No tenant");
 
@@ -108,10 +107,7 @@ export const getLessonFn = createServerFn({ method: "GET" })
     }
 
     // Load the lesson
-    const [lesson] = await db
-      .select()
-      .from(lessons)
-      .where(eq(lessons.id, data.lessonId));
+    const [lesson] = await db.select().from(lessons).where(eq(lessons.id, data.lessonId));
     if (!lesson) throw new Error("Lesson not found");
 
     // Verify the lesson belongs to this course
@@ -154,26 +150,24 @@ export const getLessonFn = createServerFn({ method: "GET" })
     const allLessons = curriculum.flatMap((m) => m.lessons);
     const currentIndex = allLessons.findIndex((l) => l.id === data.lessonId);
     const prevLesson = currentIndex > 0 ? allLessons[currentIndex - 1] : null;
-    const nextLesson =
-      currentIndex < allLessons.length - 1
-        ? allLessons[currentIndex + 1]
-        : null;
+    const nextLesson = currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null;
 
     // Fetch progress data for sidebar completion indicators
     const allLessonIds = allLessons.map((l) => l.id);
-    const completedRows = allLessonIds.length > 0
-      ? await db
-          .select({ lessonId: lessonProgress.lessonId })
-          .from(lessonProgress)
-          .where(
-            and(
-              eq(lessonProgress.userId, user.id),
-              eq(lessonProgress.tenantId, tenant.id),
-              eq(lessonProgress.completed, true),
-              inArray(lessonProgress.lessonId, allLessonIds),
-            ),
-          )
-      : [];
+    const completedRows =
+      allLessonIds.length > 0
+        ? await db
+            .select({ lessonId: lessonProgress.lessonId })
+            .from(lessonProgress)
+            .where(
+              and(
+                eq(lessonProgress.userId, user.id),
+                eq(lessonProgress.tenantId, tenant.id),
+                eq(lessonProgress.completed, true),
+                inArray(lessonProgress.lessonId, allLessonIds),
+              ),
+            )
+        : [];
     const completedLessonIds = completedRows.map((r) => r.lessonId);
 
     return {

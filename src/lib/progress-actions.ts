@@ -1,16 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-import { eq, and, asc, isNull, inArray } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { db } from "#/db/index.ts";
-import {
-  courses,
-  modules,
-  lessons,
-  enrollments,
-  lessonProgress,
-  subscriptions,
-  tenants,
-} from "#/db/schema/index.ts";
+import { courses, modules, lessons, lessonProgress, tenants } from "#/db/schema/index.ts";
 import { auth } from "./auth.ts";
 import { extractSubdomain } from "#/middleware/tenant.ts";
 import { checkCourseAccess } from "./lesson-actions.ts";
@@ -21,8 +13,7 @@ import { checkAndIssueCertificate } from "./certificate-actions.ts";
  */
 async function requireTenant() {
   const request = getRequest();
-  const host =
-    request.headers.get("x-tenant") ?? request.headers.get("host") ?? "";
+  const host = request.headers.get("x-tenant") ?? request.headers.get("host") ?? "";
   const subdomain = extractSubdomain(host);
   if (!subdomain) throw new Error("No tenant");
 
@@ -100,11 +91,7 @@ export const markLessonCompleteFn = createServerFn({ method: "POST" })
       });
 
     // Check if course is now 100% complete and issue certificate
-    const certResult = await checkAndIssueCertificate(
-      user.id,
-      course.id,
-      tenant.id,
-    );
+    const certResult = await checkAndIssueCertificate(user.id, course.id, tenant.id);
 
     return { success: true, certificateIssued: certResult.issued };
   });

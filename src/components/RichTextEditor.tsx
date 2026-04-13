@@ -180,7 +180,7 @@ export function RichTextEditor({
         ...(placeholder ? { "data-placeholder": placeholder } : {}),
       },
     },
-    onUpdate: ({ editor: e }) => {
+    onUpdate: ({ editor: e }: { editor: Editor }) => {
       onChange(e.getJSON() as RichTextDoc);
     },
     // SSR: avoid hydration mismatch by rendering the empty editor until the

@@ -1,4 +1,7 @@
-import { afterAll, beforeAll, describe, expect, it } from "vite-plus/test";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vite-plus/test";
+
+// PgBoss polls at intervals; give integration tests enough time
+vi.setConfig({ testTimeout: 30_000 });
 import PgBoss from "pg-boss";
 
 // Use a dedicated PgBoss instance for tests to avoid conflicts with app code.
@@ -23,6 +26,7 @@ afterAll(async () => {
 describe("job queue: enqueue and execute", () => {
   it("enqueues a job and returns a job ID", async () => {
     const queue = `test-enqueue-${Date.now()}`;
+    await boss.createQueue(queue);
     const jobId = await boss.send(queue, { message: "hello" });
 
     expect(jobId).toBeTruthy();
@@ -31,6 +35,7 @@ describe("job queue: enqueue and execute", () => {
 
   it("worker receives and processes the enqueued job data", async () => {
     const queue = `test-execute-${Date.now()}`;
+    await boss.createQueue(queue);
     let receivedData: unknown = null;
     const done = new Promise<void>((resolve) => {
       boss.work(queue, async (jobs) => {
@@ -54,6 +59,7 @@ describe("job queue: enqueue and execute", () => {
 
   it("job marked as completed after successful handler", async () => {
     const queue = `test-complete-${Date.now()}`;
+    await boss.createQueue(queue);
     const processed = new Promise<string>((resolve) => {
       boss.work(queue, async (jobs) => {
         resolve(jobs[0].id);
@@ -64,9 +70,7 @@ describe("job queue: enqueue and execute", () => {
 
     const completedJobId = await Promise.race([
       processed,
-      new Promise<string>((_, reject) =>
-        setTimeout(() => reject(new Error("Timeout")), 15_000),
-      ),
+      new Promise<string>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 15_000)),
     ]);
 
     expect(completedJobId).toBe(jobId);
@@ -80,6 +84,7 @@ describe("job queue: enqueue and execute", () => {
 describe("job queue: retry behavior", () => {
   it("retries a failed job up to the configured limit", async () => {
     const queue = `test-retry-${Date.now()}`;
+    await boss.createQueue(queue);
     let attempts = 0;
     const allDone = new Promise<number>((resolve) => {
       boss.work(queue, async (jobs) => {

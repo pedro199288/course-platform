@@ -9,6 +9,7 @@ import {
   enrollments,
   lessonProgress,
 } from "#/db/schema/index.ts";
+import { users } from "#/db/schema/auth.ts";
 import { deriveCourseCompletion } from "#/lib/progress-actions.ts";
 
 // Mock email to prevent Resend API calls
@@ -97,6 +98,14 @@ describe("progress tracking", () => {
       .returning();
     lesson3Id = l3.id;
 
+    // Create test user
+    await db.insert(users).values({
+      id: userId,
+      tenantId,
+      name: "Progress Test User",
+      email: `progress-test-${Date.now()}@example.com`,
+    });
+
     // Enroll the user
     await db.insert(enrollments).values({
       tenantId,
@@ -127,6 +136,10 @@ describe("progress tracking", () => {
       .where(eq(modules.courseId, courseId))
       .catch(() => {});
     await db
+      .delete(users)
+      .where(eq(users.tenantId, tenantId))
+      .catch(() => {});
+    await db
       .delete(courses)
       .where(eq(courses.tenantId, tenantId))
       .catch(() => {});
@@ -150,12 +163,7 @@ describe("progress tracking", () => {
     const [record] = await db
       .select()
       .from(lessonProgress)
-      .where(
-        and(
-          eq(lessonProgress.userId, userId),
-          eq(lessonProgress.lessonId, lesson1Id),
-        ),
-      );
+      .where(and(eq(lessonProgress.userId, userId), eq(lessonProgress.lessonId, lesson1Id)));
 
     expect(record).toBeDefined();
     expect(record.completed).toBe(true);
@@ -196,12 +204,7 @@ describe("progress tracking", () => {
     const [record] = await db
       .select()
       .from(lessonProgress)
-      .where(
-        and(
-          eq(lessonProgress.userId, userId),
-          eq(lessonProgress.lessonId, lesson1Id),
-        ),
-      );
+      .where(and(eq(lessonProgress.userId, userId), eq(lessonProgress.lessonId, lesson1Id)));
 
     expect(record).toBeDefined();
     expect(record.completed).toBe(true);

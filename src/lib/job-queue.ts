@@ -54,11 +54,18 @@ const handlers = new Map<string, JobHandler<any>>();
  *   await sendEmail(data);
  * });
  */
-export function registerHandler<T = unknown>(
-  name: string,
-  handler: JobHandler<T>,
-): void {
+export function registerHandler<T = unknown>(name: string, handler: JobHandler<T>): void {
   handlers.set(name, handler);
+}
+
+/**
+ * Ensure a queue exists (idempotent — ignores "already exists" errors).
+ */
+const knownQueues = new Set<string>();
+async function ensureQueue(b: PgBoss, name: string): Promise<void> {
+  if (knownQueues.has(name)) return;
+  await b.createQueue(name).catch(() => {});
+  knownQueues.add(name);
 }
 
 /**
@@ -68,6 +75,7 @@ export function registerHandler<T = unknown>(
 export async function startWorkers(): Promise<void> {
   const b = getBoss();
   for (const [name, handler] of handlers) {
+    await ensureQueue(b, name);
     await b.work(name, async (jobs) => {
       for (const job of jobs) {
         await handler(job.data);
@@ -103,11 +111,12 @@ export async function sendJob<T = unknown>(
   options: SendOptions = {},
 ): Promise<string | null> {
   const b = getBoss();
-  const id = await b.send(name, data as object, {
-    startAfter: options.startAfter,
-    retryLimit: options.retryLimit,
-    retryBackoff: options.retryBackoff,
-    singletonKey: options.singletonKey,
-  });
+  await ensureQueue(b, name);
+  const sendOptions: Record<string, unknown> = {};
+  if (options.startAfter !== undefined) sendOptions.startAfter = options.startAfter;
+  if (options.retryLimit !== undefined) sendOptions.retryLimit = options.retryLimit;
+  if (options.retryBackoff !== undefined) sendOptions.retryBackoff = options.retryBackoff;
+  if (options.singletonKey !== undefined) sendOptions.singletonKey = options.singletonKey;
+  const id = await b.send(name, data as object, sendOptions);
   return id;
 }

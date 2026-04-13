@@ -1,8 +1,5 @@
 import { describe, expect, it, vi } from "vite-plus/test";
-import {
-  renderVerifyEmail,
-  renderResetPassword,
-} from "#/lib/email-templates/index.ts";
+import { renderVerifyEmail, renderResetPassword } from "#/lib/email-templates/index.ts";
 
 describe("email templates", () => {
   it("renders verify email template with verification link", async () => {
@@ -29,15 +26,16 @@ describe("email templates", () => {
 
 describe("sendEmail", () => {
   it("calls Resend API with correct parameters", async () => {
+    vi.resetModules();
     const mockSend = vi.fn().mockResolvedValue({
       data: { id: "test-email-id" },
       error: null,
     });
 
     vi.doMock("resend", () => ({
-      Resend: vi.fn().mockImplementation(() => ({
-        emails: { send: mockSend },
-      })),
+      Resend: class {
+        emails = { send: mockSend };
+      },
     }));
 
     const { sendEmail } = await import("#/lib/email.ts");
@@ -57,15 +55,16 @@ describe("sendEmail", () => {
   });
 
   it("throws on Resend API error", async () => {
+    vi.resetModules();
     const mockSend = vi.fn().mockResolvedValue({
       data: null,
       error: { message: "Invalid API key" },
     });
 
     vi.doMock("resend", () => ({
-      Resend: vi.fn().mockImplementation(() => ({
-        emails: { send: mockSend },
-      })),
+      Resend: class {
+        emails = { send: mockSend };
+      },
     }));
 
     const { sendEmail } = await import("#/lib/email.ts");

@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vite-plus/test";
 import { eq, and, isNull } from "drizzle-orm";
 import { db } from "#/db/index.ts";
 import { tenants, courses, payments, enrollments, plans } from "#/db/schema/index.ts";
+import { users } from "#/db/schema/auth.ts";
 
 // Mock email to prevent Resend API calls
 vi.mock("#/lib/email.ts", () => ({
@@ -68,6 +69,14 @@ describe("checkout", () => {
       })
       .returning();
     courseId = course.id;
+
+    // Create a test user for FK constraints
+    await db.insert(users).values({
+      id: userId,
+      tenantId,
+      name: "Checkout Test User",
+      email: `checkout-test-${Date.now()}@example.com`,
+    });
   });
 
   afterAll(async () => {
@@ -78,6 +87,10 @@ describe("checkout", () => {
     await db
       .delete(payments)
       .where(eq(payments.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(users)
+      .where(eq(users.tenantId, tenantId))
       .catch(() => {});
     await db
       .delete(courses)
@@ -237,13 +250,11 @@ describe("checkout", () => {
   // ── Enrollment creation ──────────────────────────────────
 
   it("creates an enrollment record on successful payment", async () => {
-    const enrollUserId = crypto.randomUUID();
-
     const [enrollment] = await db
       .insert(enrollments)
       .values({
         tenantId,
-        userId: enrollUserId,
+        userId,
         courseId,
       })
       .returning();
@@ -257,11 +268,9 @@ describe("checkout", () => {
   });
 
   it("prevents duplicate enrollments (unique constraint)", async () => {
-    const enrollUserId = crypto.randomUUID();
-
     await db.insert(enrollments).values({
       tenantId,
-      userId: enrollUserId,
+      userId,
       courseId,
     });
 
@@ -269,7 +278,7 @@ describe("checkout", () => {
     await expect(
       db.insert(enrollments).values({
         tenantId,
-        userId: enrollUserId,
+        userId,
         courseId,
       }),
     ).rejects.toThrow();
@@ -277,21 +286,19 @@ describe("checkout", () => {
     // Cleanup
     await db
       .delete(enrollments)
-      .where(and(eq(enrollments.userId, enrollUserId), eq(enrollments.courseId, courseId)));
+      .where(and(eq(enrollments.userId, userId), eq(enrollments.courseId, courseId)));
   });
 
   // ── Enrollment check ──────────────────────────────────
 
   it("detects existing enrollment to prevent double-purchase", async () => {
-    const enrollUserId = crypto.randomUUID();
-
     // No enrollment yet
     const [noEnrollment] = await db
       .select({ id: enrollments.id })
       .from(enrollments)
       .where(
         and(
-          eq(enrollments.userId, enrollUserId),
+          eq(enrollments.userId, userId),
           eq(enrollments.courseId, courseId),
           isNull(enrollments.revokedAt),
         ),
@@ -301,7 +308,7 @@ describe("checkout", () => {
     // Create enrollment
     await db.insert(enrollments).values({
       tenantId,
-      userId: enrollUserId,
+      userId,
       courseId,
     });
 
@@ -311,7 +318,7 @@ describe("checkout", () => {
       .from(enrollments)
       .where(
         and(
-          eq(enrollments.userId, enrollUserId),
+          eq(enrollments.userId, userId),
           eq(enrollments.courseId, courseId),
           isNull(enrollments.revokedAt),
         ),
@@ -321,7 +328,7 @@ describe("checkout", () => {
     // Cleanup
     await db
       .delete(enrollments)
-      .where(and(eq(enrollments.userId, enrollUserId), eq(enrollments.courseId, courseId)));
+      .where(and(eq(enrollments.userId, userId), eq(enrollments.courseId, courseId)));
   });
 
   // ── Application fee calculation ──────────────────────────

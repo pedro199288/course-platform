@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vite-plus/test";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "#/db/index.ts";
 import {
   tenants,
@@ -9,6 +9,7 @@ import {
   enrollments,
   subscriptions,
 } from "#/db/schema/index.ts";
+import { users } from "#/db/schema/auth.ts";
 import { checkCourseAccess } from "#/lib/lesson-actions.ts";
 
 // Mock email to prevent Resend API calls
@@ -73,6 +74,28 @@ describe("lesson viewer — access gating", () => {
       .returning();
     lessonId = lesson.id;
 
+    // Create test users
+    await db.insert(users).values([
+      {
+        id: enrolledUserId,
+        tenantId,
+        name: "Enrolled User",
+        email: `enrolled-${Date.now()}@example.com`,
+      },
+      {
+        id: subscribedUserId,
+        tenantId,
+        name: "Subscribed User",
+        email: `subscribed-${Date.now()}@example.com`,
+      },
+      {
+        id: unenrolledUserId,
+        tenantId,
+        name: "Unenrolled User",
+        email: `unenrolled-${Date.now()}@example.com`,
+      },
+    ]);
+
     // Create enrollment for enrolled user
     await db.insert(enrollments).values({
       tenantId,
@@ -107,6 +130,10 @@ describe("lesson viewer — access gating", () => {
       .where(eq(modules.courseId, courseId))
       .catch(() => {});
     await db
+      .delete(users)
+      .where(eq(users.tenantId, tenantId))
+      .catch(() => {});
+    await db
       .delete(courses)
       .where(eq(courses.tenantId, tenantId))
       .catch(() => {});
@@ -137,6 +164,12 @@ describe("lesson viewer — access gating", () => {
 
   it("denies access when subscription is canceled", async () => {
     const canceledUserId = crypto.randomUUID();
+    await db.insert(users).values({
+      id: canceledUserId,
+      tenantId,
+      name: "Canceled User",
+      email: `canceled-${Date.now()}@example.com`,
+    });
     await db.insert(subscriptions).values({
       tenantId,
       userId: canceledUserId,
@@ -152,6 +185,12 @@ describe("lesson viewer — access gating", () => {
 
   it("denies access when enrollment is revoked", async () => {
     const revokedUserId = crypto.randomUUID();
+    await db.insert(users).values({
+      id: revokedUserId,
+      tenantId,
+      name: "Revoked User",
+      email: `revoked-${Date.now()}@example.com`,
+    });
     await db.insert(enrollments).values({
       tenantId,
       userId: revokedUserId,
@@ -166,10 +205,7 @@ describe("lesson viewer — access gating", () => {
   // ── Lesson content retrieval ──────────────────────────
 
   it("stores and retrieves lesson content as JSONB", async () => {
-    const [fetched] = await db
-      .select()
-      .from(lessons)
-      .where(eq(lessons.id, lessonId));
+    const [fetched] = await db.select().from(lessons).where(eq(lessons.id, lessonId));
 
     expect(fetched).toBeDefined();
     expect(fetched.type).toBe("text");
@@ -190,11 +226,7 @@ describe("lesson viewer — access gating", () => {
       .returning();
 
     // Enrolled user in tenant A should not have access in tenant B
-    const hasAccess = await checkCourseAccess(
-      enrolledUserId,
-      courseId,
-      otherTenant.id,
-    );
+    const hasAccess = await checkCourseAccess(enrolledUserId, courseId, otherTenant.id);
     expect(hasAccess).toBe(false);
 
     // Cleanup

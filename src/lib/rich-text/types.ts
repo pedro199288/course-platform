@@ -5,7 +5,7 @@
 export type RichTextMarkType = "bold" | "italic" | "code" | "link";
 
 export type RichTextMark =
-  | { type: "bold" | "italic" | "code"; attrs?: Record<string, unknown> }
+  | { type: "bold" | "italic" | "code"; attrs?: Record<string, string | number | boolean | null> }
   | { type: "link"; attrs: { href: string; target?: string | null; rel?: string | null } };
 
 export type RichTextNode =
@@ -40,9 +40,7 @@ export type QuizContent = {
 
 export function isQuizContent(value: unknown): value is QuizContent {
   return (
-    typeof value === "object" &&
-    value !== null &&
-    (value as { type?: unknown }).type === "quiz"
+    typeof value === "object" && value !== null && (value as { type?: unknown }).type === "quiz"
   );
 }
 
@@ -55,9 +53,7 @@ export type FileContent = {
 
 export function isFileContent(value: unknown): value is FileContent {
   return (
-    typeof value === "object" &&
-    value !== null &&
-    (value as { type?: unknown }).type === "file"
+    typeof value === "object" && value !== null && (value as { type?: unknown }).type === "file"
   );
 }
 

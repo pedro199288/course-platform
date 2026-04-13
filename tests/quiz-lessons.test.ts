@@ -10,6 +10,7 @@ import {
   lessonProgress,
   quizResults,
 } from "#/db/schema/index.ts";
+import { users } from "#/db/schema/auth.ts";
 import type { QuizContent } from "#/lib/rich-text/types.ts";
 
 // Mock email to prevent Resend API calls
@@ -92,15 +93,24 @@ describe("quiz lessons", () => {
     quizLessonId = quizLesson.id;
 
     // Create text lesson (for mixed content testing)
-    await db
-      .insert(lessons)
-      .values({
-        moduleId,
-        title: "Text Lesson",
-        type: "text",
-        content: { text: "Hello world" },
-        position: 1,
-      });
+    await db.insert(lessons).values({
+      moduleId,
+      title: "Text Lesson",
+      type: "text",
+      content: { text: "Hello world" },
+      position: 1,
+    });
+
+    // Create test users
+    await db.insert(users).values([
+      { id: userId, tenantId, name: "Quiz User", email: `quiz-user-${Date.now()}@example.com` },
+      {
+        id: otherUserId,
+        tenantId,
+        name: "Other Quiz User",
+        email: `quiz-other-${Date.now()}@example.com`,
+      },
+    ]);
 
     // Enroll the user
     await db.insert(enrollments).values({
@@ -111,22 +121,44 @@ describe("quiz lessons", () => {
   });
 
   afterAll(async () => {
-    await db.delete(quizResults).where(eq(quizResults.tenantId, tenantId)).catch(() => {});
-    await db.delete(lessonProgress).where(eq(lessonProgress.tenantId, tenantId)).catch(() => {});
-    await db.delete(enrollments).where(eq(enrollments.tenantId, tenantId)).catch(() => {});
-    await db.delete(lessons).where(eq(lessons.moduleId, moduleId)).catch(() => {});
-    await db.delete(modules).where(eq(modules.courseId, courseId)).catch(() => {});
-    await db.delete(courses).where(eq(courses.tenantId, tenantId)).catch(() => {});
-    await db.delete(tenants).where(eq(tenants.subdomain, subdomain)).catch(() => {});
+    await db
+      .delete(quizResults)
+      .where(eq(quizResults.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(lessonProgress)
+      .where(eq(lessonProgress.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(enrollments)
+      .where(eq(enrollments.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(lessons)
+      .where(eq(lessons.moduleId, moduleId))
+      .catch(() => {});
+    await db
+      .delete(modules)
+      .where(eq(modules.courseId, courseId))
+      .catch(() => {});
+    await db
+      .delete(users)
+      .where(eq(users.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(courses)
+      .where(eq(courses.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(tenants)
+      .where(eq(tenants.subdomain, subdomain))
+      .catch(() => {});
   });
 
   // ── Quiz creation ──────────────��───────────────────────
 
   it("stores quiz content as JSONB on lesson", async () => {
-    const [lesson] = await db
-      .select()
-      .from(lessons)
-      .where(eq(lessons.id, quizLessonId));
+    const [lesson] = await db.select().from(lessons).where(eq(lessons.id, quizLessonId));
 
     expect(lesson).toBeDefined();
     expect(lesson.type).toBe("quiz");
@@ -153,25 +185,16 @@ describe("quiz lessons", () => {
       ],
     };
 
-    await db
-      .update(lessons)
-      .set({ content: updatedContent })
-      .where(eq(lessons.id, quizLessonId));
+    await db.update(lessons).set({ content: updatedContent }).where(eq(lessons.id, quizLessonId));
 
-    const [lesson] = await db
-      .select()
-      .from(lessons)
-      .where(eq(lessons.id, quizLessonId));
+    const [lesson] = await db.select().from(lessons).where(eq(lessons.id, quizLessonId));
 
     const content = lesson.content as QuizContent;
     expect(content.questions).toHaveLength(4);
     expect(content.questions[3].question).toBe("What is 3+3?");
 
     // Restore original content for subsequent tests
-    await db
-      .update(lessons)
-      .set({ content: quizContent })
-      .where(eq(lessons.id, quizLessonId));
+    await db.update(lessons).set({ content: quizContent }).where(eq(lessons.id, quizLessonId));
   });
 
   // ── Quiz submission + result storage ────────────────────
@@ -197,12 +220,7 @@ describe("quiz lessons", () => {
     const [result] = await db
       .select()
       .from(quizResults)
-      .where(
-        and(
-          eq(quizResults.userId, userId),
-          eq(quizResults.lessonId, quizLessonId),
-        ),
-      );
+      .where(and(eq(quizResults.userId, userId), eq(quizResults.lessonId, quizLessonId)));
 
     expect(result).toBeDefined();
     expect(result.score).toBe(3);
@@ -232,12 +250,7 @@ describe("quiz lessons", () => {
     const [result] = await db
       .select()
       .from(quizResults)
-      .where(
-        and(
-          eq(quizResults.userId, otherUserId),
-          eq(quizResults.lessonId, quizLessonId),
-        ),
-      );
+      .where(and(eq(quizResults.userId, otherUserId), eq(quizResults.lessonId, quizLessonId)));
 
     expect(result.score).toBe(1);
     expect(result.totalQuestions).toBe(3);
@@ -297,12 +310,7 @@ describe("quiz lessons", () => {
     const [result] = await db
       .select()
       .from(quizResults)
-      .where(
-        and(
-          eq(quizResults.userId, userId),
-          eq(quizResults.lessonId, quizLessonId),
-        ),
-      );
+      .where(and(eq(quizResults.userId, userId), eq(quizResults.lessonId, quizLessonId)));
 
     expect(result.score).toBe(2);
     expect(result.totalQuestions).toBe(3);
@@ -329,12 +337,7 @@ describe("quiz lessons", () => {
     const [progress] = await db
       .select()
       .from(lessonProgress)
-      .where(
-        and(
-          eq(lessonProgress.userId, userId),
-          eq(lessonProgress.lessonId, quizLessonId),
-        ),
-      );
+      .where(and(eq(lessonProgress.userId, userId), eq(lessonProgress.lessonId, quizLessonId)));
 
     expect(progress).toBeDefined();
     expect(progress.completed).toBe(true);
@@ -351,12 +354,7 @@ describe("quiz lessons", () => {
     const results = await db
       .select()
       .from(quizResults)
-      .where(
-        and(
-          eq(quizResults.userId, userId),
-          eq(quizResults.tenantId, otherTenant.id),
-        ),
-      );
+      .where(and(eq(quizResults.userId, userId), eq(quizResults.tenantId, otherTenant.id)));
 
     expect(results.length).toBe(0);
 

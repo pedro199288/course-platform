@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vite-plus/test";
-import { eq, and } from "drizzle-orm";
+import { eq, and, like } from "drizzle-orm";
 import { db } from "#/db/index.ts";
 import { tenants, users, accounts, sessions, verifications, rateLimit } from "#/db/schema/index.ts";
 import { auth } from "#/lib/auth.ts";
@@ -69,6 +69,10 @@ describe("auth: per-tenant registration, login, and roles", () => {
     const allUserIds = [...allUsers, ...allUsersB].map((u) => u.id);
 
     for (const userId of allUserIds) {
+      await db
+        .delete(auditLogs)
+        .where(eq(auditLogs.actorId, userId))
+        .catch(() => {});
       await db.delete(sessions).where(eq(sessions.userId, userId));
       await db.delete(accounts).where(eq(accounts.userId, userId));
     }
@@ -462,7 +466,11 @@ describe("email verification flow", () => {
     expect(result.token).toBeDefined();
   });
 
-  it("creates verification token in DB on signup", async () => {
+  it("sends verification email with JWT token on signup", async () => {
+    const { sendEmail } = await import("#/lib/email.ts");
+    const mockSendEmail = sendEmail as ReturnType<typeof vi.fn>;
+    mockSendEmail.mockClear();
+
     const newEmail = `verify2-${Date.now()}@example.com`;
 
     await tenantIdStore.run(tenantId, async () => {
@@ -475,19 +483,16 @@ describe("email verification flow", () => {
       });
     });
 
-    // Better Auth stores verification tokens in the verifications table
-    const token = await db.query.verifications.findFirst({
-      where: eq(verifications.identifier, newEmail),
-    });
-    expect(token).toBeDefined();
-    expect(token!.value).toBeTruthy();
-    expect(token!.expiresAt).toBeDefined();
+    // Better Auth 1.6 uses JWT-based email verification tokens (not stored in DB).
+    // Verify the verification email was sent with a URL containing a token.
+    expect(mockSendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: newEmail,
+        subject: "Verify your email",
+      }),
+    );
 
     // Cleanup
-    await db
-      .delete(verifications)
-      .where(eq(verifications.identifier, newEmail))
-      .catch(() => {});
     const user = await db.query.users.findFirst({
       where: and(eq(users.email, newEmail), eq(users.tenantId, tenantId)),
     });
@@ -560,7 +565,7 @@ describe("password reset flow", () => {
     }
     await db
       .delete(verifications)
-      .where(eq(verifications.identifier, testEmail))
+      .where(like(verifications.identifier, "reset-password:%"))
       .catch(() => {});
     await db.delete(tenants).where(eq(tenants.subdomain, tenantSubdomain));
   });
@@ -587,9 +592,10 @@ describe("password reset flow", () => {
       }),
     );
 
-    // Verify token created in DB
+    // Better Auth 1.6 stores reset tokens with identifier "reset-password:<token>"
+    // and the value is the userId.
     const token = await db.query.verifications.findFirst({
-      where: eq(verifications.identifier, testEmail),
+      where: like(verifications.identifier, "reset-password:%"),
     });
     expect(token).toBeDefined();
     expect(token!.value).toBeTruthy();
@@ -597,17 +603,20 @@ describe("password reset flow", () => {
   });
 
   it("resets password with valid token and allows login with new password", async () => {
-    // Get the verification token from DB
+    // Get the verification token from DB — identifier is "reset-password:<token>"
     const tokenRecord = await db.query.verifications.findFirst({
-      where: eq(verifications.identifier, testEmail),
+      where: like(verifications.identifier, "reset-password:%"),
     });
     expect(tokenRecord).toBeDefined();
+
+    // Extract the actual token from the identifier (format: "reset-password:<token>")
+    const resetToken = tokenRecord!.identifier.replace("reset-password:", "");
 
     // Reset the password using the token
     await auth.api.resetPassword({
       body: {
         newPassword: "newpassword456",
-        token: tokenRecord!.value,
+        token: resetToken,
       },
     });
 
@@ -659,9 +668,11 @@ describe("password reset flow", () => {
 
     // Manually expire the token by setting expiresAt in the past
     const tokenRecord = await db.query.verifications.findFirst({
-      where: eq(verifications.identifier, testEmail),
+      where: like(verifications.identifier, "reset-password:%"),
     });
     expect(tokenRecord).toBeDefined();
+
+    const resetToken = tokenRecord!.identifier.replace("reset-password:", "");
 
     await db
       .update(verifications)
@@ -672,7 +683,7 @@ describe("password reset flow", () => {
       await auth.api.resetPassword({
         body: {
           newPassword: "expiredtokenpassword",
-          token: tokenRecord!.value,
+          token: resetToken,
         },
       });
       expect.unreachable("Should have thrown for expired token");
@@ -707,6 +718,12 @@ describe("password reset flow", () => {
     });
     expect(sessionsBefore.length).toBeGreaterThan(0);
 
+    // Clean up any stale verification records from previous tests
+    await db
+      .delete(verifications)
+      .where(like(verifications.identifier, "reset-password:%"))
+      .catch(() => {});
+
     // Request and perform password reset
     await tenantIdStore.run(tenantId, async () => {
       await auth.api.requestPasswordReset({
@@ -715,13 +732,16 @@ describe("password reset flow", () => {
     });
 
     const tokenRecord = await db.query.verifications.findFirst({
-      where: eq(verifications.identifier, testEmail),
+      where: like(verifications.identifier, "reset-password:%"),
     });
+    expect(tokenRecord).toBeDefined();
+
+    const resetToken = tokenRecord!.identifier.replace("reset-password:", "");
 
     await auth.api.resetPassword({
       body: {
         newPassword: "finalpassword789",
-        token: tokenRecord!.value,
+        token: resetToken,
       },
     });
 

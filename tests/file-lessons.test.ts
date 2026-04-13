@@ -1,13 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vite-plus/test";
 import { eq, and } from "drizzle-orm";
 import { db } from "#/db/index.ts";
-import {
-  tenants,
-  courses,
-  modules,
-  lessons,
-  enrollments,
-} from "#/db/schema/index.ts";
+import { tenants, courses, modules, lessons, enrollments } from "#/db/schema/index.ts";
+import { users } from "#/db/schema/auth.ts";
 import type { FileContent } from "#/lib/rich-text/types.ts";
 
 // Mock email to prevent Resend API calls
@@ -65,6 +60,14 @@ describe("file lessons", () => {
       .returning();
     moduleId = mod.id;
 
+    // Create test user
+    await db.insert(users).values({
+      id: userId,
+      tenantId,
+      name: "File Test User",
+      email: `file-test-${Date.now()}@example.com`,
+    });
+
     // Enroll the user
     await db.insert(enrollments).values({
       tenantId,
@@ -74,11 +77,30 @@ describe("file lessons", () => {
   });
 
   afterAll(async () => {
-    await db.delete(enrollments).where(eq(enrollments.tenantId, tenantId)).catch(() => {});
-    await db.delete(lessons).where(eq(lessons.moduleId, moduleId)).catch(() => {});
-    await db.delete(modules).where(eq(modules.courseId, courseId)).catch(() => {});
-    await db.delete(courses).where(eq(courses.tenantId, tenantId)).catch(() => {});
-    await db.delete(tenants).where(eq(tenants.subdomain, subdomain)).catch(() => {});
+    await db
+      .delete(enrollments)
+      .where(eq(enrollments.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(lessons)
+      .where(eq(lessons.moduleId, moduleId))
+      .catch(() => {});
+    await db
+      .delete(modules)
+      .where(eq(modules.courseId, courseId))
+      .catch(() => {});
+    await db
+      .delete(users)
+      .where(eq(users.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(courses)
+      .where(eq(courses.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(tenants)
+      .where(eq(tenants.subdomain, subdomain))
+      .catch(() => {});
   });
 
   // ── File lesson creation ────────────────────────────────
@@ -115,10 +137,7 @@ describe("file lessons", () => {
       })
       .where(eq(lessons.id, fileLessonId));
 
-    const [lesson] = await db
-      .select()
-      .from(lessons)
-      .where(eq(lessons.id, fileLessonId));
+    const [lesson] = await db.select().from(lessons).where(eq(lessons.id, fileLessonId));
 
     expect(lesson.fileUrl).toContain("worksheet.pdf");
     const content = lesson.content as {
@@ -145,10 +164,7 @@ describe("file lessons", () => {
       })
       .where(eq(lessons.id, fileLessonId));
 
-    const [lesson] = await db
-      .select()
-      .from(lessons)
-      .where(eq(lessons.id, fileLessonId));
+    const [lesson] = await db.select().from(lessons).where(eq(lessons.id, fileLessonId));
 
     expect(lesson.fileUrl).toBe(newKey);
     const content = lesson.content as unknown as { filename: string };
@@ -211,12 +227,7 @@ describe("file lessons", () => {
     const result = await db
       .select()
       .from(enrollments)
-      .where(
-        and(
-          eq(enrollments.userId, nonEnrolledUserId),
-          eq(enrollments.courseId, courseId),
-        ),
-      );
+      .where(and(eq(enrollments.userId, nonEnrolledUserId), eq(enrollments.courseId, courseId)));
 
     expect(result.length).toBe(0);
   });
@@ -252,7 +263,11 @@ describe("file lessons", () => {
         title: "Other File",
         type: "file",
         fileUrl: `tenants/${otherTenant.id}/files/other/secret.pdf`,
-        content: { type: "file", filename: "secret.pdf", contentType: "application/pdf" } as FileContent,
+        content: {
+          type: "file",
+          filename: "secret.pdf",
+          contentType: "application/pdf",
+        } as FileContent,
         position: 0,
       })
       .returning();
@@ -261,12 +276,7 @@ describe("file lessons", () => {
     const enrollment = await db
       .select()
       .from(enrollments)
-      .where(
-        and(
-          eq(enrollments.userId, userId),
-          eq(enrollments.courseId, otherCourse.id),
-        ),
-      );
+      .where(and(eq(enrollments.userId, userId), eq(enrollments.courseId, otherCourse.id)));
     expect(enrollment.length).toBe(0);
 
     // Cleanup
@@ -300,10 +310,7 @@ describe("file lessons", () => {
     await db.delete(modules).where(eq(modules.id, tempMod.id));
 
     // Verify lesson was cascade-deleted
-    const result = await db
-      .select()
-      .from(lessons)
-      .where(eq(lessons.id, tempLesson.id));
+    const result = await db.select().from(lessons).where(eq(lessons.id, tempLesson.id));
     expect(result.length).toBe(0);
   });
 });

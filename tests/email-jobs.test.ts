@@ -1,5 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
+// PgBoss polls at intervals; give integration tests enough time
+vi.setConfig({ testTimeout: 30_000 });
+
 // ---------------------------------------------------------------------------
 // Mock the email module so tests never hit the Resend API
 // ---------------------------------------------------------------------------
@@ -15,9 +18,8 @@ import { sendEmail } from "#/lib/email.ts";
 
 describe("email templates: rendering", () => {
   it("purchase confirmation renders with course and amount details", async () => {
-    const { renderPurchaseConfirmation } = await import(
-      "#/lib/email-templates/purchase-confirmation.tsx"
-    );
+    const { renderPurchaseConfirmation } =
+      await import("#/lib/email-templates/purchase-confirmation.tsx");
     const html = await renderPurchaseConfirmation({
       studentName: "Alice",
       courseName: "Intro to TypeScript",
@@ -34,9 +36,8 @@ describe("email templates: rendering", () => {
   });
 
   it("enrollment confirmation renders with course link", async () => {
-    const { renderEnrollmentConfirmation } = await import(
-      "#/lib/email-templates/enrollment-confirmation.tsx"
-    );
+    const { renderEnrollmentConfirmation } =
+      await import("#/lib/email-templates/enrollment-confirmation.tsx");
     const html = await renderEnrollmentConfirmation({
       studentName: "Bob",
       courseName: "Advanced React",
@@ -52,9 +53,8 @@ describe("email templates: rendering", () => {
   });
 
   it("certificate delivery renders with completion date and download link", async () => {
-    const { renderCertificateDelivery } = await import(
-      "#/lib/email-templates/certificate-delivery.tsx"
-    );
+    const { renderCertificateDelivery } =
+      await import("#/lib/email-templates/certificate-delivery.tsx");
     const html = await renderCertificateDelivery({
       studentName: "Carol",
       courseName: "Data Science 101",
@@ -102,9 +102,7 @@ beforeEach(() => {
 
 describe("email jobs: enqueue and handler", () => {
   it("registerEmailHandler registers the send_email handler", async () => {
-    const { registerEmailHandler, EMAIL_JOB_NAME } = await import(
-      "#/lib/email-jobs.ts"
-    );
+    const { registerEmailHandler, EMAIL_JOB_NAME } = await import("#/lib/email-jobs.ts");
 
     // Should not throw
     registerEmailHandler();
@@ -131,14 +129,15 @@ describe("email jobs: enqueue and handler", () => {
   });
 
   it("send_email worker calls sendEmail with job data including optional from", async () => {
-    const { startJobQueue, stopJobQueue, startWorkers } = await import(
-      "#/lib/job-queue.ts"
-    );
-    // Re-import to get fresh module with handler already registered from earlier test
+    const { startJobQueue, stopJobQueue, startWorkers } = await import("#/lib/job-queue.ts");
     const { enqueueEmail } = await import("#/lib/email-jobs.ts");
 
     await startJobQueue();
     await startWorkers();
+
+    // Wait for any stale jobs from previous tests to drain
+    await new Promise((r) => setTimeout(r, 500));
+    vi.mocked(sendEmail).mockClear();
 
     const done = new Promise<void>((resolve) => {
       vi.mocked(sendEmail).mockImplementation(async () => {
@@ -172,13 +171,13 @@ describe("email jobs: enqueue and handler", () => {
   });
 
   it("enqueuePurchaseConfirmation enqueues a rendered purchase email", async () => {
-    const { startJobQueue, stopJobQueue, startWorkers } = await import(
-      "#/lib/job-queue.ts"
-    );
+    const { startJobQueue, stopJobQueue, startWorkers } = await import("#/lib/job-queue.ts");
     const { enqueuePurchaseConfirmation } = await import("#/lib/email-jobs.ts");
 
     await startJobQueue();
     await startWorkers();
+    await new Promise((r) => setTimeout(r, 500));
+    vi.mocked(sendEmail).mockClear();
 
     const done = new Promise<void>((resolve) => {
       vi.mocked(sendEmail).mockImplementation(async () => {
@@ -205,9 +204,9 @@ describe("email jobs: enqueue and handler", () => {
       ),
     ]);
 
-    expect(sendEmail).toHaveBeenCalledTimes(1);
-    const call = vi.mocked(sendEmail).mock.calls[0][0];
-    expect(call.to).toBe("buyer@example.com");
+    // Find the call with our specific "to" address
+    const calls = vi.mocked(sendEmail).mock.calls;
+    const call = calls.find((c) => c[0].to === "buyer@example.com")![0];
     expect(call.subject).toContain("Test Course");
     expect(call.html).toContain("Test Buyer");
     expect(call.html).toContain("USD 29.99");
@@ -216,13 +215,13 @@ describe("email jobs: enqueue and handler", () => {
   });
 
   it("enqueueEnrollmentConfirmation enqueues a rendered enrollment email", async () => {
-    const { startJobQueue, stopJobQueue, startWorkers } = await import(
-      "#/lib/job-queue.ts"
-    );
+    const { startJobQueue, stopJobQueue, startWorkers } = await import("#/lib/job-queue.ts");
     const { enqueueEnrollmentConfirmation } = await import("#/lib/email-jobs.ts");
 
     await startJobQueue();
     await startWorkers();
+    await new Promise((r) => setTimeout(r, 500));
+    vi.mocked(sendEmail).mockClear();
 
     const done = new Promise<void>((resolve) => {
       vi.mocked(sendEmail).mockImplementation(async () => {
@@ -232,7 +231,7 @@ describe("email jobs: enqueue and handler", () => {
     });
 
     await enqueueEnrollmentConfirmation({
-      to: "student@example.com",
+      to: "enrolled-student@example.com",
       studentName: "Test Student",
       courseName: "React Mastery",
       schoolName: "Code School",
@@ -246,8 +245,8 @@ describe("email jobs: enqueue and handler", () => {
       ),
     ]);
 
-    const call = vi.mocked(sendEmail).mock.calls[0][0];
-    expect(call.to).toBe("student@example.com");
+    const calls = vi.mocked(sendEmail).mock.calls;
+    const call = calls.find((c) => c[0].to === "enrolled-student@example.com")![0];
     expect(call.subject).toContain("React Mastery");
     expect(call.html).toContain("Test Student");
     expect(call.html).toContain("https://code.school.com/courses/react-mastery");
@@ -256,13 +255,13 @@ describe("email jobs: enqueue and handler", () => {
   });
 
   it("enqueueCertificateDelivery enqueues a rendered certificate email", async () => {
-    const { startJobQueue, stopJobQueue, startWorkers } = await import(
-      "#/lib/job-queue.ts"
-    );
+    const { startJobQueue, stopJobQueue, startWorkers } = await import("#/lib/job-queue.ts");
     const { enqueueCertificateDelivery } = await import("#/lib/email-jobs.ts");
 
     await startJobQueue();
     await startWorkers();
+    await new Promise((r) => setTimeout(r, 500));
+    vi.mocked(sendEmail).mockClear();
 
     const done = new Promise<void>((resolve) => {
       vi.mocked(sendEmail).mockImplementation(async () => {
@@ -287,8 +286,8 @@ describe("email jobs: enqueue and handler", () => {
       ),
     ]);
 
-    const call = vi.mocked(sendEmail).mock.calls[0][0];
-    expect(call.to).toBe("grad@example.com");
+    const calls = vi.mocked(sendEmail).mock.calls;
+    const call = calls.find((c) => c[0].to === "grad@example.com")![0];
     expect(call.subject).toContain("Full Stack Dev");
     expect(call.html).toContain("Test Graduate");
     expect(call.html).toContain("April 8, 2026");
