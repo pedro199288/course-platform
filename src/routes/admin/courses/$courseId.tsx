@@ -63,6 +63,9 @@ function CourseDetailPage() {
   const [slug, setSlug] = useState(initialCourse.slug);
   const [price, setPrice] = useState(initialCourse.price ?? "");
   const [pricingModel, setPricingModel] = useState(initialCourse.pricingModel);
+  const [sequentialProgress, setSequentialProgress] = useState(
+    initialCourse.sequentialProgress ?? false,
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -81,6 +84,7 @@ function CourseDetailPage() {
           slug,
           price: price || undefined,
           pricingModel,
+          sequentialProgress,
         },
       });
       setSuccess(true);
@@ -200,6 +204,25 @@ function CourseDetailPage() {
               <option value="subscription">Subscription</option>
               <option value="both">Both</option>
             </select>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <label htmlFor="sequentialProgress" className="relative inline-flex cursor-pointer items-center">
+            <input
+              id="sequentialProgress"
+              type="checkbox"
+              checked={sequentialProgress}
+              onChange={(e) => setSequentialProgress(e.target.checked)}
+              className="peer sr-only"
+            />
+            <div className="peer h-5 w-9 rounded-full bg-neutral-300 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-900 peer-checked:after:translate-x-full dark:bg-neutral-700 dark:peer-checked:bg-neutral-100" />
+          </label>
+          <div>
+            <span className="text-sm font-medium">Sequential progression</span>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              Students must complete lessons in order
+            </p>
           </div>
         </div>
 

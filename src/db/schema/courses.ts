@@ -1,4 +1,5 @@
 import {
+  boolean,
   index,
   integer,
   jsonb,
@@ -41,6 +42,7 @@ export const courses = pgTable(
     pricingModel: pricingModel("pricing_model").notNull().default("one_time"),
     status: courseStatus().notNull().default("draft"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
+    sequentialProgress: boolean("sequential_progress").notNull().default(false),
     updatedAt: timestamp("updated_at")
       .defaultNow()
       .notNull()

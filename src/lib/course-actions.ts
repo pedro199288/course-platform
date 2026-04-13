@@ -77,6 +77,7 @@ export const updateCourseFn = createServerFn({ method: "POST" })
       price?: string;
       pricingModel?: "one_time" | "subscription" | "both";
       status?: "draft" | "published";
+      sequentialProgress?: boolean;
     }) => d,
   )
   .handler(async ({ data }) => {
@@ -91,6 +92,8 @@ export const updateCourseFn = createServerFn({ method: "POST" })
     if (updates.price !== undefined) setValues.price = updates.price;
     if (updates.pricingModel !== undefined) setValues.pricingModel = updates.pricingModel;
     if (updates.status !== undefined) setValues.status = updates.status;
+    if (updates.sequentialProgress !== undefined)
+      setValues.sequentialProgress = updates.sequentialProgress;
 
     const [course] = await db
       .update(courses)

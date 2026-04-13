@@ -31,6 +31,7 @@ export const Route = createFileRoute("/courses/$courseSlug/lessons/$lessonId")({
 function LessonError({ error }: { error: Error }) {
   const isNotEnrolled = error.message === "Not enrolled";
   const isUnauthorized = error.message === "Unauthorized";
+  const isLocked = error.message === "Lesson locked";
 
   if (isUnauthorized) {
     return (
@@ -46,6 +47,19 @@ function LessonError({ error }: { error: Error }) {
           >
             Sign in
           </Link>
+        </div>
+      </main>
+    );
+  }
+
+  if (isLocked) {
+    return (
+      <main className="page-wrap px-4 py-10">
+        <div className="mx-auto max-w-lg text-center">
+          <h1 className="text-2xl font-bold">Lesson locked</h1>
+          <p className="mt-2 text-neutral-600 dark:text-neutral-400">
+            Complete the previous lesson first to unlock this one.
+          </p>
         </div>
       </main>
     );
@@ -89,11 +103,13 @@ function LessonViewerPage() {
     prevLesson,
     nextLesson,
     completedLessonIds,
+    lockedLessonIds,
     quizResult: initialQuizResult,
   } = Route.useLoaderData();
 
   const content = lesson.content as { text?: string; type?: string; filename?: string } | null;
   const completedSet = new Set(completedLessonIds);
+  const lockedSet = new Set(lockedLessonIds ?? []);
   const isQuiz = lesson.type === "quiz" && isQuizContent(lesson.content);
   const isFile = lesson.type === "file";
 
@@ -137,6 +153,27 @@ function LessonViewerPage() {
                     {mod.lessons.map((l) => {
                       const isCurrent = l.id === lesson.id;
                       const isDone = isCurrent ? isCompleted : completedSet.has(l.id);
+                      const isLocked = lockedSet.has(l.id);
+
+                      if (isLocked) {
+                        return (
+                          <li key={l.id}>
+                            <span className="flex items-center gap-2 px-4 py-2 text-sm text-neutral-400 dark:text-neutral-500">
+                              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-neutral-300 dark:border-neutral-600">
+                                <svg
+                                  viewBox="0 0 12 12"
+                                  className="h-2.5 w-2.5"
+                                  fill="currentColor"
+                                >
+                                  <path d="M9 4V3a3 3 0 00-6 0v1H2v6h8V4H9zM4 3a2 2 0 014 0v1H4V3z" />
+                                </svg>
+                              </span>
+                              <span className="truncate">{l.title}</span>
+                            </span>
+                          </li>
+                        );
+                      }
+
                       return (
                         <li key={l.id}>
                           <Link

@@ -149,8 +149,6 @@ export const getLessonFn = createServerFn({ method: "GET" })
     // Build flat lesson list for prev/next navigation
     const allLessons = curriculum.flatMap((m) => m.lessons);
     const currentIndex = allLessons.findIndex((l) => l.id === data.lessonId);
-    const prevLesson = currentIndex > 0 ? allLessons[currentIndex - 1] : null;
-    const nextLesson = currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null;
 
     // Fetch progress data for sidebar completion indicators
     const allLessonIds = allLessons.map((l) => l.id);
@@ -169,6 +167,32 @@ export const getLessonFn = createServerFn({ method: "GET" })
             )
         : [];
     const completedLessonIds = completedRows.map((r) => r.lessonId);
+    const completedSet = new Set(completedLessonIds);
+
+    // Sequential progression gating: check all previous lessons are completed
+    const lockedLessonIds = course.sequentialProgress
+      ? computeLockedLessonIds(
+          allLessons.map((l) => l.id),
+          completedSet,
+        )
+      : [];
+
+    // Block access if the requested lesson is locked
+    if (lockedLessonIds.includes(data.lessonId)) {
+      throw new Error("Lesson locked");
+    }
+
+    // Prev/next navigation — for sequential courses, "next" points to first incomplete
+    const prevLesson = currentIndex > 0 ? allLessons[currentIndex - 1] : null;
+    let nextLesson: (typeof allLessons)[number] | null = null;
+    if (course.sequentialProgress) {
+      // Next = first lesson not yet completed (after or including current+1)
+      nextLesson =
+        allLessons.find((l, i) => i > currentIndex && !completedSet.has(l.id)) ??
+        (currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null);
+    } else {
+      nextLesson = currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null;
+    }
 
     return {
       tenant,
@@ -176,6 +200,7 @@ export const getLessonFn = createServerFn({ method: "GET" })
         id: course.id,
         title: course.title,
         slug: course.slug,
+        sequentialProgress: course.sequentialProgress,
       },
       module: { id: mod.id, title: mod.title },
       lesson: lesson as any,
@@ -183,8 +208,26 @@ export const getLessonFn = createServerFn({ method: "GET" })
       prevLesson,
       nextLesson,
       completedLessonIds,
+      lockedLessonIds,
     };
   });
+
+/**
+ * Compute which lessons are locked by sequential progression.
+ * A lesson is locked if any previous lesson (in flat order) is not completed.
+ * First lesson is never locked.
+ */
+export function computeLockedLessonIds(
+  allLessonIds: string[],
+  completedLessonIds: Set<string>,
+): string[] {
+  for (let i = 1; i < allLessonIds.length; i++) {
+    if (!completedLessonIds.has(allLessonIds[i - 1])) {
+      return allLessonIds.slice(i);
+    }
+  }
+  return [];
+}
 
 /**
  * Check enrollment status for a course (used by course detail page).

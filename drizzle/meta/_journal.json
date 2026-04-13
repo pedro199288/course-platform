@@ -50,6 +50,13 @@
       "when": 1776268800000,
       "tag": "0006_subscription_price",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1776103550614,
+      "tag": "0007_big_romulus",
+      "breakpoints": true
     }
   ]
 }
