@@ -571,6 +571,12 @@ describe("password reset flow", () => {
   });
 
   it("sends reset email with token on forgetPassword request", async () => {
+    // Clean up any stale verification records from previous test runs
+    await db
+      .delete(verifications)
+      .where(like(verifications.identifier, "reset-password:%"))
+      .catch(() => {});
+
     const { sendEmail } = await import("#/lib/email.ts");
     const mockSendEmail = sendEmail as ReturnType<typeof vi.fn>;
     mockSendEmail.mockClear();
