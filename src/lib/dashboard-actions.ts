@@ -19,8 +19,7 @@ import { extractSubdomain } from "#/middleware/tenant.ts";
  */
 async function requireTenant() {
   const request = getRequest();
-  const host =
-    request.headers.get("x-tenant") ?? request.headers.get("host") ?? "";
+  const host = request.headers.get("x-tenant") ?? request.headers.get("host") ?? "";
   const subdomain = extractSubdomain(host);
   if (!subdomain) throw new Error("No tenant");
 
@@ -73,164 +72,149 @@ export function findNextLesson(
  * Get all enrolled courses for the current student with progress data.
  * Returns courses with progress percentage and next-lesson link.
  */
-export const getStudentDashboardFn = createServerFn({ method: "GET" }).handler(
-  async () => {
-    const tenant = await requireTenant();
-    const user = await requireAuth();
+export const getStudentDashboardFn = createServerFn({ method: "GET" }).handler(async () => {
+  const tenant = await requireTenant();
+  const user = await requireAuth();
 
-    // Get all active enrollments for this user+tenant
-    const userEnrollments = await db
-      .select({
-        courseId: enrollments.courseId,
-        enrolledAt: enrollments.enrolledAt,
-      })
-      .from(enrollments)
-      .where(
-        and(
-          eq(enrollments.userId, user.id),
-          eq(enrollments.tenantId, tenant.id),
-          isNull(enrollments.revokedAt),
-        ),
-      );
-
-    // Also check for active subscription (grants access to all courses)
-    const [activeSub] = await db
-      .select({ id: subscriptions.id })
-      .from(subscriptions)
-      .where(
-        and(
-          eq(subscriptions.userId, user.id),
-          eq(subscriptions.tenantId, tenant.id),
-          eq(subscriptions.status, "active"),
-        ),
-      );
-
-    // Determine which courses the user has access to
-    let accessibleCourseIds: string[];
-    let enrollmentDates: Map<string, Date>;
-
-    if (activeSub) {
-      // Subscriber: access to all published courses
-      const allPublished = await db
-        .select({ id: courses.id })
-        .from(courses)
-        .where(
-          and(
-            eq(courses.tenantId, tenant.id),
-            eq(courses.status, "published"),
-          ),
-        );
-      accessibleCourseIds = allPublished.map((c) => c.id);
-      enrollmentDates = new Map(
-        userEnrollments.map((e) => [e.courseId, e.enrolledAt]),
-      );
-    } else {
-      accessibleCourseIds = userEnrollments.map((e) => e.courseId);
-      enrollmentDates = new Map(
-        userEnrollments.map((e) => [e.courseId, e.enrolledAt]),
-      );
-    }
-
-    if (accessibleCourseIds.length === 0) {
-      return { courses: [], hasSubscription: !!activeSub };
-    }
-
-    // Load course details
-    const enrolledCourses = await db
-      .select({
-        id: courses.id,
-        title: courses.title,
-        slug: courses.slug,
-        thumbnailUrl: courses.thumbnailUrl,
-        description: courses.description,
-      })
-      .from(courses)
-      .where(
-        and(
-          eq(courses.tenantId, tenant.id),
-          eq(courses.status, "published"),
-          inArray(courses.id, accessibleCourseIds),
-        ),
-      );
-
-    // For each course, load curriculum + progress
-    const result = await Promise.all(
-      enrolledCourses.map(async (course) => {
-        // Load curriculum (modules + lessons, ordered)
-        const courseModules = await db
-          .select({
-            id: modules.id,
-            title: modules.title,
-            position: modules.position,
-          })
-          .from(modules)
-          .where(eq(modules.courseId, course.id))
-          .orderBy(asc(modules.position));
-
-        const curriculum = await Promise.all(
-          courseModules.map(async (m) => {
-            const modLessons = await db
-              .select({
-                id: lessons.id,
-                title: lessons.title,
-                type: lessons.type,
-                position: lessons.position,
-              })
-              .from(lessons)
-              .where(eq(lessons.moduleId, m.id))
-              .orderBy(asc(lessons.position));
-            return { ...m, lessons: modLessons };
-          }),
-        );
-
-        // Count total lessons
-        const allLessonIds = curriculum.flatMap((m) =>
-          m.lessons.map((l) => l.id),
-        );
-        const totalLessons = allLessonIds.length;
-
-        // Get completed lessons
-        let completedLessonIds: string[] = [];
-        if (totalLessons > 0) {
-          const completedRows = await db
-            .select({ lessonId: lessonProgress.lessonId })
-            .from(lessonProgress)
-            .where(
-              and(
-                eq(lessonProgress.userId, user.id),
-                eq(lessonProgress.tenantId, tenant.id),
-                eq(lessonProgress.completed, true),
-                inArray(lessonProgress.lessonId, allLessonIds),
-              ),
-            );
-          completedLessonIds = completedRows.map((r) => r.lessonId);
-        }
-
-        const completedCount = completedLessonIds.length;
-        const progressPercent =
-          totalLessons > 0
-            ? Math.round((completedCount / totalLessons) * 100)
-            : 0;
-
-        // Find next incomplete lesson
-        const completedSet = new Set(completedLessonIds);
-        const nextLesson = findNextLesson(curriculum, completedSet);
-
-        return {
-          id: course.id,
-          title: course.title,
-          slug: course.slug,
-          thumbnailUrl: course.thumbnailUrl,
-          description: course.description,
-          enrolledAt: enrollmentDates.get(course.id) ?? null,
-          totalLessons,
-          completedCount,
-          progressPercent,
-          nextLesson,
-        };
-      }),
+  // Get all active enrollments for this user+tenant
+  const userEnrollments = await db
+    .select({
+      courseId: enrollments.courseId,
+      enrolledAt: enrollments.enrolledAt,
+    })
+    .from(enrollments)
+    .where(
+      and(
+        eq(enrollments.userId, user.id),
+        eq(enrollments.tenantId, tenant.id),
+        isNull(enrollments.revokedAt),
+      ),
     );
 
-    return { courses: result, hasSubscription: !!activeSub };
-  },
-);
+  // Also check for active subscription (grants access to all courses)
+  const [activeSub] = await db
+    .select({ id: subscriptions.id })
+    .from(subscriptions)
+    .where(
+      and(
+        eq(subscriptions.userId, user.id),
+        eq(subscriptions.tenantId, tenant.id),
+        eq(subscriptions.status, "active"),
+      ),
+    );
+
+  // Determine which courses the user has access to
+  let accessibleCourseIds: string[];
+  let enrollmentDates: Map<string, Date>;
+
+  if (activeSub) {
+    // Subscriber: access to all published courses
+    const allPublished = await db
+      .select({ id: courses.id })
+      .from(courses)
+      .where(and(eq(courses.tenantId, tenant.id), eq(courses.status, "published")));
+    accessibleCourseIds = allPublished.map((c) => c.id);
+    enrollmentDates = new Map(userEnrollments.map((e) => [e.courseId, e.enrolledAt]));
+  } else {
+    accessibleCourseIds = userEnrollments.map((e) => e.courseId);
+    enrollmentDates = new Map(userEnrollments.map((e) => [e.courseId, e.enrolledAt]));
+  }
+
+  if (accessibleCourseIds.length === 0) {
+    return { courses: [], hasSubscription: !!activeSub };
+  }
+
+  // Load course details
+  const enrolledCourses = await db
+    .select({
+      id: courses.id,
+      title: courses.title,
+      slug: courses.slug,
+      thumbnailUrl: courses.thumbnailUrl,
+      description: courses.description,
+    })
+    .from(courses)
+    .where(
+      and(
+        eq(courses.tenantId, tenant.id),
+        eq(courses.status, "published"),
+        inArray(courses.id, accessibleCourseIds),
+      ),
+    );
+
+  // For each course, load curriculum + progress
+  const result = await Promise.all(
+    enrolledCourses.map(async (course) => {
+      // Load curriculum (modules + lessons, ordered)
+      const courseModules = await db
+        .select({
+          id: modules.id,
+          title: modules.title,
+          position: modules.position,
+        })
+        .from(modules)
+        .where(eq(modules.courseId, course.id))
+        .orderBy(asc(modules.position));
+
+      const curriculum = await Promise.all(
+        courseModules.map(async (m) => {
+          const modLessons = await db
+            .select({
+              id: lessons.id,
+              title: lessons.title,
+              type: lessons.type,
+              position: lessons.position,
+            })
+            .from(lessons)
+            .where(eq(lessons.moduleId, m.id))
+            .orderBy(asc(lessons.position));
+          return { ...m, lessons: modLessons };
+        }),
+      );
+
+      // Count total lessons
+      const allLessonIds = curriculum.flatMap((m) => m.lessons.map((l) => l.id));
+      const totalLessons = allLessonIds.length;
+
+      // Get completed lessons
+      let completedLessonIds: string[] = [];
+      if (totalLessons > 0) {
+        const completedRows = await db
+          .select({ lessonId: lessonProgress.lessonId })
+          .from(lessonProgress)
+          .where(
+            and(
+              eq(lessonProgress.userId, user.id),
+              eq(lessonProgress.tenantId, tenant.id),
+              eq(lessonProgress.completed, true),
+              inArray(lessonProgress.lessonId, allLessonIds),
+            ),
+          );
+        completedLessonIds = completedRows.map((r) => r.lessonId);
+      }
+
+      const completedCount = completedLessonIds.length;
+      const progressPercent =
+        totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+
+      // Find next incomplete lesson
+      const completedSet = new Set(completedLessonIds);
+      const nextLesson = findNextLesson(curriculum, completedSet);
+
+      return {
+        id: course.id,
+        title: course.title,
+        slug: course.slug,
+        thumbnailUrl: course.thumbnailUrl,
+        description: course.description,
+        enrolledAt: enrollmentDates.get(course.id) ?? null,
+        totalLessons,
+        completedCount,
+        progressPercent,
+        nextLesson,
+      };
+    }),
+  );
+
+  return { courses: result, hasSubscription: !!activeSub };
+});

@@ -12,12 +12,8 @@ function StorefrontPage() {
   return (
     <main className="page-wrap px-4 py-10">
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-          {tenant.name}
-        </h1>
-        <p className="mt-2 text-neutral-500 dark:text-neutral-400">
-          Browse our available courses
-        </p>
+        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{tenant.name}</h1>
+        <p className="mt-2 text-neutral-500 dark:text-neutral-400">Browse our available courses</p>
       </div>
 
       {courses.length === 0 ? (

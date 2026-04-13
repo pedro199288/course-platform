@@ -42,7 +42,13 @@ export const getCourseByIdFn = createServerFn({ method: "GET" })
 
 export const createCourseFn = createServerFn({ method: "POST" })
   .inputValidator(
-    (d: { title: string; description?: string; slug: string; price?: string; pricingModel?: "one_time" | "subscription" | "both" }) => d,
+    (d: {
+      title: string;
+      description?: string;
+      slug: string;
+      price?: string;
+      pricingModel?: "one_time" | "subscription" | "both";
+    }) => d,
   )
   .handler(async ({ data }) => {
     const user = await requireAdmin();
@@ -235,7 +241,12 @@ export const listLessonsFn = createServerFn({ method: "GET" })
 
 export const createLessonFn = createServerFn({ method: "POST" })
   .inputValidator(
-    (d: { moduleId: string; title: string; type?: "video" | "text" | "quiz" | "file"; content?: Record<string, unknown> | null }) => d,
+    (d: {
+      moduleId: string;
+      title: string;
+      type?: "video" | "text" | "quiz" | "file";
+      content?: Record<string, unknown> | null;
+    }) => d,
   )
   .handler(async ({ data }) => {
     const user = await requireAdmin();
@@ -275,7 +286,13 @@ export const createLessonFn = createServerFn({ method: "POST" })
 
 export const updateLessonFn = createServerFn({ method: "POST" })
   .inputValidator(
-    (d: { lessonId: string; title?: string; content?: Record<string, unknown> | null; type?: "video" | "text" | "quiz" | "file"; position?: number }) => d,
+    (d: {
+      lessonId: string;
+      title?: string;
+      content?: Record<string, unknown> | null;
+      type?: "video" | "text" | "quiz" | "file";
+      position?: number;
+    }) => d,
   )
   .handler(async ({ data }) => {
     const user = await requireAdmin();

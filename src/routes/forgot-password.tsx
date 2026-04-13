@@ -37,12 +37,10 @@ function ForgotPasswordPage() {
       <main className="flex min-h-[60vh] items-center justify-center px-4">
         <div className="w-full max-w-sm space-y-6 text-center">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              Check your inbox
-            </h1>
+            <h1 className="text-2xl font-bold tracking-tight">Check your inbox</h1>
             <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-              If an account exists with that email, we sent a password reset
-              link. The link expires in 30 minutes.
+              If an account exists with that email, we sent a password reset link. The link expires
+              in 30 minutes.
             </p>
           </div>
 
@@ -63,9 +61,7 @@ function ForgotPasswordPage() {
     <main className="flex min-h-[60vh] items-center justify-center px-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold tracking-tight">
-            Reset your password
-          </h1>
+          <h1 className="text-2xl font-bold tracking-tight">Reset your password</h1>
           <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
             Enter your email and we'll send you a reset link
           </p>

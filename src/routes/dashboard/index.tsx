@@ -29,9 +29,7 @@ function StudentDashboard() {
   return (
     <main className="page-wrap px-4 py-10">
       <div className="mx-auto max-w-4xl">
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-          My Learning
-        </h1>
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">My Learning</h1>
         <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
           {hasSubscription
             ? "You have an active subscription — all courses are available."
@@ -61,11 +59,7 @@ function StudentDashboard() {
         ) : (
           <div className="mt-8 grid gap-6 sm:grid-cols-2">
             {courses.map((course) => (
-              <CourseCard
-                key={course.id}
-                course={course}
-                certificateId={certMap[course.id]?.id}
-              />
+              <CourseCard key={course.id} course={course} certificateId={certMap[course.id]?.id} />
             ))}
           </div>
         )}
@@ -129,9 +123,7 @@ function CourseCard({
           <div className="mt-1 h-2 overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-700">
             <div
               className={`h-full rounded-full transition-all ${
-                isComplete
-                  ? "bg-green-500"
-                  : "bg-neutral-900 dark:bg-neutral-100"
+                isComplete ? "bg-green-500" : "bg-neutral-900 dark:bg-neutral-100"
               }`}
               style={{ width: `${course.progressPercent}%` }}
             />
@@ -173,9 +165,7 @@ function CourseCard({
               }}
               className="inline-flex items-center gap-1.5 rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
             >
-              {course.completedCount === 0
-                ? "Start learning"
-                : "Continue learning"}
+              {course.completedCount === 0 ? "Start learning" : "Continue learning"}
               <span aria-hidden="true">&rarr;</span>
             </Link>
           ) : (
@@ -205,7 +195,10 @@ function SubscriptionBanner({
   const isCanceled = status === "canceled" || !!canceledAt;
 
   async function handleCancel() {
-    if (!confirm("Cancel your subscription? You'll keep access until the end of the billing period.")) return;
+    if (
+      !confirm("Cancel your subscription? You'll keep access until the end of the billing period.")
+    )
+      return;
     setCanceling(true);
     try {
       await cancelSubscriptionFn();

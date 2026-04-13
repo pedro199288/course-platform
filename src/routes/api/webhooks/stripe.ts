@@ -25,8 +25,7 @@ export const Route = createFileRoute("/api/webhooks/stripe")({
         try {
           event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
         } catch (err) {
-          const message =
-            err instanceof Error ? err.message : "Unknown verification error";
+          const message = err instanceof Error ? err.message : "Unknown verification error";
           return new Response(`Webhook signature verification failed: ${message}`, {
             status: 400,
           });
@@ -47,7 +46,10 @@ export const Route = createFileRoute("/api/webhooks/stripe")({
         }
 
         // Dispatch to background job queue for async processing
-        await dispatchWebhookEvent(event.type, event.data.object as unknown as Record<string, unknown>);
+        await dispatchWebhookEvent(
+          event.type,
+          event.data.object as unknown as Record<string, unknown>,
+        );
 
         return new Response(JSON.stringify({ received: true }), {
           status: 200,

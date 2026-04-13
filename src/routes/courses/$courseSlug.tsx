@@ -17,7 +17,9 @@ export const Route = createFileRoute("/courses/$courseSlug")({
     ]);
     const [enrollment, subscriptionStatus] = session
       ? await Promise.all([
-          checkEnrollmentFn({ data: { courseSlug: params.courseSlug } }).catch(() => ({ enrolled: false })),
+          checkEnrollmentFn({ data: { courseSlug: params.courseSlug } }).catch(() => ({
+            enrolled: false,
+          })),
           getSubscriptionStatusFn().catch(() => ({ hasSubscription: false as const })),
         ])
       : [{ enrolled: false }, { hasSubscription: false as const }];
@@ -27,13 +29,14 @@ export const Route = createFileRoute("/courses/$courseSlug")({
 });
 
 function CourseDetailPage() {
-  const { tenant, course, curriculum, session, enrolled, subscriptionStatus } = Route.useLoaderData();
-  const hasActiveSubscription = subscriptionStatus.hasSubscription && "status" in subscriptionStatus && subscriptionStatus.status === "active";
+  const { tenant, course, curriculum, session, enrolled, subscriptionStatus } =
+    Route.useLoaderData();
+  const hasActiveSubscription =
+    subscriptionStatus.hasSubscription &&
+    "status" in subscriptionStatus &&
+    subscriptionStatus.status === "active";
   const hasAccess = enrolled || hasActiveSubscription;
-  const totalLessons = curriculum.reduce(
-    (sum, mod) => sum + mod.lessons.length,
-    0,
-  );
+  const totalLessons = curriculum.reduce((sum, mod) => sum + mod.lessons.length, 0);
 
   return (
     <main className="page-wrap px-4 py-10">
@@ -49,9 +52,7 @@ function CourseDetailPage() {
       <div className="grid gap-8 lg:grid-cols-3">
         {/* Course info */}
         <div className="lg:col-span-2">
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            {course.title}
-          </h1>
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{course.title}</h1>
 
           <div className="mt-2 flex items-center gap-3 text-sm text-neutral-500 dark:text-neutral-400">
             <span>{tenant.name}</span>
@@ -91,8 +92,7 @@ function CourseDetailPage() {
                       </span>
                       <h3 className="font-medium">{mod.title}</h3>
                       <span className="ml-auto text-xs text-neutral-400 dark:text-neutral-500">
-                        {mod.lessons.length}{" "}
-                        {mod.lessons.length === 1 ? "lesson" : "lessons"}
+                        {mod.lessons.length} {mod.lessons.length === 1 ? "lesson" : "lessons"}
                       </span>
                     </div>
                     {mod.lessons.length > 0 && (
@@ -151,9 +151,7 @@ function CourseDetailPage() {
               {course.price ? (
                 <div className="text-3xl font-bold">${course.price}</div>
               ) : (
-                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                  Free
-                </div>
+                <div className="text-2xl font-bold text-green-600 dark:text-green-400">Free</div>
               )}
               <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
                 {course.pricingModel === "subscription"
@@ -187,9 +185,7 @@ function CourseDetailPage() {
                   <BuyButton courseId={course.id} hasPrice={!!course.price} />
                 )}
                 {(course.pricingModel === "subscription" || course.pricingModel === "both") &&
-                  tenant.subscriptionPrice && (
-                    <SubscribeButton price={tenant.subscriptionPrice} />
-                  )}
+                  tenant.subscriptionPrice && <SubscribeButton price={tenant.subscriptionPrice} />}
               </div>
             ) : (
               <Link
@@ -217,13 +213,7 @@ function CourseDetailPage() {
   );
 }
 
-function BuyButton({
-  courseId,
-  hasPrice,
-}: {
-  courseId: string;
-  hasPrice: boolean;
-}) {
+function BuyButton({ courseId, hasPrice }: { courseId: string; hasPrice: boolean }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -251,9 +241,7 @@ function BuyButton({
       >
         {loading ? "Redirecting..." : hasPrice ? "Buy now" : "Enroll for free"}
       </button>
-      {error && (
-        <p className="mt-2 text-xs text-red-600 dark:text-red-400">{error}</p>
-      )}
+      {error && <p className="mt-2 text-xs text-red-600 dark:text-red-400">{error}</p>}
     </div>
   );
 }
@@ -286,16 +274,13 @@ function SubscribeButton({ price }: { price: string }) {
       >
         {loading ? "Redirecting..." : `Subscribe — $${price}/mo`}
       </button>
-      {error && (
-        <p className="mt-2 text-xs text-red-600 dark:text-red-400">{error}</p>
-      )}
+      {error && <p className="mt-2 text-xs text-red-600 dark:text-red-400">{error}</p>}
     </div>
   );
 }
 
 function LessonIcon({ type }: { type: string }) {
-  const className =
-    "h-4 w-4 flex-shrink-0 text-neutral-400 dark:text-neutral-500";
+  const className = "h-4 w-4 flex-shrink-0 text-neutral-400 dark:text-neutral-500";
   switch (type) {
     case "video":
       return (

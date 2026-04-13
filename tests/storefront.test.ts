@@ -75,8 +75,14 @@ describe("storefront queries", () => {
   });
 
   afterAll(async () => {
-    await db.delete(courses).where(eq(courses.tenantId, tenantId)).catch(() => {});
-    await db.delete(tenants).where(eq(tenants.subdomain, subdomain)).catch(() => {});
+    await db
+      .delete(courses)
+      .where(eq(courses.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(tenants)
+      .where(eq(tenants.subdomain, subdomain))
+      .catch(() => {});
   });
 
   // ── Catalog queries ──────────────────────────────────────────────
@@ -93,9 +99,7 @@ describe("storefront queries", () => {
         status: courses.status,
       })
       .from(courses)
-      .where(
-        and(eq(courses.tenantId, tenantId), eq(courses.status, "published")),
-      );
+      .where(and(eq(courses.tenantId, tenantId), eq(courses.status, "published")));
 
     expect(rows.length).toBe(1);
     expect(rows[0].title).toBe("Published Course");
@@ -107,9 +111,7 @@ describe("storefront queries", () => {
     const rows = await db
       .select({ id: courses.id })
       .from(courses)
-      .where(
-        and(eq(courses.tenantId, tenantId), eq(courses.status, "published")),
-      );
+      .where(and(eq(courses.tenantId, tenantId), eq(courses.status, "published")));
 
     const ids = rows.map((r) => r.id);
     expect(ids).not.toContain(draftCourseId);
@@ -237,14 +239,18 @@ describe("storefront queries", () => {
     const rows = await db
       .select({ id: courses.id, title: courses.title })
       .from(courses)
-      .where(
-        and(eq(courses.tenantId, tenantId), eq(courses.status, "published")),
-      );
+      .where(and(eq(courses.tenantId, tenantId), eq(courses.status, "published")));
 
     expect(rows.every((r) => r.title !== "Other School Course")).toBe(true);
 
     // Cleanup
-    await db.delete(courses).where(eq(courses.tenantId, otherTenant.id)).catch(() => {});
-    await db.delete(tenants).where(eq(tenants.subdomain, otherSubdomain)).catch(() => {});
+    await db
+      .delete(courses)
+      .where(eq(courses.tenantId, otherTenant.id))
+      .catch(() => {});
+    await db
+      .delete(tenants)
+      .where(eq(tenants.subdomain, otherSubdomain))
+      .catch(() => {});
   });
 });

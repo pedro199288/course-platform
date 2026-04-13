@@ -54,10 +54,7 @@ function LoginPage() {
               {error}
               {isUnverified && (
                 <span className="block mt-1">
-                  <Link
-                    to="/verify-email"
-                    className="font-medium underline hover:no-underline"
-                  >
+                  <Link to="/verify-email" className="font-medium underline hover:no-underline">
                     Resend verification email
                   </Link>
                 </span>

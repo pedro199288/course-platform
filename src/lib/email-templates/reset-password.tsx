@@ -25,27 +25,24 @@ function ResetPasswordTemplate({ resetUrl }: ResetPasswordProps) {
         <Container style={container}>
           <Heading style={heading}>Reset your password</Heading>
           <Text style={text}>
-            We received a request to reset your password. Click the button below
-            to choose a new one.
+            We received a request to reset your password. Click the button below to choose a new
+            one.
           </Text>
           <Section style={buttonSection}>
             <Button style={button} href={resetUrl}>
               Reset Password
             </Button>
           </Section>
-          <Text style={warning}>
-            This link will expire in 30 minutes.
-          </Text>
+          <Text style={warning}>This link will expire in 30 minutes.</Text>
           <Text style={footnote}>
-            If the button doesn't work, copy and paste this link into your
-            browser:{" "}
+            If the button doesn't work, copy and paste this link into your browser:{" "}
             <Link href={resetUrl} style={link}>
               {resetUrl}
             </Link>
           </Text>
           <Text style={footnote}>
-            If you didn't request a password reset, you can safely ignore this
-            email. Your password will not be changed.
+            If you didn't request a password reset, you can safely ignore this email. Your password
+            will not be changed.
           </Text>
         </Container>
       </Body>
@@ -55,8 +52,7 @@ function ResetPasswordTemplate({ resetUrl }: ResetPasswordProps) {
 
 const body = {
   backgroundColor: "#f6f9fc",
-  fontFamily:
-    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
 };
 
 const container = {

@@ -1,9 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import {
-  createStripeConnectLinkFn,
-  getStripeConnectStatusFn,
-} from "#/lib/stripe-connect.ts";
+import { createStripeConnectLinkFn, getStripeConnectStatusFn } from "#/lib/stripe-connect.ts";
 
 type StripeStatus = {
   connected: boolean;
@@ -184,9 +181,7 @@ function OnboardingStep({
         </div>
         <div className="flex-1">
           <h3 className="text-sm font-semibold">{title}</h3>
-          <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">
-            {description}
-          </p>
+          <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">{description}</p>
           {children}
         </div>
       </div>

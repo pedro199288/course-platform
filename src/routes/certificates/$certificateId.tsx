@@ -70,8 +70,7 @@ function CertificateView() {
           </h2>
 
           <p className="mt-6 text-sm text-neutral-500 dark:text-neutral-400">
-            Issued by <span className="font-medium">{cert.schoolName}</span> on{" "}
-            {generatedDate}
+            Issued by <span className="font-medium">{cert.schoolName}</span> on {generatedDate}
           </p>
 
           {/* Divider */}

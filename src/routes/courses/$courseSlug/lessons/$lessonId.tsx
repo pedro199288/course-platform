@@ -8,9 +8,7 @@ import { isQuizContent } from "#/lib/rich-text/types.ts";
 import type { QuizContent } from "#/lib/rich-text/types.ts";
 import type { QuizAnswer } from "#/db/schema/quiz-results.ts";
 
-export const Route = createFileRoute(
-  "/courses/$courseSlug/lessons/$lessonId",
-)({
+export const Route = createFileRoute("/courses/$courseSlug/lessons/$lessonId")({
   loader: async ({ params }) => {
     const lessonData = await getLessonFn({
       data: { courseSlug: params.courseSlug, lessonId: params.lessonId },
@@ -76,9 +74,7 @@ function LessonError({ error }: { error: Error }) {
     <main className="page-wrap px-4 py-10">
       <div className="mx-auto max-w-lg text-center">
         <h1 className="text-2xl font-bold">Something went wrong</h1>
-        <p className="mt-2 text-neutral-600 dark:text-neutral-400">
-          {error.message}
-        </p>
+        <p className="mt-2 text-neutral-600 dark:text-neutral-400">{error.message}</p>
       </div>
     </main>
   );
@@ -101,9 +97,7 @@ function LessonViewerPage() {
   const isQuiz = lesson.type === "quiz" && isQuizContent(lesson.content);
   const isFile = lesson.type === "file";
 
-  const [isCompleted, setIsCompleted] = useState(
-    completedSet.has(lesson.id),
-  );
+  const [isCompleted, setIsCompleted] = useState(completedSet.has(lesson.id));
   const [isMarking, setIsMarking] = useState(false);
 
   async function handleMarkComplete() {
@@ -142,8 +136,7 @@ function LessonViewerPage() {
                   <ul>
                     {mod.lessons.map((l) => {
                       const isCurrent = l.id === lesson.id;
-                      const isDone =
-                        isCurrent ? isCompleted : completedSet.has(l.id);
+                      const isDone = isCurrent ? isCompleted : completedSet.has(l.id);
                       return (
                         <li key={l.id}>
                           <Link
@@ -191,12 +184,8 @@ function LessonViewerPage() {
 
         {/* Main content */}
         <div className="order-1 lg:order-2 lg:col-span-3">
-          <div className="mb-2 text-sm text-neutral-500 dark:text-neutral-400">
-            {module.title}
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            {lesson.title}
-          </h1>
+          <div className="mb-2 text-sm text-neutral-500 dark:text-neutral-400">{module.title}</div>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{lesson.title}</h1>
 
           {isQuiz ? (
             <QuizViewer
@@ -208,10 +197,7 @@ function LessonViewerPage() {
             />
           ) : isFile ? (
             <>
-              <FileDownloader
-                lessonId={lesson.id}
-                filename={content?.filename}
-              />
+              <FileDownloader lessonId={lesson.id} filename={content?.filename} />
 
               {/* Mark as complete */}
               <div className="mt-8">
@@ -245,17 +231,13 @@ function LessonViewerPage() {
               {/* Text content */}
               <div className="prose dark:prose-invert mt-6 max-w-none">
                 {content?.text ? (
-                  content.text.split("\n").map((paragraph, i) =>
-                    paragraph.trim() ? (
-                      <p key={i}>{paragraph}</p>
-                    ) : (
-                      <br key={i} />
-                    ),
-                  )
+                  content.text
+                    .split("\n")
+                    .map((paragraph, i) =>
+                      paragraph.trim() ? <p key={i}>{paragraph}</p> : <br key={i} />,
+                    )
                 ) : (
-                  <p className="text-neutral-500 dark:text-neutral-400 italic">
-                    No content yet.
-                  </p>
+                  <p className="text-neutral-500 dark:text-neutral-400 italic">No content yet.</p>
                 )}
               </div>
 
@@ -426,7 +408,8 @@ function QuizViewer({
                   const isCorrect = q.correctOption === oi;
                   let className = "flex items-center gap-2 rounded-md px-2 py-1 text-sm";
                   if (isCorrect) {
-                    className += " bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400";
+                    className +=
+                      " bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400";
                   } else if (isSelected && !answer?.correct) {
                     className += " bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-400";
                   }
@@ -473,9 +456,7 @@ function QuizViewer({
                   type="radio"
                   name={`quiz-${q.id}`}
                   checked={selectedAnswers[q.id] === oi}
-                  onChange={() =>
-                    setSelectedAnswers((prev) => ({ ...prev, [q.id]: oi }))
-                  }
+                  onChange={() => setSelectedAnswers((prev) => ({ ...prev, [q.id]: oi }))}
                 />
                 {opt}
               </label>
@@ -496,13 +477,7 @@ function QuizViewer({
   );
 }
 
-function FileDownloader({
-  lessonId,
-  filename,
-}: {
-  lessonId: string;
-  filename?: string;
-}) {
+function FileDownloader({ lessonId, filename }: { lessonId: string; filename?: string }) {
   const [downloading, setDownloading] = useState(false);
 
   async function handleDownload() {
@@ -523,18 +498,18 @@ function FileDownloader({
       <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-6 dark:border-neutral-800 dark:bg-neutral-900">
         <div className="flex items-center gap-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-neutral-200 dark:bg-neutral-800">
-            <svg viewBox="0 0 20 20" fill="currentColor" className="h-6 w-6 text-neutral-600 dark:text-neutral-400">
+            <svg
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="h-6 w-6 text-neutral-600 dark:text-neutral-400"
+            >
               <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
               <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
             </svg>
           </div>
           <div className="flex-1">
-            <div className="text-sm font-medium">
-              {filename ?? "Downloadable file"}
-            </div>
-            <div className="text-xs text-neutral-500 dark:text-neutral-400">
-              Click to download
-            </div>
+            <div className="text-sm font-medium">{filename ?? "Downloadable file"}</div>
+            <div className="text-xs text-neutral-500 dark:text-neutral-400">Click to download</div>
           </div>
           <button
             type="button"

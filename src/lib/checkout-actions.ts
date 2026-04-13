@@ -90,9 +90,7 @@ export const createCheckoutSessionFn = createServerFn({ method: "POST" })
     }
 
     const amountInCents = Math.round(Number(course.price) * 100);
-    const applicationFeeAmount = Math.round(
-      amountInCents * (applicationFeePercent / 100),
-    );
+    const applicationFeeAmount = Math.round(amountInCents * (applicationFeePercent / 100));
 
     // Build success/cancel URLs from request origin
     const origin =
@@ -184,166 +182,158 @@ export const getCheckoutResultFn = createServerFn({ method: "GET" })
  * Subscription gives access to all published courses for the tenant.
  * Uses Stripe Connect with application_fee_percent for recurring billing.
  */
-export const createSubscriptionCheckoutFn = createServerFn({ method: "POST" })
-  .handler(async () => {
-    const { user, request } = await requireStudent();
+export const createSubscriptionCheckoutFn = createServerFn({ method: "POST" }).handler(async () => {
+  const { user, request } = await requireStudent();
 
-    // Check if already has an active subscription
-    const [existingSub] = await db
-      .select({ id: subscriptions.id })
-      .from(subscriptions)
-      .where(
-        and(
-          eq(subscriptions.userId, user.id),
-          eq(subscriptions.tenantId, user.tenantId),
-          eq(subscriptions.status, "active"),
-        ),
-      );
-    if (existingSub) throw new Error("Already have an active subscription");
+  // Check if already has an active subscription
+  const [existingSub] = await db
+    .select({ id: subscriptions.id })
+    .from(subscriptions)
+    .where(
+      and(
+        eq(subscriptions.userId, user.id),
+        eq(subscriptions.tenantId, user.tenantId),
+        eq(subscriptions.status, "active"),
+      ),
+    );
+  if (existingSub) throw new Error("Already have an active subscription");
 
-    // Load tenant to get Stripe Connect account + subscription price
-    const [tenant] = await db
-      .select({
-        id: tenants.id,
-        name: tenants.name,
-        subdomain: tenants.subdomain,
-        stripeConnectAccountId: tenants.stripeConnectAccountId,
-        subscriptionPrice: tenants.subscriptionPrice,
-        planId: tenants.planId,
-      })
-      .from(tenants)
-      .where(eq(tenants.id, user.tenantId));
-    if (!tenant) throw new Error("Tenant not found");
-    if (!tenant.stripeConnectAccountId) {
-      throw new Error("Instructor has not connected Stripe");
+  // Load tenant to get Stripe Connect account + subscription price
+  const [tenant] = await db
+    .select({
+      id: tenants.id,
+      name: tenants.name,
+      subdomain: tenants.subdomain,
+      stripeConnectAccountId: tenants.stripeConnectAccountId,
+      subscriptionPrice: tenants.subscriptionPrice,
+      planId: tenants.planId,
+    })
+    .from(tenants)
+    .where(eq(tenants.id, user.tenantId));
+  if (!tenant) throw new Error("Tenant not found");
+  if (!tenant.stripeConnectAccountId) {
+    throw new Error("Instructor has not connected Stripe");
+  }
+  if (!tenant.subscriptionPrice || Number(tenant.subscriptionPrice) <= 0) {
+    throw new Error("Subscription pricing not configured");
+  }
+
+  // Calculate application fee percentage from plan (default 10%)
+  let applicationFeePercent = 10;
+  if (tenant.planId) {
+    const { plans } = await import("#/db/schema/index.ts");
+    const [plan] = await db
+      .select({ applicationFeePercent: plans.applicationFeePercent })
+      .from(plans)
+      .where(eq(plans.id, tenant.planId));
+    if (plan?.applicationFeePercent) {
+      applicationFeePercent = Number(plan.applicationFeePercent);
     }
-    if (!tenant.subscriptionPrice || Number(tenant.subscriptionPrice) <= 0) {
-      throw new Error("Subscription pricing not configured");
-    }
+  }
 
-    // Calculate application fee percentage from plan (default 10%)
-    let applicationFeePercent = 10;
-    if (tenant.planId) {
-      const { plans } = await import("#/db/schema/index.ts");
-      const [plan] = await db
-        .select({ applicationFeePercent: plans.applicationFeePercent })
-        .from(plans)
-        .where(eq(plans.id, tenant.planId));
-      if (plan?.applicationFeePercent) {
-        applicationFeePercent = Number(plan.applicationFeePercent);
-      }
-    }
+  const amountInCents = Math.round(Number(tenant.subscriptionPrice) * 100);
 
-    const amountInCents = Math.round(Number(tenant.subscriptionPrice) * 100);
+  const origin =
+    request.headers.get("origin") ??
+    `${request.headers.get("x-forwarded-proto") ?? "http"}://${request.headers.get("host")}`;
 
-    const origin =
-      request.headers.get("origin") ??
-      `${request.headers.get("x-forwarded-proto") ?? "http"}://${request.headers.get("host")}`;
-
-    const stripe = getStripe();
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      line_items: [
-        {
-          price_data: {
-            currency: "usd",
-            product_data: {
-              name: `${tenant.name} — Monthly Access`,
-              description: "Monthly subscription for access to all courses",
-            },
-            unit_amount: amountInCents,
-            recurring: { interval: "month" },
+  const stripe = getStripe();
+  const session = await stripe.checkout.sessions.create({
+    mode: "subscription",
+    line_items: [
+      {
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: `${tenant.name} — Monthly Access`,
+            description: "Monthly subscription for access to all courses",
           },
-          quantity: 1,
+          unit_amount: amountInCents,
+          recurring: { interval: "month" },
         },
-      ],
-      subscription_data: {
-        application_fee_percent: applicationFeePercent,
-        transfer_data: {
-          destination: tenant.stripeConnectAccountId,
-        },
-        metadata: {
-          tenantId: tenant.id,
-          userId: user.id,
-        },
+        quantity: 1,
       },
-      success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}&type=subscription`,
-      cancel_url: `${origin}/checkout/cancel`,
+    ],
+    subscription_data: {
+      application_fee_percent: applicationFeePercent,
+      transfer_data: {
+        destination: tenant.stripeConnectAccountId,
+      },
       metadata: {
         tenantId: tenant.id,
         userId: user.id,
-        type: "subscription",
       },
-    });
-
-    return { url: session.url };
+    },
+    success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}&type=subscription`,
+    cancel_url: `${origin}/checkout/cancel`,
+    metadata: {
+      tenantId: tenant.id,
+      userId: user.id,
+      type: "subscription",
+    },
   });
+
+  return { url: session.url };
+});
 
 /**
  * Cancel the current user's active subscription.
  * Sets subscription to cancel at period end (graceful cancellation).
  */
-export const cancelSubscriptionFn = createServerFn({ method: "POST" })
-  .handler(async () => {
-    const { user } = await requireStudent();
+export const cancelSubscriptionFn = createServerFn({ method: "POST" }).handler(async () => {
+  const { user } = await requireStudent();
 
-    const [sub] = await db
-      .select()
-      .from(subscriptions)
-      .where(
-        and(
-          eq(subscriptions.userId, user.id),
-          eq(subscriptions.tenantId, user.tenantId),
-          eq(subscriptions.status, "active"),
-        ),
-      );
-    if (!sub) throw new Error("No active subscription");
+  const [sub] = await db
+    .select()
+    .from(subscriptions)
+    .where(
+      and(
+        eq(subscriptions.userId, user.id),
+        eq(subscriptions.tenantId, user.tenantId),
+        eq(subscriptions.status, "active"),
+      ),
+    );
+  if (!sub) throw new Error("No active subscription");
 
-    const stripe = getStripe();
-    // Cancel at period end — student keeps access until period expires
-    await stripe.subscriptions.update(sub.stripeSubscriptionId, {
-      cancel_at_period_end: true,
-    });
-
-    await db
-      .update(subscriptions)
-      .set({ canceledAt: new Date() })
-      .where(eq(subscriptions.id, sub.id));
-
-    return { canceledAt: new Date().toISOString(), periodEnd: sub.currentPeriodEnd?.toISOString() };
+  const stripe = getStripe();
+  // Cancel at period end — student keeps access until period expires
+  await stripe.subscriptions.update(sub.stripeSubscriptionId, {
+    cancel_at_period_end: true,
   });
+
+  await db
+    .update(subscriptions)
+    .set({ canceledAt: new Date() })
+    .where(eq(subscriptions.id, sub.id));
+
+  return { canceledAt: new Date().toISOString(), periodEnd: sub.currentPeriodEnd?.toISOString() };
+});
 
 /**
  * Get the current user's subscription status for the current tenant.
  */
-export const getSubscriptionStatusFn = createServerFn({ method: "GET" })
-  .handler(async () => {
-    const { user } = await requireStudent();
+export const getSubscriptionStatusFn = createServerFn({ method: "GET" }).handler(async () => {
+  const { user } = await requireStudent();
 
-    const [sub] = await db
-      .select({
-        id: subscriptions.id,
-        status: subscriptions.status,
-        currentPeriodEnd: subscriptions.currentPeriodEnd,
-        canceledAt: subscriptions.canceledAt,
-      })
-      .from(subscriptions)
-      .where(
-        and(
-          eq(subscriptions.userId, user.id),
-          eq(subscriptions.tenantId, user.tenantId),
-        ),
-      );
+  const [sub] = await db
+    .select({
+      id: subscriptions.id,
+      status: subscriptions.status,
+      currentPeriodEnd: subscriptions.currentPeriodEnd,
+      canceledAt: subscriptions.canceledAt,
+    })
+    .from(subscriptions)
+    .where(and(eq(subscriptions.userId, user.id), eq(subscriptions.tenantId, user.tenantId)));
 
-    if (!sub) return { hasSubscription: false as const };
+  if (!sub) return { hasSubscription: false as const };
 
-    return {
-      hasSubscription: true as const,
-      status: sub.status,
-      currentPeriodEnd: sub.currentPeriodEnd?.toISOString() ?? null,
-      canceledAt: sub.canceledAt?.toISOString() ?? null,
-    };
-  });
+  return {
+    hasSubscription: true as const,
+    status: sub.status,
+    currentPeriodEnd: sub.currentPeriodEnd?.toISOString() ?? null,
+    canceledAt: sub.canceledAt?.toISOString() ?? null,
+  };
+});
 
 /**
  * Set subscription pricing for the tenant (instructor only).
@@ -364,14 +354,13 @@ export const setSubscriptionPriceFn = createServerFn({ method: "POST" })
 /**
  * Get subscription pricing for the tenant (instructor only).
  */
-export const getSubscriptionPriceFn = createServerFn({ method: "GET" })
-  .handler(async () => {
-    const { user } = await requireAdmin();
+export const getSubscriptionPriceFn = createServerFn({ method: "GET" }).handler(async () => {
+  const { user } = await requireAdmin();
 
-    const [tenant] = await db
-      .select({ subscriptionPrice: tenants.subscriptionPrice })
-      .from(tenants)
-      .where(eq(tenants.id, user.tenantId));
+  const [tenant] = await db
+    .select({ subscriptionPrice: tenants.subscriptionPrice })
+    .from(tenants)
+    .where(eq(tenants.id, user.tenantId));
 
-    return { subscriptionPrice: tenant?.subscriptionPrice ?? null };
-  });
+  return { subscriptionPrice: tenant?.subscriptionPrice ?? null };
+});

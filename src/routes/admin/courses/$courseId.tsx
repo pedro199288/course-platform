@@ -130,28 +130,72 @@ function CourseDetailPage() {
         )}
 
         <div className="space-y-1.5">
-          <label htmlFor="title" className="block text-sm font-medium">Title</label>
-          <input id="title" type="text" required value={title} onChange={(e) => setTitle(e.target.value)} className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 dark:border-neutral-700 dark:bg-neutral-900" />
+          <label htmlFor="title" className="block text-sm font-medium">
+            Title
+          </label>
+          <input
+            id="title"
+            type="text"
+            required
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 dark:border-neutral-700 dark:bg-neutral-900"
+          />
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="slug" className="block text-sm font-medium">Slug</label>
-          <input id="slug" type="text" required value={slug} onChange={(e) => setSlug(e.target.value)} className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 dark:border-neutral-700 dark:bg-neutral-900" />
+          <label htmlFor="slug" className="block text-sm font-medium">
+            Slug
+          </label>
+          <input
+            id="slug"
+            type="text"
+            required
+            value={slug}
+            onChange={(e) => setSlug(e.target.value)}
+            className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 dark:border-neutral-700 dark:bg-neutral-900"
+          />
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="description" className="block text-sm font-medium">Description</label>
-          <textarea id="description" rows={4} value={description} onChange={(e) => setDescription(e.target.value)} className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 dark:border-neutral-700 dark:bg-neutral-900" />
+          <label htmlFor="description" className="block text-sm font-medium">
+            Description
+          </label>
+          <textarea
+            id="description"
+            rows={4}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 dark:border-neutral-700 dark:bg-neutral-900"
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label htmlFor="price" className="block text-sm font-medium">Price</label>
-            <input id="price" type="number" step="0.01" min="0" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 dark:border-neutral-700 dark:bg-neutral-900" />
+            <label htmlFor="price" className="block text-sm font-medium">
+              Price
+            </label>
+            <input
+              id="price"
+              type="number"
+              step="0.01"
+              min="0"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder="0.00"
+              className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 dark:border-neutral-700 dark:bg-neutral-900"
+            />
           </div>
           <div className="space-y-1.5">
-            <label htmlFor="pricingModel" className="block text-sm font-medium">Pricing model</label>
-            <select id="pricingModel" value={pricingModel} onChange={(e) => setPricingModel(e.target.value as typeof pricingModel)} className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 dark:border-neutral-700 dark:bg-neutral-900">
+            <label htmlFor="pricingModel" className="block text-sm font-medium">
+              Pricing model
+            </label>
+            <select
+              id="pricingModel"
+              value={pricingModel}
+              onChange={(e) => setPricingModel(e.target.value as typeof pricingModel)}
+              className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 dark:border-neutral-700 dark:bg-neutral-900"
+            >
               <option value="one_time">One-time purchase</option>
               <option value="subscription">Subscription</option>
               <option value="both">Both</option>
@@ -159,7 +203,11 @@ function CourseDetailPage() {
           </div>
         </div>
 
-        <button type="submit" disabled={saving} className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200">
+        <button
+          type="submit"
+          disabled={saving}
+          className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
+        >
           {saving ? "Saving..." : "Save changes"}
         </button>
       </form>
@@ -257,11 +305,12 @@ function ModuleItem({ module: mod }: { module: Module & { lessons: Lesson[] } })
           moduleId: mod.id,
           title: newLessonTitle.trim(),
           type: newLessonType,
-          content: newLessonType === "quiz"
-            ? { type: "quiz", questions: [] } as Record<string, unknown>
-            : newLessonType === "file"
-              ? { type: "file", filename: null, contentType: null } as Record<string, unknown>
-              : undefined,
+          content:
+            newLessonType === "quiz"
+              ? ({ type: "quiz", questions: [] } as Record<string, unknown>)
+              : newLessonType === "file"
+                ? ({ type: "file", filename: null, contentType: null } as Record<string, unknown>)
+                : undefined,
         },
       });
       setNewLessonTitle("");
@@ -285,17 +334,45 @@ function ModuleItem({ module: mod }: { module: Module & { lessons: Lesson[] } })
               onChange={(e) => setTitle(e.target.value)}
               className="flex-1 rounded-md border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-900"
               autoFocus
-              onKeyDown={(e) => { if (e.key === "Enter") void handleSave(); if (e.key === "Escape") setEditing(false); }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void handleSave();
+                if (e.key === "Escape") setEditing(false);
+              }}
             />
-            <button type="button" onClick={() => void handleSave()} className="text-xs text-neutral-600 hover:underline dark:text-neutral-400">Save</button>
-            <button type="button" onClick={() => { setEditing(false); setTitle(mod.title); }} className="text-xs text-neutral-400 hover:underline">Cancel</button>
+            <button
+              type="button"
+              onClick={() => void handleSave()}
+              className="text-xs text-neutral-600 hover:underline dark:text-neutral-400"
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setEditing(false);
+                setTitle(mod.title);
+              }}
+              className="text-xs text-neutral-400 hover:underline"
+            >
+              Cancel
+            </button>
           </div>
         ) : (
-          <button type="button" onClick={() => setEditing(true)} className="text-sm font-medium hover:underline">
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="text-sm font-medium hover:underline"
+          >
             {mod.title}
           </button>
         )}
-        <button type="button" onClick={() => void handleDelete()} className="ml-2 text-xs text-red-500 hover:underline">Delete</button>
+        <button
+          type="button"
+          onClick={() => void handleDelete()}
+          className="ml-2 text-xs text-red-500 hover:underline"
+        >
+          Delete
+        </button>
       </div>
 
       <div className="p-3 space-y-2">
@@ -338,23 +415,31 @@ function LessonItem({ lesson }: { lesson: Lesson }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(lesson.title);
   const [content, setContent] = useState(
-    lesson.content && typeof lesson.content === "object" && "text" in (lesson.content as Record<string, unknown>)
+    lesson.content &&
+      typeof lesson.content === "object" &&
+      "text" in (lesson.content as Record<string, unknown>)
       ? String((lesson.content as Record<string, unknown>).text)
-      : typeof lesson.content === "string" ? lesson.content : "",
+      : typeof lesson.content === "string"
+        ? lesson.content
+        : "",
   );
 
   // Quiz editing state
   const quizContent = isQuizContent(lesson.content) ? lesson.content : null;
-  const [questions, setQuestions] = useState<QuizQuestion[]>(
-    quizContent?.questions ?? [],
-  );
+  const [questions, setQuestions] = useState<QuizQuestion[]>(quizContent?.questions ?? []);
 
   // File upload state
-  const fileContent = lesson.type === "file" && lesson.content && typeof lesson.content === "object" && "filename" in (lesson.content as Record<string, unknown>)
-    ? (lesson.content as { filename: string | null; contentType: string | null })
-    : null;
+  const fileContent =
+    lesson.type === "file" &&
+    lesson.content &&
+    typeof lesson.content === "object" &&
+    "filename" in (lesson.content as Record<string, unknown>)
+      ? (lesson.content as { filename: string | null; contentType: string | null })
+      : null;
   const [uploading, setUploading] = useState(false);
-  const [uploadedFilename, setUploadedFilename] = useState<string | null>(fileContent?.filename ?? null);
+  const [uploadedFilename, setUploadedFilename] = useState<string | null>(
+    fileContent?.filename ?? null,
+  );
 
   async function handleFileUpload(file: File) {
     setUploading(true);
@@ -465,12 +550,18 @@ function LessonItem({ lesson }: { lesson: Lesson }) {
             {uploadedFilename && (
               <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
                 <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-                  <path fillRule="evenodd" d="M15.621 4.379a3 3 0 00-4.242 0l-7 7a3 3 0 004.241 4.243h.001l.497-.5a.75.75 0 011.064 1.057l-.498.501a4.5 4.5 0 01-6.364-6.364l7-7a4.5 4.5 0 016.368 6.36l-3.455 3.553A2.625 2.625 0 119.52 9.52l3.45-3.451a.75.75 0 111.061 1.06l-3.45 3.451a1.125 1.125 0 001.587 1.595l3.454-3.553a3 3 0 000-4.242z" clipRule="evenodd" />
+                  <path
+                    fillRule="evenodd"
+                    d="M15.621 4.379a3 3 0 00-4.242 0l-7 7a3 3 0 004.241 4.243h.001l.497-.5a.75.75 0 011.064 1.057l-.498.501a4.5 4.5 0 01-6.364-6.364l7-7a4.5 4.5 0 016.368 6.36l-3.455 3.553A2.625 2.625 0 119.52 9.52l3.45-3.451a.75.75 0 111.061 1.06l-3.45 3.451a1.125 1.125 0 001.587 1.595l3.454-3.553a3 3 0 000-4.242z"
+                    clipRule="evenodd"
+                  />
                 </svg>
                 {uploadedFilename}
               </div>
             )}
-            <label className={`flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-neutral-300 px-3 py-3 text-xs text-neutral-600 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800 ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
+            <label
+              className={`flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-neutral-300 px-3 py-3 text-xs text-neutral-600 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800 ${uploading ? "opacity-50 pointer-events-none" : ""}`}
+            >
               <input
                 type="file"
                 className="hidden"
@@ -494,8 +585,20 @@ function LessonItem({ lesson }: { lesson: Lesson }) {
         )}
 
         <div className="flex gap-2">
-          <button type="button" onClick={() => void handleSave()} className="rounded-md bg-neutral-900 px-2 py-1 text-xs font-medium text-white hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200">Save</button>
-          <button type="button" onClick={() => setEditing(false)} className="text-xs text-neutral-400 hover:underline">Cancel</button>
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            className="rounded-md bg-neutral-900 px-2 py-1 text-xs font-medium text-white hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
+          >
+            Save
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditing(false)}
+            className="text-xs text-neutral-400 hover:underline"
+          >
+            Cancel
+          </button>
         </div>
       </div>
     );
@@ -512,14 +615,24 @@ function LessonItem({ lesson }: { lesson: Lesson }) {
           </span>
         )}
         {lesson.type === "file" && uploadedFilename && (
-          <span className="text-xs text-neutral-400">
-            ({uploadedFilename})
-          </span>
+          <span className="text-xs text-neutral-400">({uploadedFilename})</span>
         )}
       </div>
       <div className="flex gap-2">
-        <button type="button" onClick={() => setEditing(true)} className="text-xs text-neutral-500 hover:underline">Edit</button>
-        <button type="button" onClick={() => void handleDelete()} className="text-xs text-red-500 hover:underline">Delete</button>
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="text-xs text-neutral-500 hover:underline"
+        >
+          Edit
+        </button>
+        <button
+          type="button"
+          onClick={() => void handleDelete()}
+          className="text-xs text-red-500 hover:underline"
+        >
+          Delete
+        </button>
       </div>
     </div>
   );
@@ -562,11 +675,7 @@ function QuizQuestionEditor({
     <div className="rounded-md border border-neutral-200 p-2 dark:border-neutral-700">
       <div className="mb-2 flex items-center justify-between">
         <span className="text-xs font-medium text-neutral-500">Question {index + 1}</span>
-        <button
-          type="button"
-          onClick={onRemove}
-          className="text-xs text-red-500 hover:underline"
-        >
+        <button type="button" onClick={onRemove} className="text-xs text-red-500 hover:underline">
           Remove
         </button>
       </div>

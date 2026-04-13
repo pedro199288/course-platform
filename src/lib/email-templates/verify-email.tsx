@@ -25,8 +25,7 @@ function VerifyEmailTemplate({ verificationUrl }: VerifyEmailProps) {
         <Container style={container}>
           <Heading style={heading}>Verify your email</Heading>
           <Text style={text}>
-            Thanks for signing up! Please verify your email address by clicking
-            the button below.
+            Thanks for signing up! Please verify your email address by clicking the button below.
           </Text>
           <Section style={buttonSection}>
             <Button style={button} href={verificationUrl}>
@@ -34,8 +33,7 @@ function VerifyEmailTemplate({ verificationUrl }: VerifyEmailProps) {
             </Button>
           </Section>
           <Text style={footnote}>
-            If the button doesn't work, copy and paste this link into your
-            browser:{" "}
+            If the button doesn't work, copy and paste this link into your browser:{" "}
             <Link href={verificationUrl} style={link}>
               {verificationUrl}
             </Link>
@@ -51,8 +49,7 @@ function VerifyEmailTemplate({ verificationUrl }: VerifyEmailProps) {
 
 const body = {
   backgroundColor: "#f6f9fc",
-  fontFamily:
-    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
 };
 
 const container = {

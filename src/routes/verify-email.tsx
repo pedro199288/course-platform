@@ -33,12 +33,10 @@ function VerifyEmailPage() {
     <main className="flex min-h-[60vh] items-center justify-center px-4">
       <div className="w-full max-w-sm space-y-6 text-center">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            Check your inbox
-          </h1>
+          <h1 className="text-2xl font-bold tracking-tight">Check your inbox</h1>
           <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-            We sent a verification link to your email address. Click the link to
-            activate your account.
+            We sent a verification link to your email address. Click the link to activate your
+            account.
           </p>
         </div>
 

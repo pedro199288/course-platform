@@ -36,20 +36,17 @@ function CertificateDeliveryTemplate({
           <Heading style={heading}>Congratulations!</Heading>
           <Text style={text}>Hi {studentName},</Text>
           <Text style={text}>
-            You've completed <strong>{courseName}</strong> on {schoolName}.
-            Your certificate of completion is ready to download.
+            You've completed <strong>{courseName}</strong> on {schoolName}. Your certificate of
+            completion is ready to download.
           </Text>
-          <Text style={completionText}>
-            Completed on {completionDate}
-          </Text>
+          <Text style={completionText}>Completed on {completionDate}</Text>
           <Section style={buttonSection}>
             <Button style={button} href={certificateUrl}>
               Download Certificate
             </Button>
           </Section>
           <Text style={footnote}>
-            If the button doesn't work, copy and paste this link into your
-            browser:{" "}
+            If the button doesn't work, copy and paste this link into your browser:{" "}
             <Link href={certificateUrl} style={link}>
               {certificateUrl}
             </Link>
@@ -62,8 +59,7 @@ function CertificateDeliveryTemplate({
 
 const body = {
   backgroundColor: "#f6f9fc",
-  fontFamily:
-    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
 };
 
 const container = {

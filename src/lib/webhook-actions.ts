@@ -9,10 +9,7 @@ import {
   users,
 } from "#/db/schema/index.ts";
 import { sendJob } from "./job-queue.ts";
-import {
-  enqueuePurchaseConfirmation,
-  enqueueEnrollmentConfirmation,
-} from "./email-jobs.ts";
+import { enqueuePurchaseConfirmation, enqueueEnrollmentConfirmation } from "./email-jobs.ts";
 
 // ---------------------------------------------------------------------------
 // Webhook event types we handle
@@ -67,9 +64,7 @@ export async function processWebhookEvent(event: WebhookJobData): Promise<void> 
 // checkout.session.completed → create payment + enrollment + emails
 // ---------------------------------------------------------------------------
 
-async function handleCheckoutSessionCompleted(
-  data: Record<string, unknown>,
-): Promise<void> {
+async function handleCheckoutSessionCompleted(data: Record<string, unknown>): Promise<void> {
   const metadata = data.metadata as {
     tenantId: string;
     courseId: string;
@@ -165,9 +160,7 @@ async function handleCheckoutSessionCompleted(
 // charge.refunded → revoke enrollment
 // ---------------------------------------------------------------------------
 
-async function handleChargeRefunded(
-  data: Record<string, unknown>,
-): Promise<void> {
+async function handleChargeRefunded(data: Record<string, unknown>): Promise<void> {
   const paymentIntentId = data.payment_intent as string | undefined;
   if (!paymentIntentId) {
     throw new Error("Missing payment_intent in charge.refunded event");
@@ -203,9 +196,7 @@ async function handleChargeRefunded(
 // customer.subscription.created → create subscription record
 // ---------------------------------------------------------------------------
 
-async function handleSubscriptionCreated(
-  data: Record<string, unknown>,
-): Promise<void> {
+async function handleSubscriptionCreated(data: Record<string, unknown>): Promise<void> {
   const subscriptionId = data.id as string;
   const metadata = data.metadata as {
     tenantId?: string;
@@ -240,9 +231,7 @@ async function handleSubscriptionCreated(
 // customer.subscription.updated → update status + period
 // ---------------------------------------------------------------------------
 
-async function handleSubscriptionUpdated(
-  data: Record<string, unknown>,
-): Promise<void> {
+async function handleSubscriptionUpdated(data: Record<string, unknown>): Promise<void> {
   const subscriptionId = data.id as string;
   const status = data.status as string;
   const currentPeriodEnd = data.current_period_end as number | undefined;
@@ -264,7 +253,11 @@ async function handleSubscriptionUpdated(
     .set({
       status: mapSubscriptionStatus(status),
       currentPeriodEnd: currentPeriodEnd ? new Date(currentPeriodEnd * 1000) : undefined,
-      canceledAt: canceledAt ? new Date(canceledAt * 1000) : cancelAt ? new Date(cancelAt * 1000) : undefined,
+      canceledAt: canceledAt
+        ? new Date(canceledAt * 1000)
+        : cancelAt
+          ? new Date(cancelAt * 1000)
+          : undefined,
     })
     .where(eq(subscriptions.stripeSubscriptionId, subscriptionId));
 }
@@ -273,9 +266,7 @@ async function handleSubscriptionUpdated(
 // customer.subscription.deleted → mark subscription canceled
 // ---------------------------------------------------------------------------
 
-async function handleSubscriptionDeleted(
-  data: Record<string, unknown>,
-): Promise<void> {
+async function handleSubscriptionDeleted(data: Record<string, unknown>): Promise<void> {
   const subscriptionId = data.id as string;
 
   await db

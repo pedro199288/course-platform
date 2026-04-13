@@ -39,7 +39,11 @@ function AdminDashboard() {
         <DashboardCard
           title="Students"
           value={String(metrics.totalStudents)}
-          description={metrics.totalStudents === 1 ? "1 enrolled student" : `${metrics.totalStudents} enrolled students`}
+          description={
+            metrics.totalStudents === 1
+              ? "1 enrolled student"
+              : `${metrics.totalStudents} enrolled students`
+          }
         />
         <DashboardCard
           title="Revenue"
@@ -49,7 +53,11 @@ function AdminDashboard() {
         <DashboardCard
           title="Published"
           value={String(metrics.publishedCourses)}
-          description={metrics.publishedCourses === 1 ? "1 live course" : `${metrics.publishedCourses} live courses`}
+          description={
+            metrics.publishedCourses === 1
+              ? "1 live course"
+              : `${metrics.publishedCourses} live courses`
+          }
         />
       </div>
 
@@ -61,15 +69,26 @@ function AdminDashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900">
-                  <th className="px-4 py-3 text-left font-medium text-neutral-500 dark:text-neutral-400">Course</th>
-                  <th className="px-4 py-3 text-left font-medium text-neutral-500 dark:text-neutral-400">Status</th>
-                  <th className="px-4 py-3 text-right font-medium text-neutral-500 dark:text-neutral-400">Students</th>
-                  <th className="px-4 py-3 text-right font-medium text-neutral-500 dark:text-neutral-400">Revenue</th>
+                  <th className="px-4 py-3 text-left font-medium text-neutral-500 dark:text-neutral-400">
+                    Course
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-neutral-500 dark:text-neutral-400">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-right font-medium text-neutral-500 dark:text-neutral-400">
+                    Students
+                  </th>
+                  <th className="px-4 py-3 text-right font-medium text-neutral-500 dark:text-neutral-400">
+                    Revenue
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {metrics.perCourseStats.map((course) => (
-                  <tr key={course.courseId} className="border-b border-neutral-100 last:border-0 dark:border-neutral-800">
+                  <tr
+                    key={course.courseId}
+                    className="border-b border-neutral-100 last:border-0 dark:border-neutral-800"
+                  >
                     <td className="px-4 py-3 font-medium">{course.courseTitle}</td>
                     <td className="px-4 py-3">
                       <span
@@ -83,7 +102,9 @@ function AdminDashboard() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums">{course.enrolledStudents}</td>
-                    <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(course.revenue)}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">
+                      {formatCurrency(course.revenue)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -100,17 +121,28 @@ function AdminDashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900">
-                  <th className="px-4 py-3 text-left font-medium text-neutral-500 dark:text-neutral-400">Student</th>
-                  <th className="px-4 py-3 text-left font-medium text-neutral-500 dark:text-neutral-400">Course</th>
-                  <th className="px-4 py-3 text-right font-medium text-neutral-500 dark:text-neutral-400">Date</th>
+                  <th className="px-4 py-3 text-left font-medium text-neutral-500 dark:text-neutral-400">
+                    Student
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-neutral-500 dark:text-neutral-400">
+                    Course
+                  </th>
+                  <th className="px-4 py-3 text-right font-medium text-neutral-500 dark:text-neutral-400">
+                    Date
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {metrics.recentEnrollments.map((enrollment) => (
-                  <tr key={enrollment.id} className="border-b border-neutral-100 last:border-0 dark:border-neutral-800">
+                  <tr
+                    key={enrollment.id}
+                    className="border-b border-neutral-100 last:border-0 dark:border-neutral-800"
+                  >
                     <td className="px-4 py-3">
                       <div className="font-medium">{enrollment.userName ?? "Unknown"}</div>
-                      <div className="text-xs text-neutral-500 dark:text-neutral-400">{enrollment.userEmail}</div>
+                      <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                        {enrollment.userEmail}
+                      </div>
                     </td>
                     <td className="px-4 py-3">{enrollment.courseTitle}</td>
                     <td className="px-4 py-3 text-right text-neutral-500 dark:text-neutral-400">
@@ -132,7 +164,10 @@ function AdminDashboard() {
         <div className="rounded-lg border border-dashed border-neutral-300 p-8 text-center dark:border-neutral-700">
           <p className="text-neutral-500 dark:text-neutral-400">
             No courses yet.{" "}
-            <Link to="/admin/courses/new" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
+            <Link
+              to="/admin/courses/new"
+              className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+            >
               Create your first course
             </Link>
           </p>
@@ -169,7 +204,8 @@ function SubscriptionPricing({ currentPrice }: { currentPrice: string | null }) 
     <div>
       <h2 className="text-lg font-semibold">Subscription Pricing</h2>
       <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-        Set a monthly price for students to access all your courses. Leave empty to disable subscriptions.
+        Set a monthly price for students to access all your courses. Leave empty to disable
+        subscriptions.
       </p>
       <form onSubmit={(e) => void handleSave(e)} className="mt-3 flex items-end gap-3">
         <div className="space-y-1.5">
@@ -197,9 +233,7 @@ function SubscriptionPricing({ currentPrice }: { currentPrice: string | null }) 
         >
           {saving ? "Saving..." : "Save"}
         </button>
-        {saved && (
-          <span className="text-sm text-green-600 dark:text-green-400">Saved</span>
-        )}
+        {saved && <span className="text-sm text-green-600 dark:text-green-400">Saved</span>}
       </form>
     </div>
   );

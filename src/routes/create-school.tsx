@@ -124,18 +124,20 @@ function CreateSchoolPage() {
                 pattern="[a-z0-9][a-z0-9-]*[a-z0-9]"
                 placeholder="my-school"
                 value={subdomain}
-                onChange={(e) => setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                onChange={(e) =>
+                  setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))
+                }
                 className="w-full rounded-l-md border border-r-0 border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 dark:border-neutral-700 dark:bg-neutral-900"
               />
               <span className="rounded-r-md border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm text-neutral-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-400">
                 .localhost
               </span>
             </div>
-            {checking && (
-              <p className="text-xs text-neutral-500">Checking availability...</p>
-            )}
+            {checking && <p className="text-xs text-neutral-500">Checking availability...</p>}
             {!checking && subdomainStatus && (
-              <p className={`text-xs ${subdomainStatus.available ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+              <p
+                className={`text-xs ${subdomainStatus.available ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
+              >
                 {subdomainStatus.available ? "Available!" : subdomainStatus.reason}
               </p>
             )}
@@ -143,7 +145,9 @@ function CreateSchoolPage() {
 
           <button
             type="submit"
-            disabled={loading || checking || (subdomainStatus !== null && !subdomainStatus.available)}
+            disabled={
+              loading || checking || (subdomainStatus !== null && !subdomainStatus.available)
+            }
             className="w-full rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
           >
             {loading ? "Creating school..." : "Create school"}

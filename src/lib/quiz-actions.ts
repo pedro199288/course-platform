@@ -19,8 +19,7 @@ import { isQuizContent } from "./rich-text/types.ts";
 
 async function requireTenant() {
   const request = getRequest();
-  const host =
-    request.headers.get("x-tenant") ?? request.headers.get("host") ?? "";
+  const host = request.headers.get("x-tenant") ?? request.headers.get("host") ?? "";
   const subdomain = extractSubdomain(host);
   if (!subdomain) throw new Error("No tenant");
 
@@ -73,10 +72,7 @@ export const submitQuizFn = createServerFn({ method: "POST" })
     if (!hasAccess) throw new Error("Not enrolled");
 
     // Load the lesson and verify it's a quiz
-    const [lesson] = await db
-      .select()
-      .from(lessons)
-      .where(eq(lessons.id, data.lessonId));
+    const [lesson] = await db.select().from(lessons).where(eq(lessons.id, data.lessonId));
     if (!lesson) throw new Error("Lesson not found");
     if (lesson.type !== "quiz") throw new Error("Not a quiz lesson");
 
@@ -93,9 +89,7 @@ export const submitQuizFn = createServerFn({ method: "POST" })
       throw new Error("Invalid quiz content");
     }
 
-    const questionMap = new Map(
-      quizContent.questions.map((q) => [q.id, q]),
-    );
+    const questionMap = new Map(quizContent.questions.map((q) => [q.id, q]));
 
     const scoredAnswers = data.answers.map((a) => {
       const question = questionMap.get(a.questionId);
@@ -147,11 +141,7 @@ export const submitQuizFn = createServerFn({ method: "POST" })
       });
 
     // Check if course is now 100% complete
-    const certResult = await checkAndIssueCertificate(
-      user.id,
-      course.id,
-      tenant.id,
-    );
+    const certResult = await checkAndIssueCertificate(user.id, course.id, tenant.id);
 
     return {
       score,

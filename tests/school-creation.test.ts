@@ -120,9 +120,7 @@ describe("school creation (integration)", () => {
 
       await db.insert(tenants).values({ name: "First", subdomain });
 
-      await expect(
-        db.insert(tenants).values({ name: "Second", subdomain }),
-      ).rejects.toThrow();
+      await expect(db.insert(tenants).values({ name: "Second", subdomain })).rejects.toThrow();
     });
 
     it("allows different subdomains", async () => {
@@ -130,8 +128,14 @@ describe("school creation (integration)", () => {
       const sub2 = `diff-b-${timestamp}`;
       createdSubdomains.push(sub1, sub2);
 
-      const [t1] = await db.insert(tenants).values({ name: "School A", subdomain: sub1 }).returning();
-      const [t2] = await db.insert(tenants).values({ name: "School B", subdomain: sub2 }).returning();
+      const [t1] = await db
+        .insert(tenants)
+        .values({ name: "School A", subdomain: sub1 })
+        .returning();
+      const [t2] = await db
+        .insert(tenants)
+        .values({ name: "School B", subdomain: sub2 })
+        .returning();
 
       expect(t1.id).not.toBe(t2.id);
       expect(t1.subdomain).toBe(sub1);
@@ -191,13 +195,11 @@ describe("school creation (integration)", () => {
       createdSubdomains.push(subdomain);
 
       const accountId = `acct_webhook_${timestamp}`;
-      await db
-        .insert(tenants)
-        .values({
-          name: "Webhook School",
-          subdomain,
-          stripeConnectAccountId: accountId,
-        });
+      await db.insert(tenants).values({
+        name: "Webhook School",
+        subdomain,
+        stripeConnectAccountId: accountId,
+      });
 
       // Simulate what the webhook handler does
       const result = await db

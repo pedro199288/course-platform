@@ -12,7 +12,9 @@ function NewCoursePage() {
   const [description, setDescription] = useState("");
   const [slug, setSlug] = useState("");
   const [price, setPrice] = useState("");
-  const [pricingModel, setPricingModel] = useState<"one_time" | "subscription" | "both">("one_time");
+  const [pricingModel, setPricingModel] = useState<"one_time" | "subscription" | "both">(
+    "one_time",
+  );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 

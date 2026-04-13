@@ -46,76 +46,82 @@ export const getInstructorDashboardFn = createServerFn({ method: "GET" }).handle
     const tenantId = user.tenantId;
 
     // Run independent queries in parallel
-    const [courseStats, studentCount, revenueResult, recentEnrollmentRows, perCourseEnrollments, perCourseRevenue] =
-      await Promise.all([
-        // Course counts by status
-        db
-          .select({
-            status: courses.status,
-            count: sql<number>`count(*)::int`,
-          })
-          .from(courses)
-          .where(eq(courses.tenantId, tenantId))
-          .groupBy(courses.status),
+    const [
+      courseStats,
+      studentCount,
+      revenueResult,
+      recentEnrollmentRows,
+      perCourseEnrollments,
+      perCourseRevenue,
+    ] = await Promise.all([
+      // Course counts by status
+      db
+        .select({
+          status: courses.status,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(courses)
+        .where(eq(courses.tenantId, tenantId))
+        .groupBy(courses.status),
 
-        // Total unique students (from non-revoked enrollments)
-        db
-          .select({
-            count: sql<number>`count(distinct ${enrollments.userId})::int`,
-          })
-          .from(enrollments)
-          .where(and(eq(enrollments.tenantId, tenantId), isNull(enrollments.revokedAt))),
+      // Total unique students (from non-revoked enrollments)
+      db
+        .select({
+          count: sql<number>`count(distinct ${enrollments.userId})::int`,
+        })
+        .from(enrollments)
+        .where(and(eq(enrollments.tenantId, tenantId), isNull(enrollments.revokedAt))),
 
-        // Total revenue
-        db
-          .select({
-            total: sql<string>`coalesce(sum(${payments.amount}), 0)`,
-          })
-          .from(payments)
-          .where(eq(payments.tenantId, tenantId)),
+      // Total revenue
+      db
+        .select({
+          total: sql<string>`coalesce(sum(${payments.amount}), 0)`,
+        })
+        .from(payments)
+        .where(eq(payments.tenantId, tenantId)),
 
-        // Recent enrollments (last 10) with user and course info
-        db
-          .select({
-            id: enrollments.id,
-            userName: users.name,
-            userEmail: users.email,
-            courseTitle: courses.title,
-            enrolledAt: enrollments.enrolledAt,
-          })
-          .from(enrollments)
-          .innerJoin(users, eq(enrollments.userId, users.id))
-          .innerJoin(courses, eq(enrollments.courseId, courses.id))
-          .where(and(eq(enrollments.tenantId, tenantId), isNull(enrollments.revokedAt)))
-          .orderBy(desc(enrollments.enrolledAt))
-          .limit(10),
+      // Recent enrollments (last 10) with user and course info
+      db
+        .select({
+          id: enrollments.id,
+          userName: users.name,
+          userEmail: users.email,
+          courseTitle: courses.title,
+          enrolledAt: enrollments.enrolledAt,
+        })
+        .from(enrollments)
+        .innerJoin(users, eq(enrollments.userId, users.id))
+        .innerJoin(courses, eq(enrollments.courseId, courses.id))
+        .where(and(eq(enrollments.tenantId, tenantId), isNull(enrollments.revokedAt)))
+        .orderBy(desc(enrollments.enrolledAt))
+        .limit(10),
 
-        // Per-course enrollment counts
-        db
-          .select({
-            courseId: courses.id,
-            courseTitle: courses.title,
-            status: courses.status,
-            enrolledStudents: sql<number>`count(${enrollments.id})::int`,
-          })
-          .from(courses)
-          .leftJoin(
-            enrollments,
-            and(eq(courses.id, enrollments.courseId), isNull(enrollments.revokedAt)),
-          )
-          .where(eq(courses.tenantId, tenantId))
-          .groupBy(courses.id, courses.title, courses.status),
+      // Per-course enrollment counts
+      db
+        .select({
+          courseId: courses.id,
+          courseTitle: courses.title,
+          status: courses.status,
+          enrolledStudents: sql<number>`count(${enrollments.id})::int`,
+        })
+        .from(courses)
+        .leftJoin(
+          enrollments,
+          and(eq(courses.id, enrollments.courseId), isNull(enrollments.revokedAt)),
+        )
+        .where(eq(courses.tenantId, tenantId))
+        .groupBy(courses.id, courses.title, courses.status),
 
-        // Per-course revenue
-        db
-          .select({
-            courseId: payments.courseId,
-            revenue: sql<string>`coalesce(sum(${payments.amount}), 0)`,
-          })
-          .from(payments)
-          .where(eq(payments.tenantId, tenantId))
-          .groupBy(payments.courseId),
-      ]);
+      // Per-course revenue
+      db
+        .select({
+          courseId: payments.courseId,
+          revenue: sql<string>`coalesce(sum(${payments.amount}), 0)`,
+        })
+        .from(payments)
+        .where(eq(payments.tenantId, tenantId))
+        .groupBy(payments.courseId),
+    ]);
 
     // Aggregate course counts
     const publishedCourses = courseStats.find((s) => s.status === "published")?.count ?? 0;

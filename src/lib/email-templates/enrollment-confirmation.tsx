@@ -34,8 +34,8 @@ function EnrollmentConfirmationTemplate({
           <Heading style={heading}>You're In!</Heading>
           <Text style={text}>Hi {studentName},</Text>
           <Text style={text}>
-            You've been enrolled in <strong>{courseName}</strong> on{" "}
-            {schoolName}. You can start learning right away.
+            You've been enrolled in <strong>{courseName}</strong> on {schoolName}. You can start
+            learning right away.
           </Text>
           <Section style={buttonSection}>
             <Button style={button} href={courseUrl}>
@@ -43,8 +43,7 @@ function EnrollmentConfirmationTemplate({
             </Button>
           </Section>
           <Text style={footnote}>
-            If the button doesn't work, copy and paste this link into your
-            browser:{" "}
+            If the button doesn't work, copy and paste this link into your browser:{" "}
             <Link href={courseUrl} style={link}>
               {courseUrl}
             </Link>
@@ -57,8 +56,7 @@ function EnrollmentConfirmationTemplate({
 
 const body = {
   backgroundColor: "#f6f9fc",
-  fontFamily:
-    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
 };
 
 const container = {

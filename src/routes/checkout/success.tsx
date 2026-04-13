@@ -29,17 +29,12 @@ function CheckoutSuccessPage() {
                 strokeWidth={2}
                 stroke="currentColor"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M4.5 12.75l6 6 9-13.5"
-                />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
               </svg>
             </div>
             <h1 className="text-2xl font-bold">Purchase Complete!</h1>
             <p className="mt-2 text-neutral-600 dark:text-neutral-400">
-              You're now enrolled in{" "}
-              <span className="font-medium">{result.courseName}</span>.
+              You're now enrolled in <span className="font-medium">{result.courseName}</span>.
             </p>
             {result.amount && (
               <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
@@ -66,8 +61,7 @@ function CheckoutSuccessPage() {
           <>
             <h1 className="text-2xl font-bold">Processing your purchase...</h1>
             <p className="mt-2 text-neutral-600 dark:text-neutral-400">
-              Your payment is being processed. You'll receive a confirmation
-              email shortly.
+              Your payment is being processed. You'll receive a confirmation email shortly.
             </p>
             <Link
               to="/courses"

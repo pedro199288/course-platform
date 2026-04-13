@@ -1,12 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vite-plus/test";
 import { eq, and, asc } from "drizzle-orm";
 import { db } from "#/db/index.ts";
-import {
-  tenants,
-  courses,
-  modules,
-  lessons,
-} from "#/db/schema/index.ts";
+import { tenants, courses, modules, lessons } from "#/db/schema/index.ts";
 
 // Mock email to prevent Resend API calls
 vi.mock("#/lib/email.ts", () => ({
@@ -36,10 +31,22 @@ describe("course/module/lesson CRUD", () => {
   afterAll(async () => {
     // Clean up: lessons → modules → courses → tenants
     // Cascade deletes handle lessons and modules when courses are deleted
-    await db.delete(courses).where(eq(courses.tenantId, tenantId)).catch(() => {});
-    await db.delete(courses).where(eq(courses.tenantId, tenantBId)).catch(() => {});
-    await db.delete(tenants).where(eq(tenants.subdomain, tenantSubdomain)).catch(() => {});
-    await db.delete(tenants).where(eq(tenants.subdomain, tenantBSubdomain)).catch(() => {});
+    await db
+      .delete(courses)
+      .where(eq(courses.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(courses)
+      .where(eq(courses.tenantId, tenantBId))
+      .catch(() => {});
+    await db
+      .delete(tenants)
+      .where(eq(tenants.subdomain, tenantSubdomain))
+      .catch(() => {});
+    await db
+      .delete(tenants)
+      .where(eq(tenants.subdomain, tenantBSubdomain))
+      .catch(() => {});
   });
 
   // ── Course CRUD ──────────────────────────────────────────────────
@@ -77,15 +84,9 @@ describe("course/module/lesson CRUD", () => {
     });
 
     // Query for tenant A's courses only
-    const tenantACourses = await db
-      .select()
-      .from(courses)
-      .where(eq(courses.tenantId, tenantId));
+    const tenantACourses = await db.select().from(courses).where(eq(courses.tenantId, tenantId));
 
-    const tenantBCourses = await db
-      .select()
-      .from(courses)
-      .where(eq(courses.tenantId, tenantBId));
+    const tenantBCourses = await db.select().from(courses).where(eq(courses.tenantId, tenantBId));
 
     expect(tenantACourses.length).toBe(1);
     expect(tenantACourses[0].title).toBe("Test Course");
@@ -116,10 +117,7 @@ describe("course/module/lesson CRUD", () => {
     expect(result.length).toBe(0);
 
     // Verify original is unchanged
-    const [original] = await db
-      .select()
-      .from(courses)
-      .where(eq(courses.id, courseId));
+    const [original] = await db.select().from(courses).where(eq(courses.id, courseId));
     expect(original.title).toBe("Updated Course");
   });
 
@@ -233,10 +231,7 @@ describe("course/module/lesson CRUD", () => {
 
     await db.delete(lessons).where(eq(lessons.id, temp.id));
 
-    const found = await db
-      .select()
-      .from(lessons)
-      .where(eq(lessons.id, temp.id));
+    const found = await db.select().from(lessons).where(eq(lessons.id, temp.id));
     expect(found.length).toBe(0);
   });
 
@@ -251,10 +246,7 @@ describe("course/module/lesson CRUD", () => {
 
     await db.delete(modules).where(eq(modules.id, module2Id));
 
-    const found = await db
-      .select()
-      .from(lessons)
-      .where(eq(lessons.id, lesson.id));
+    const found = await db.select().from(lessons).where(eq(lessons.id, lesson.id));
     expect(found.length).toBe(0);
   });
 

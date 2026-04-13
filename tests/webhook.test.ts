@@ -25,10 +25,7 @@ vi.mock("#/lib/job-queue.ts", () => ({
   getBoss: vi.fn(),
 }));
 
-import {
-  processWebhookEvent,
-  dispatchWebhookEvent,
-} from "#/lib/webhook-actions.ts";
+import { processWebhookEvent, dispatchWebhookEvent } from "#/lib/webhook-actions.ts";
 
 describe("webhook handling", () => {
   const subdomain = `webhook-test-${Date.now()}`;
@@ -142,16 +139,13 @@ describe("webhook handling", () => {
     });
 
     expect(jobId).toBe("mock-job-id");
-    expect(mockSendJob).toHaveBeenCalledWith(
-      "process_stripe_webhook",
-      {
-        type: "checkout.session.completed",
-        data: {
-          id: "cs_test_dispatch",
-          metadata: { tenantId, courseId, userId },
-        },
+    expect(mockSendJob).toHaveBeenCalledWith("process_stripe_webhook", {
+      type: "checkout.session.completed",
+      data: {
+        id: "cs_test_dispatch",
+        metadata: { tenantId, courseId, userId },
       },
-    );
+    });
   });
 
   // ── checkout.session.completed → payment + enrollment ─────
@@ -187,12 +181,7 @@ describe("webhook handling", () => {
     // Clean up any prior enrollment from previous test
     await db
       .delete(enrollments)
-      .where(
-        and(
-          eq(enrollments.userId, userId),
-          eq(enrollments.courseId, courseId),
-        ),
-      );
+      .where(and(eq(enrollments.userId, userId), eq(enrollments.courseId, courseId)));
 
     const sessionId = `cs_test_enroll_${Date.now()}`;
 
@@ -229,15 +218,8 @@ describe("webhook handling", () => {
     // Clean slate
     await db
       .delete(enrollments)
-      .where(
-        and(
-          eq(enrollments.userId, userId),
-          eq(enrollments.courseId, courseId),
-        ),
-      );
-    await db
-      .delete(payments)
-      .where(eq(payments.tenantId, tenantId));
+      .where(and(eq(enrollments.userId, userId), eq(enrollments.courseId, courseId)));
+    await db.delete(payments).where(eq(payments.tenantId, tenantId));
 
     const sessionId = `cs_test_idempotent_${Date.now()}`;
     const eventData = {
@@ -282,15 +264,8 @@ describe("webhook handling", () => {
     // Clean slate
     await db
       .delete(enrollments)
-      .where(
-        and(
-          eq(enrollments.userId, userId),
-          eq(enrollments.courseId, courseId),
-        ),
-      );
-    await db
-      .delete(payments)
-      .where(eq(payments.tenantId, tenantId));
+      .where(and(eq(enrollments.userId, userId), eq(enrollments.courseId, courseId)));
+    await db.delete(payments).where(eq(payments.tenantId, tenantId));
 
     const paymentIntentId = `pi_test_refund_${Date.now()}`;
     const sessionId = `cs_test_refund_${Date.now()}`;
@@ -346,12 +321,7 @@ describe("webhook handling", () => {
     const [revokedEnrollment] = await db
       .select()
       .from(enrollments)
-      .where(
-        and(
-          eq(enrollments.userId, userId),
-          eq(enrollments.courseId, courseId),
-        ),
-      );
+      .where(and(eq(enrollments.userId, userId), eq(enrollments.courseId, courseId)));
     expect(revokedEnrollment).toBeDefined();
     expect(revokedEnrollment.revokedAt).not.toBeNull();
   });

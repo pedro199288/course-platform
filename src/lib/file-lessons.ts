@@ -5,10 +5,7 @@ import { db } from "#/db/index.ts";
 import { courses, modules, lessons } from "#/db/schema/index.ts";
 import { enrollments } from "#/db/schema/enrollments.ts";
 import { auth } from "./auth.ts";
-import {
-  createPresignedUploadUrl,
-  createPresignedDownloadUrl,
-} from "./storage/s3.ts";
+import { createPresignedUploadUrl, createPresignedDownloadUrl } from "./storage/s3.ts";
 import type { FileContent } from "./rich-text/types.ts";
 
 type SessionUser = { id: string; role: string; tenantId: string };
@@ -82,16 +79,10 @@ async function verifyLessonOwnership(
 // ── Upload URL (instructor only) ────────────────────────────────────
 
 export const getFileUploadUrlFn = createServerFn({ method: "POST" })
-  .inputValidator(
-    (input: { lessonId: string; filename: string; contentType: string }) =>
-      input,
-  )
+  .inputValidator((input: { lessonId: string; filename: string; contentType: string }) => input)
   .handler(async ({ data }) => {
     const user = await requireInstructor();
-    const { lessonId } = await verifyLessonOwnership(
-      data.lessonId,
-      user.tenantId,
-    );
+    const { lessonId } = await verifyLessonOwnership(data.lessonId, user.tenantId);
 
     const lesson = await db.query.lessons.findFirst({
       where: eq(lessons.id, lessonId),

@@ -32,7 +32,10 @@ export const checkSubdomainFn = createServerFn({ method: "GET" })
     const subdomain = data.subdomain.toLowerCase().trim();
 
     if (!SUBDOMAIN_REGEX.test(subdomain)) {
-      return { available: false as const, reason: "Invalid subdomain format. Use lowercase letters, numbers, and hyphens." };
+      return {
+        available: false as const,
+        reason: "Invalid subdomain format. Use lowercase letters, numbers, and hyphens.",
+      };
     }
 
     if (subdomain.length < 3) {
@@ -100,10 +103,7 @@ export const createSchoolFn = createServerFn({ method: "POST" })
     }
 
     // Create tenant
-    const [tenant] = await db
-      .insert(tenants)
-      .values({ name, subdomain })
-      .returning();
+    const [tenant] = await db.insert(tenants).values({ name, subdomain }).returning();
 
     // Update user to tenant_owner and assign to new tenant
     await db

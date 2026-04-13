@@ -54,9 +54,8 @@ export async function enqueuePurchaseConfirmation(opts: {
   schoolName: string;
   from?: string;
 }): Promise<string | null> {
-  const { renderPurchaseConfirmation } = await import(
-    "./email-templates/purchase-confirmation.tsx"
-  );
+  const { renderPurchaseConfirmation } =
+    await import("./email-templates/purchase-confirmation.tsx");
   const html = await renderPurchaseConfirmation({
     studentName: opts.studentName,
     courseName: opts.courseName,
@@ -83,9 +82,8 @@ export async function enqueueEnrollmentConfirmation(opts: {
   courseUrl: string;
   from?: string;
 }): Promise<string | null> {
-  const { renderEnrollmentConfirmation } = await import(
-    "./email-templates/enrollment-confirmation.tsx"
-  );
+  const { renderEnrollmentConfirmation } =
+    await import("./email-templates/enrollment-confirmation.tsx");
   const html = await renderEnrollmentConfirmation({
     studentName: opts.studentName,
     courseName: opts.courseName,
@@ -112,9 +110,7 @@ export async function enqueueCertificateDelivery(opts: {
   completionDate: string;
   from?: string;
 }): Promise<string | null> {
-  const { renderCertificateDelivery } = await import(
-    "./email-templates/certificate-delivery.tsx"
-  );
+  const { renderCertificateDelivery } = await import("./email-templates/certificate-delivery.tsx");
   const html = await renderCertificateDelivery({
     studentName: opts.studentName,
     courseName: opts.courseName,
