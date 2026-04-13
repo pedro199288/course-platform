@@ -100,9 +100,7 @@ function AnalyticsPage() {
                     }`}
                   >
                     <td className="px-4 py-3 font-medium">{course.courseTitle}</td>
-                    <td className="px-4 py-3 text-right tabular-nums">
-                      {course.enrolledStudents}
-                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums">{course.enrolledStudents}</td>
                     <td className="px-4 py-3 text-right tabular-nums">
                       {course.completedStudents}
                     </td>
@@ -127,10 +125,7 @@ function AnalyticsPage() {
               {/* Average Progress */}
               {avgProgress && (
                 <div className="grid gap-4 sm:grid-cols-3">
-                  <StatCard
-                    title="Total Lessons"
-                    value={String(avgProgress.totalLessons)}
-                  />
+                  <StatCard title="Total Lessons" value={String(avgProgress.totalLessons)} />
                   <StatCard
                     title="Enrolled Students"
                     value={String(avgProgress.enrolledStudents)}
@@ -180,8 +175,7 @@ function AnalyticsPage() {
                 <div>
                   <h2 className="text-lg font-semibold">Lesson Drop-off</h2>
                   <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                    Lessons sorted by completion rate (lowest first) to identify where students
-                    stop
+                    Lessons sorted by completion rate (lowest first) to identify where students stop
                   </p>
                   <div className="mt-3 overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-800">
                     <table className="w-full text-sm">

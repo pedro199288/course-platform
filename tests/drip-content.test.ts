@@ -123,14 +123,38 @@ describe("drip content", () => {
   });
 
   afterAll(async () => {
-    await db.delete(lessonProgress).where(eq(lessonProgress.tenantId, tenantId)).catch(() => {});
-    await db.delete(enrollments).where(eq(enrollments.tenantId, tenantId)).catch(() => {});
-    await db.delete(lessons).where(eq(lessons.moduleId, moduleId)).catch(() => {});
-    await db.delete(lessons).where(eq(lessons.moduleId, module2Id)).catch(() => {});
-    await db.delete(modules).where(eq(modules.courseId, courseId)).catch(() => {});
-    await db.delete(users).where(eq(users.tenantId, tenantId)).catch(() => {});
-    await db.delete(courses).where(eq(courses.tenantId, tenantId)).catch(() => {});
-    await db.delete(tenants).where(eq(tenants.subdomain, subdomain)).catch(() => {});
+    await db
+      .delete(lessonProgress)
+      .where(eq(lessonProgress.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(enrollments)
+      .where(eq(enrollments.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(lessons)
+      .where(eq(lessons.moduleId, moduleId))
+      .catch(() => {});
+    await db
+      .delete(lessons)
+      .where(eq(lessons.moduleId, module2Id))
+      .catch(() => {});
+    await db
+      .delete(modules)
+      .where(eq(modules.courseId, courseId))
+      .catch(() => {});
+    await db
+      .delete(users)
+      .where(eq(users.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(courses)
+      .where(eq(courses.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(tenants)
+      .where(eq(tenants.subdomain, subdomain))
+      .catch(() => {});
   });
 
   // ── Pure function tests ──────────────────────────
@@ -335,7 +359,13 @@ describe("drip content", () => {
     // Before
     const before = new Date("2026-02-15T00:00:00Z");
     const r1 = computeDripLockedLessonIds(
-      [{ id: lesson3Id, availableAfterDays: null, availableFromDate: new Date("2026-03-01T00:00:00Z") }],
+      [
+        {
+          id: lesson3Id,
+          availableAfterDays: null,
+          availableFromDate: new Date("2026-03-01T00:00:00Z"),
+        },
+      ],
       new Map([[lesson3Id, moduleId]]),
       new Map([[moduleId, { availableAfterDays: null, availableFromDate: null }]]),
       enrolledAt,
@@ -346,7 +376,13 @@ describe("drip content", () => {
     // After
     const after = new Date("2026-03-02T00:00:00Z");
     const r2 = computeDripLockedLessonIds(
-      [{ id: lesson3Id, availableAfterDays: null, availableFromDate: new Date("2026-03-01T00:00:00Z") }],
+      [
+        {
+          id: lesson3Id,
+          availableAfterDays: null,
+          availableFromDate: new Date("2026-03-01T00:00:00Z"),
+        },
+      ],
       new Map([[lesson3Id, moduleId]]),
       new Map([[moduleId, { availableAfterDays: null, availableFromDate: null }]]),
       enrolledAt,

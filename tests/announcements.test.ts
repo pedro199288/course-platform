@@ -112,25 +112,55 @@ describe("announcements", () => {
   });
 
   afterAll(async () => {
-    await db.delete(announcements).where(eq(announcements.tenantId, tenantId)).catch(() => {});
-    await db.delete(announcements).where(eq(announcements.tenantId, tenant2Id)).catch(() => {});
-    await db.delete(enrollments).where(eq(enrollments.tenantId, tenantId)).catch(() => {});
-    await db.delete(lessons).where(
-      eq(
-        lessons.moduleId,
-        db
-          .select({ id: modules.id })
-          .from(modules)
-          .where(eq(modules.courseId, courseId))
-          .limit(1) as any,
-      ),
-    ).catch(() => {});
-    await db.delete(modules).where(eq(modules.courseId, courseId)).catch(() => {});
-    await db.delete(users).where(eq(users.tenantId, tenantId)).catch(() => {});
-    await db.delete(courses).where(eq(courses.tenantId, tenantId)).catch(() => {});
-    await db.delete(courses).where(eq(courses.tenantId, tenant2Id)).catch(() => {});
-    await db.delete(tenants).where(eq(tenants.subdomain, subdomain)).catch(() => {});
-    await db.delete(tenants).where(eq(tenants.subdomain, subdomain2)).catch(() => {});
+    await db
+      .delete(announcements)
+      .where(eq(announcements.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(announcements)
+      .where(eq(announcements.tenantId, tenant2Id))
+      .catch(() => {});
+    await db
+      .delete(enrollments)
+      .where(eq(enrollments.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(lessons)
+      .where(
+        eq(
+          lessons.moduleId,
+          db
+            .select({ id: modules.id })
+            .from(modules)
+            .where(eq(modules.courseId, courseId))
+            .limit(1) as any,
+        ),
+      )
+      .catch(() => {});
+    await db
+      .delete(modules)
+      .where(eq(modules.courseId, courseId))
+      .catch(() => {});
+    await db
+      .delete(users)
+      .where(eq(users.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(courses)
+      .where(eq(courses.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(courses)
+      .where(eq(courses.tenantId, tenant2Id))
+      .catch(() => {});
+    await db
+      .delete(tenants)
+      .where(eq(tenants.subdomain, subdomain))
+      .catch(() => {});
+    await db
+      .delete(tenants)
+      .where(eq(tenants.subdomain, subdomain2))
+      .catch(() => {});
   });
 
   // ── CRUD Tests ──────────────────────────────────────────────
@@ -172,9 +202,7 @@ describe("announcements", () => {
     const rows = await db
       .select()
       .from(announcements)
-      .where(
-        and(eq(announcements.courseId, courseId), eq(announcements.tenantId, tenantId)),
-      )
+      .where(and(eq(announcements.courseId, courseId), eq(announcements.tenantId, tenantId)))
       .orderBy(announcements.createdAt);
 
     expect(rows.length).toBeGreaterThanOrEqual(2);
@@ -195,18 +223,13 @@ describe("announcements", () => {
 
     const [deleted] = await db
       .delete(announcements)
-      .where(
-        and(eq(announcements.id, temp.id), eq(announcements.tenantId, tenantId)),
-      )
+      .where(and(eq(announcements.id, temp.id), eq(announcements.tenantId, tenantId)))
       .returning();
 
     expect(deleted.id).toBe(temp.id);
 
     // Verify it's gone
-    const remaining = await db
-      .select()
-      .from(announcements)
-      .where(eq(announcements.id, temp.id));
+    const remaining = await db.select().from(announcements).where(eq(announcements.id, temp.id));
     expect(remaining.length).toBe(0);
   });
 
@@ -245,12 +268,7 @@ describe("announcements", () => {
       .select({ email: users.email, name: users.name })
       .from(enrollments)
       .innerJoin(users, eq(users.id, enrollments.userId))
-      .where(
-        and(
-          eq(enrollments.courseId, courseId),
-          eq(enrollments.tenantId, tenantId),
-        ),
-      );
+      .where(and(eq(enrollments.courseId, courseId), eq(enrollments.tenantId, tenantId)));
 
     for (const student of enrolledStudents) {
       await enqueueAnnouncementEmail({

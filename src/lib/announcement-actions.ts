@@ -61,9 +61,7 @@ export const listAnnouncementsFn = createServerFn({ method: "GET" })
   });
 
 export const createAnnouncementFn = createServerFn({ method: "POST" })
-  .inputValidator(
-    (d: { courseId: string; title: string; body: string; sendEmail: boolean }) => d,
-  )
+  .inputValidator((d: { courseId: string; title: string; body: string; sendEmail: boolean }) => d)
   .handler(async ({ data }) => {
     const user = await requireAdmin();
 
@@ -221,9 +219,7 @@ export const getRecentAnnouncementsFn = createServerFn({ method: "GET" }).handle
     })
     .from(announcements)
     .innerJoin(courses, eq(courses.id, announcements.courseId))
-    .where(
-      and(eq(announcements.tenantId, tenant.id), inArray(announcements.courseId, courseIds)),
-    )
+    .where(and(eq(announcements.tenantId, tenant.id), inArray(announcements.courseId, courseIds)))
     .orderBy(desc(announcements.createdAt))
     .limit(10);
 

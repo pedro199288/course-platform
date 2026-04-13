@@ -64,7 +64,11 @@ export const Route = createFileRoute("/admin/courses/$courseId")({
 });
 
 function CourseDetailPage() {
-  const { course: initialCourse, modules: initialModules, announcements: initialAnnouncements } = Route.useLoaderData();
+  const {
+    course: initialCourse,
+    modules: initialModules,
+    announcements: initialAnnouncements,
+  } = Route.useLoaderData();
   const navigate = useNavigate();
   const router = useRouter();
 
@@ -218,7 +222,10 @@ function CourseDetailPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <label htmlFor="sequentialProgress" className="relative inline-flex cursor-pointer items-center">
+          <label
+            htmlFor="sequentialProgress"
+            className="relative inline-flex cursor-pointer items-center"
+          >
             <input
               id="sequentialProgress"
               type="checkbox"
@@ -287,7 +294,8 @@ function AnnouncementsSection({
   async function handlePost(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim() || !body.trim()) return;
-    if (sendEmail && !confirm("This will send an email to all enrolled students. Continue?")) return;
+    if (sendEmail && !confirm("This will send an email to all enrolled students. Continue?"))
+      return;
     setPosting(true);
     try {
       await createAnnouncementFn({
@@ -671,9 +679,7 @@ function LessonItem({ lesson }: { lesson: Lesson }) {
     lesson.availableAfterDays?.toString() ?? "",
   );
   const [lessonAvailableFromDate, setLessonAvailableFromDate] = useState(
-    lesson.availableFromDate
-      ? new Date(lesson.availableFromDate).toISOString().slice(0, 10)
-      : "",
+    lesson.availableFromDate ? new Date(lesson.availableFromDate).toISOString().slice(0, 10) : "",
   );
   const [content, setContent] = useState(
     lesson.content &&
@@ -730,9 +736,7 @@ function LessonItem({ lesson }: { lesson: Lesson }) {
 
   async function handleSave() {
     const dripData = {
-      availableAfterDays: lessonAvailableAfterDays
-        ? parseInt(lessonAvailableAfterDays, 10)
-        : null,
+      availableAfterDays: lessonAvailableAfterDays ? parseInt(lessonAvailableAfterDays, 10) : null,
       availableFromDate: lessonAvailableFromDate || null,
     };
     if (lesson.type === "quiz") {

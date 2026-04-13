@@ -26,7 +26,8 @@ export const Route = createFileRoute("/dashboard/")({
 });
 
 function StudentDashboard() {
-  const { courses, hasSubscription, certMap, subscriptionStatus, recentAnnouncements } = Route.useLoaderData();
+  const { courses, hasSubscription, certMap, subscriptionStatus, recentAnnouncements } =
+    Route.useLoaderData();
 
   return (
     <main className="page-wrap px-4 py-10">

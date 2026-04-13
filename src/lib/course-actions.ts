@@ -195,9 +195,12 @@ export const updateModuleFn = createServerFn({ method: "POST" })
     const setValues: Record<string, unknown> = {};
     if (data.title !== undefined) setValues.title = data.title;
     if (data.position !== undefined) setValues.position = data.position;
-    if (data.availableAfterDays !== undefined) setValues.availableAfterDays = data.availableAfterDays;
+    if (data.availableAfterDays !== undefined)
+      setValues.availableAfterDays = data.availableAfterDays;
     if (data.availableFromDate !== undefined)
-      setValues.availableFromDate = data.availableFromDate ? new Date(data.availableFromDate) : null;
+      setValues.availableFromDate = data.availableFromDate
+        ? new Date(data.availableFromDate)
+        : null;
 
     const [mod] = await db
       .update(modules)
@@ -335,9 +338,12 @@ export const updateLessonFn = createServerFn({ method: "POST" })
     if (data.content !== undefined) setValues.content = data.content;
     if (data.type !== undefined) setValues.type = data.type;
     if (data.position !== undefined) setValues.position = data.position;
-    if (data.availableAfterDays !== undefined) setValues.availableAfterDays = data.availableAfterDays;
+    if (data.availableAfterDays !== undefined)
+      setValues.availableAfterDays = data.availableAfterDays;
     if (data.availableFromDate !== undefined)
-      setValues.availableFromDate = data.availableFromDate ? new Date(data.availableFromDate) : null;
+      setValues.availableFromDate = data.availableFromDate
+        ? new Date(data.availableFromDate)
+        : null;
 
     const [lesson] = await db
       .update(lessons)

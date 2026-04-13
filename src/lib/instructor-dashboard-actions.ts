@@ -209,9 +209,7 @@ export const getCourseCompletionRatesFn = createServerFn({ method: "GET" }).hand
       )
       .where(and(eq(courses.tenantId, tenantId), eq(courses.status, "published")))
       .groupBy(courses.id, enrollments.userId)
-      .having(
-        sql`count(${lessons.id}) = count(${lessonProgress.id})`,
-      )
+      .having(sql`count(${lessons.id}) = count(${lessonProgress.id})`)
       .then((studentRows) => {
         // Group by courseId and count distinct students
         const map = new Map<string, number>();
@@ -449,10 +447,7 @@ export const getAverageProgressFn = createServerFn({ method: "POST" })
       .from(enrollments)
       .leftJoin(
         lessonProgress,
-        and(
-          eq(enrollments.userId, lessonProgress.userId),
-          eq(lessonProgress.completed, true),
-        ),
+        and(eq(enrollments.userId, lessonProgress.userId), eq(lessonProgress.completed, true)),
       )
       .leftJoin(lessons, eq(lessonProgress.lessonId, lessons.id))
       .leftJoin(modules, eq(lessons.moduleId, modules.id))
@@ -476,10 +471,7 @@ export const getAverageProgressFn = createServerFn({ method: "POST" })
       };
     }
 
-    const totalProgress = rows.reduce(
-      (sum, row) => sum + row.completedLessons / totalLessons,
-      0,
-    );
+    const totalProgress = rows.reduce((sum, row) => sum + row.completedLessons / totalLessons, 0);
 
     return {
       courseId,

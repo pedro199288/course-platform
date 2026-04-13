@@ -24,11 +24,21 @@ export const Route = createFileRoute("/courses/$courseSlug")({
           getSubscriptionStatusFn().catch(() => ({ hasSubscription: false as const })),
         ])
       : [{ enrolled: false }, { hasSubscription: false as const }];
-    const hasAccess = enrollment.enrolled || (subscriptionStatus.hasSubscription && "status" in subscriptionStatus && subscriptionStatus.status === "active");
+    const hasAccess =
+      enrollment.enrolled ||
+      (subscriptionStatus.hasSubscription &&
+        "status" in subscriptionStatus &&
+        subscriptionStatus.status === "active");
     const courseAnnouncements = hasAccess
       ? await getCourseAnnouncementsFn({ data: { courseSlug: params.courseSlug } }).catch(() => [])
       : [];
-    return { ...data, session, enrolled: enrollment.enrolled, subscriptionStatus, courseAnnouncements };
+    return {
+      ...data,
+      session,
+      enrolled: enrollment.enrolled,
+      subscriptionStatus,
+      courseAnnouncements,
+    };
   },
   component: CourseDetailPage,
 });

@@ -1,7 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vite-plus/test";
 import { eq } from "drizzle-orm";
 import { db } from "#/db/index.ts";
-import { tenants, courses, modules, lessons, enrollments, lessonProgress } from "#/db/schema/index.ts";
+import {
+  tenants,
+  courses,
+  modules,
+  lessons,
+  enrollments,
+  lessonProgress,
+} from "#/db/schema/index.ts";
 import { users } from "#/db/schema/auth.ts";
 import { computeLockedLessonIds } from "#/lib/lesson-actions.ts";
 
@@ -115,15 +122,42 @@ describe("sequential progression", () => {
   });
 
   afterAll(async () => {
-    await db.delete(lessonProgress).where(eq(lessonProgress.tenantId, tenantId)).catch(() => {});
-    await db.delete(enrollments).where(eq(enrollments.tenantId, tenantId)).catch(() => {});
-    await db.delete(lessons).where(eq(lessons.moduleId, moduleId)).catch(() => {});
-    await db.delete(lessons).where(eq(lessons.moduleId, freeModuleId)).catch(() => {});
-    await db.delete(modules).where(eq(modules.courseId, seqCourseId)).catch(() => {});
-    await db.delete(modules).where(eq(modules.courseId, freeCourseId)).catch(() => {});
-    await db.delete(users).where(eq(users.tenantId, tenantId)).catch(() => {});
-    await db.delete(courses).where(eq(courses.tenantId, tenantId)).catch(() => {});
-    await db.delete(tenants).where(eq(tenants.subdomain, subdomain)).catch(() => {});
+    await db
+      .delete(lessonProgress)
+      .where(eq(lessonProgress.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(enrollments)
+      .where(eq(enrollments.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(lessons)
+      .where(eq(lessons.moduleId, moduleId))
+      .catch(() => {});
+    await db
+      .delete(lessons)
+      .where(eq(lessons.moduleId, freeModuleId))
+      .catch(() => {});
+    await db
+      .delete(modules)
+      .where(eq(modules.courseId, seqCourseId))
+      .catch(() => {});
+    await db
+      .delete(modules)
+      .where(eq(modules.courseId, freeCourseId))
+      .catch(() => {});
+    await db
+      .delete(users)
+      .where(eq(users.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(courses)
+      .where(eq(courses.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(tenants)
+      .where(eq(tenants.subdomain, subdomain))
+      .catch(() => {});
   });
 
   // ── Pure function tests ──────────────────────────
@@ -168,20 +202,14 @@ describe("sequential progression", () => {
   });
 
   it("sequential course: lesson 2 is locked when lesson 1 incomplete", () => {
-    const locked = computeLockedLessonIds(
-      [lesson1Id, lesson2Id, lesson3Id],
-      new Set(),
-    );
+    const locked = computeLockedLessonIds([lesson1Id, lesson2Id, lesson3Id], new Set());
     expect(locked).toContain(lesson2Id);
     expect(locked).toContain(lesson3Id);
     expect(locked).not.toContain(lesson1Id);
   });
 
   it("sequential course: lesson 2 unlocks when lesson 1 complete", () => {
-    const locked = computeLockedLessonIds(
-      [lesson1Id, lesson2Id, lesson3Id],
-      new Set([lesson1Id]),
-    );
+    const locked = computeLockedLessonIds([lesson1Id, lesson2Id, lesson3Id], new Set([lesson1Id]));
     expect(locked).not.toContain(lesson2Id);
     expect(locked).toContain(lesson3Id);
   });
@@ -197,10 +225,7 @@ describe("sequential progression", () => {
   it("non-sequential course: no lessons locked regardless of progress", () => {
     // For non-sequential, computeLockedLessonIds is not called;
     // test that the flag controls whether gating is applied
-    const locked = computeLockedLessonIds(
-      [freeLesson1Id, freeLesson2Id],
-      new Set(),
-    );
+    const locked = computeLockedLessonIds([freeLesson1Id, freeLesson2Id], new Set());
     // The function always computes locks — it's the caller that checks the flag
     expect(locked).toContain(freeLesson2Id);
     // But in practice, non-sequential courses pass an empty array
@@ -231,10 +256,7 @@ describe("sequential progression", () => {
       .where(eq(lessonProgress.userId, studentId));
     const completedSet = new Set(completedRows.map((r) => r.lessonId));
 
-    const locked = computeLockedLessonIds(
-      [lesson1Id, lesson2Id, lesson3Id],
-      completedSet,
-    );
+    const locked = computeLockedLessonIds([lesson1Id, lesson2Id, lesson3Id], completedSet);
     expect(locked).not.toContain(lesson1Id);
     expect(locked).not.toContain(lesson2Id);
     expect(locked).toContain(lesson3Id);
@@ -274,8 +296,14 @@ describe("sequential progression", () => {
       expect(locked).toContain(lesson3Id);
       expect(locked).toContain(mod2Lesson.id);
     } finally {
-      await db.delete(lessons).where(eq(lessons.moduleId, mod2.id)).catch(() => {});
-      await db.delete(modules).where(eq(modules.id, mod2.id)).catch(() => {});
+      await db
+        .delete(lessons)
+        .where(eq(lessons.moduleId, mod2.id))
+        .catch(() => {});
+      await db
+        .delete(modules)
+        .where(eq(modules.id, mod2.id))
+        .catch(() => {});
     }
   });
 });

@@ -1,13 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vite-plus/test";
 import { eq, and, sql } from "drizzle-orm";
 import { db } from "#/db/index.ts";
-import {
-  tenants,
-  courses,
-  modules,
-  lessons,
-  enrollments,
-} from "#/db/schema/index.ts";
+import { tenants, courses, modules, lessons, enrollments } from "#/db/schema/index.ts";
 import { lessonProgress } from "#/db/schema/enrollments.ts";
 import { users } from "#/db/schema/auth.ts";
 
@@ -180,9 +174,7 @@ describe("engagement analytics", () => {
       .values({ courseId: otherCourse.id, title: "Other Module", position: 0 })
       .returning();
 
-    await db
-      .insert(lessons)
-      .values({ moduleId: otherMod.id, title: "Other Lesson", position: 0 });
+    await db.insert(lessons).values({ moduleId: otherMod.id, title: "Other Lesson", position: 0 });
 
     await db.insert(enrollments).values({
       tenantId: otherTenantId,
@@ -364,9 +356,7 @@ describe("engagement analytics", () => {
         .where(eq(modules.courseId, courseId))
         .groupBy(lessons.id);
 
-      const sorted = [...lessonRows].sort(
-        (a, b) => a.completedStudents - b.completedStudents,
-      );
+      const sorted = [...lessonRows].sort((a, b) => a.completedStudents - b.completedStudents);
 
       // A2 and B1 both have 1 completion, A1 has 2
       expect(sorted[sorted.length - 1].lessonId).toBe(lessonA1Id);
@@ -390,10 +380,7 @@ describe("engagement analytics", () => {
         .from(enrollments)
         .leftJoin(
           lessonProgress,
-          and(
-            eq(enrollments.userId, lessonProgress.userId),
-            eq(lessonProgress.completed, true),
-          ),
+          and(eq(enrollments.userId, lessonProgress.userId), eq(lessonProgress.completed, true)),
         )
         .leftJoin(lessons, eq(lessonProgress.lessonId, lessons.id))
         .leftJoin(modules, eq(lessons.moduleId, modules.id))

@@ -57,7 +57,7 @@ Vite+ automatically detects and wraps the underlying package manager such as pnp
 
 - upgrade - Update `vp` itself to the latest version
 
-These commands map to their corresponding tools. For example, `vp dev --port 4500` runs Vite's dev server and works the same as Vite. `vp test` runs JavaScript tests through the bundled Vitest. The version of all tools can be checked using `vp --version`. This is useful when researching documentation, features, and bugs.
+These commands map to their corresponding tools. For example, `vp dev --port 3000` runs Vite's dev server and works the same as Vite. `vp test` runs JavaScript tests through the bundled Vitest. The version of all tools can be checked using `vp --version`. This is useful when researching documentation, features, and bugs.
 
 ## Common Pitfalls
 

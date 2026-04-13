@@ -230,9 +230,7 @@ export const getLessonFn = createServerFn({ method: "GET" })
 
     // Merge both lock sets
     const sequentialSet = new Set(sequentialLockedIds);
-    const lockedLessonIds = [
-      ...new Set([...sequentialLockedIds, ...dripResult.lockedIds]),
-    ];
+    const lockedLessonIds = [...new Set([...sequentialLockedIds, ...dripResult.lockedIds])];
 
     // Block access if the requested lesson is locked
     if (sequentialSet.has(data.lessonId)) {
@@ -249,8 +247,9 @@ export const getLessonFn = createServerFn({ method: "GET" })
     let nextLesson: (typeof allLessons)[number] | null = null;
     if (course.sequentialProgress) {
       nextLesson =
-        allLessons.find((l, i) => i > currentIndex && !completedSet.has(l.id) && !lockedSet.has(l.id)) ??
-        (currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null);
+        allLessons.find(
+          (l, i) => i > currentIndex && !completedSet.has(l.id) && !lockedSet.has(l.id),
+        ) ?? (currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null);
     } else {
       nextLesson =
         allLessons.find((l, i) => i > currentIndex && !lockedSet.has(l.id)) ??
