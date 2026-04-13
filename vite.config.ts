@@ -12,7 +12,7 @@ const config = defineConfig({
   fmt: {},
   lint: { options: { typeAware: true, typeCheck: true } },
   resolve: { tsconfigPaths: true },
-  server: { port: 4500, forwardConsole: false },
+  server: { port: Number(process.env.PORT) || 4500, forwardConsole: false },
   plugins: [devtools(), tailwindcss(), tanstackStart(), viteReact()],
 });
 

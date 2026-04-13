@@ -14,6 +14,7 @@ import {
 import { auth } from "./auth.ts";
 import { extractSubdomain } from "#/middleware/tenant.ts";
 import { enqueueCertificateDelivery } from "./email-jobs.ts";
+import { PLATFORM_DOMAIN } from "./config.ts";
 
 async function requireTenant() {
   const request = getRequest();
@@ -130,7 +131,7 @@ export async function checkAndIssueCertificate(
       .where(eq(tenants.id, tenantId));
 
     if (user && course && tenant) {
-      const certificateUrl = `https://${tenant.subdomain}.${process.env.PLATFORM_DOMAIN || "localhost:4500"}/certificates/${cert.id}`;
+      const certificateUrl = `https://${tenant.subdomain}.${PLATFORM_DOMAIN}/certificates/${cert.id}`;
       await enqueueCertificateDelivery({
         to: user.email,
         studentName: user.name,

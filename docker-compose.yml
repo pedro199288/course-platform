@@ -2,7 +2,7 @@ services:
   db:
     image: postgres:17-alpine
     ports:
-      - "4500:4500"
+      - "5432:5432"
     environment:
       POSTGRES_USER: course
       POSTGRES_PASSWORD: course

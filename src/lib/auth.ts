@@ -9,12 +9,13 @@ import { tenantIdStore } from "./tenant-context.ts";
 import { sendEmail } from "./email.ts";
 import { renderVerifyEmail, renderResetPassword } from "./email-templates/index.ts";
 import { assertCanAddStudent } from "./plans.ts";
+import { BASE_URL, PORT } from "./config.ts";
 
 const isProduction = process.env.NODE_ENV === "production";
 
 const trustedOrigins = process.env.BETTER_AUTH_TRUSTED_ORIGINS
   ? process.env.BETTER_AUTH_TRUSTED_ORIGINS.split(",").map((o) => o.trim())
-  : ["*.localhost:4500"];
+  : [`*.localhost:${PORT}`];
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -173,7 +174,7 @@ export const auth = betterAuth({
     crossSubDomainCookies: {
       enabled: true,
       domain: isProduction
-        ? `.${new URL(process.env.BETTER_AUTH_URL || "http://localhost:4500").hostname.split(".").slice(-2).join(".")}`
+        ? `.${new URL(BASE_URL).hostname.split(".").slice(-2).join(".")}`
         : ".localhost",
     },
   },

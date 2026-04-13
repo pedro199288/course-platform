@@ -5,6 +5,7 @@ import { db } from "#/db/index.ts";
 import { tenants, users } from "#/db/schema/index.ts";
 import { auth } from "./auth.ts";
 import { getStripe } from "./stripe.ts";
+import { BASE_URL } from "./config.ts";
 
 /**
  * Creates a Stripe Connect Standard account for the tenant and returns
@@ -53,7 +54,7 @@ export const createStripeConnectLinkFn = createServerFn({ method: "POST" }).hand
       .where(eq(tenants.id, tenant.id));
   }
 
-  const baseUrl = process.env.BETTER_AUTH_URL || "http://localhost:4500";
+  const baseUrl = BASE_URL;
 
   const accountLink = await stripe.accountLinks.create({
     account: accountId,
