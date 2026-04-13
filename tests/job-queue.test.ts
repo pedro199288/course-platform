@@ -38,7 +38,7 @@ describe("job queue: enqueue and execute", () => {
     await boss.createQueue(queue);
     let receivedData: unknown = null;
     const done = new Promise<void>((resolve) => {
-      boss.work(queue, async (jobs) => {
+      void boss.work(queue, async (jobs) => {
         receivedData = jobs[0].data;
         resolve();
       });
@@ -61,7 +61,7 @@ describe("job queue: enqueue and execute", () => {
     const queue = `test-complete-${Date.now()}`;
     await boss.createQueue(queue);
     const processed = new Promise<string>((resolve) => {
-      boss.work(queue, async (jobs) => {
+      void boss.work(queue, async (jobs) => {
         resolve(jobs[0].id);
       });
     });
@@ -87,7 +87,7 @@ describe("job queue: retry behavior", () => {
     await boss.createQueue(queue);
     let attempts = 0;
     const allDone = new Promise<number>((resolve) => {
-      boss.work(queue, async (jobs) => {
+      void boss.work(queue, async (jobs) => {
         for (const _job of jobs) {
           attempts++;
           if (attempts < 3) {

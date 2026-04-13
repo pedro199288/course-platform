@@ -28,7 +28,7 @@ function NewPlanPage() {
           applicationFeePercent: fee === "" ? null : fee,
         },
       });
-      navigate({ to: "/platform-admin/plans" });
+      await navigate({ to: "/platform-admin/plans" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create plan");
     } finally {

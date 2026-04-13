@@ -30,7 +30,7 @@ function TenantDetailPage() {
   const { tenant, plans } = Route.useLoaderData();
   const router = useRouter();
   const [status, setStatus] = useState(tenant.status);
-  const [planId, setPlanId] = useState<string | "">(tenant.planId ?? "");
+  const [planId, setPlanId] = useState<string>(tenant.planId ?? "");
   const [savingStatus, setSavingStatus] = useState(false);
   const [savingPlan, setSavingPlan] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
