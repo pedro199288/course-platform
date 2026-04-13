@@ -9,8 +9,13 @@ const config = defineConfig({
   staged: {
     "*": "vp check --fix",
   },
-  fmt: {},
-  lint: { options: { typeAware: true, typeCheck: true } },
+  fmt: {
+    ignorePatterns: ["**/*.gen.ts", "**/*.gen.tsx"],
+  },
+  lint: {
+    ignorePatterns: ["**/*.gen.ts", "**/*.gen.tsx"],
+    options: { typeAware: true, typeCheck: true },
+  },
   resolve: { tsconfigPaths: true },
   server: { port: Number(process.env.PORT) || 4500, forwardConsole: false },
   plugins: [devtools(), tailwindcss(), tanstackStart(), viteReact()],
