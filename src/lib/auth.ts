@@ -14,7 +14,7 @@ const isProduction = process.env.NODE_ENV === "production";
 
 const trustedOrigins = process.env.BETTER_AUTH_TRUSTED_ORIGINS
   ? process.env.BETTER_AUTH_TRUSTED_ORIGINS.split(",").map((o) => o.trim())
-  : ["*.localhost:3000"];
+  : ["*.localhost:4500"];
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -173,7 +173,7 @@ export const auth = betterAuth({
     crossSubDomainCookies: {
       enabled: true,
       domain: isProduction
-        ? `.${new URL(process.env.BETTER_AUTH_URL || "http://localhost:3000").hostname.split(".").slice(-2).join(".")}`
+        ? `.${new URL(process.env.BETTER_AUTH_URL || "http://localhost:4500").hostname.split(".").slice(-2).join(".")}`
         : ".localhost",
     },
   },
@@ -201,7 +201,7 @@ export const auth = betterAuth({
  * This runs via .then() on the context promise, which resolves before any API call
  * since API methods also await the same promise (and .then() is registered first).
  */
-(auth.$context as Promise<any>).then((ctx: any) => {
+void (auth.$context as Promise<any>).then((ctx: any) => {
   const originalFindUserByEmail = ctx.internalAdapter.findUserByEmail.bind(ctx.internalAdapter);
 
   ctx.internalAdapter.findUserByEmail = async (

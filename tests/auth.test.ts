@@ -77,8 +77,14 @@ describe("auth: per-tenant registration, login, and roles", () => {
     }
 
     // Clean up verification tokens
-    await db.delete(verifications).where(eq(verifications.identifier, "student@example.com")).catch(() => {});
-    await db.delete(verifications).where(eq(verifications.identifier, "newstudent@example.com")).catch(() => {});
+    await db
+      .delete(verifications)
+      .where(eq(verifications.identifier, "student@example.com"))
+      .catch(() => {});
+    await db
+      .delete(verifications)
+      .where(eq(verifications.identifier, "newstudent@example.com"))
+      .catch(() => {});
 
     await db.delete(tenants).where(eq(tenants.subdomain, tenantASubdomain));
     await db.delete(tenants).where(eq(tenants.subdomain, tenantBSubdomain));
@@ -373,14 +379,20 @@ describe("email verification flow", () => {
       where: eq(users.tenantId, tenantId),
     });
     for (const user of allUsers) {
-      await db.delete(auditLogs).where(eq(auditLogs.actorId, user.id)).catch(() => {});
+      await db
+        .delete(auditLogs)
+        .where(eq(auditLogs.actorId, user.id))
+        .catch(() => {});
       await db.delete(sessions).where(eq(sessions.userId, user.id));
       await db.delete(accounts).where(eq(accounts.userId, user.id));
     }
     for (const user of allUsers) {
       await db.delete(users).where(eq(users.id, user.id));
     }
-    await db.delete(verifications).where(eq(verifications.identifier, testEmail)).catch(() => {});
+    await db
+      .delete(verifications)
+      .where(eq(verifications.identifier, testEmail))
+      .catch(() => {});
     await db.delete(tenants).where(eq(tenants.subdomain, tenantSubdomain));
   });
 
@@ -472,15 +484,30 @@ describe("email verification flow", () => {
     expect(token!.expiresAt).toBeDefined();
 
     // Cleanup
-    await db.delete(verifications).where(eq(verifications.identifier, newEmail)).catch(() => {});
+    await db
+      .delete(verifications)
+      .where(eq(verifications.identifier, newEmail))
+      .catch(() => {});
     const user = await db.query.users.findFirst({
       where: and(eq(users.email, newEmail), eq(users.tenantId, tenantId)),
     });
     if (user) {
-      await db.delete(auditLogs).where(eq(auditLogs.actorId, user.id)).catch(() => {});
-      await db.delete(sessions).where(eq(sessions.userId, user.id)).catch(() => {});
-      await db.delete(accounts).where(eq(accounts.userId, user.id)).catch(() => {});
-      await db.delete(users).where(eq(users.id, user.id)).catch(() => {});
+      await db
+        .delete(auditLogs)
+        .where(eq(auditLogs.actorId, user.id))
+        .catch(() => {});
+      await db
+        .delete(sessions)
+        .where(eq(sessions.userId, user.id))
+        .catch(() => {});
+      await db
+        .delete(accounts)
+        .where(eq(accounts.userId, user.id))
+        .catch(() => {});
+      await db
+        .delete(users)
+        .where(eq(users.id, user.id))
+        .catch(() => {});
     }
   });
 });
@@ -521,14 +548,20 @@ describe("password reset flow", () => {
       where: eq(users.tenantId, tenantId),
     });
     for (const user of allUsers) {
-      await db.delete(auditLogs).where(eq(auditLogs.actorId, user.id)).catch(() => {});
+      await db
+        .delete(auditLogs)
+        .where(eq(auditLogs.actorId, user.id))
+        .catch(() => {});
       await db.delete(sessions).where(eq(sessions.userId, user.id));
       await db.delete(accounts).where(eq(accounts.userId, user.id));
     }
     for (const user of allUsers) {
       await db.delete(users).where(eq(users.id, user.id));
     }
-    await db.delete(verifications).where(eq(verifications.identifier, testEmail)).catch(() => {});
+    await db
+      .delete(verifications)
+      .where(eq(verifications.identifier, testEmail))
+      .catch(() => {});
     await db.delete(tenants).where(eq(tenants.subdomain, tenantSubdomain));
   });
 
@@ -743,14 +776,20 @@ describe("rate limiting", () => {
       where: eq(users.tenantId, tenantId),
     });
     for (const user of allUsers) {
-      await db.delete(auditLogs).where(eq(auditLogs.actorId, user.id)).catch(() => {});
+      await db
+        .delete(auditLogs)
+        .where(eq(auditLogs.actorId, user.id))
+        .catch(() => {});
       await db.delete(sessions).where(eq(sessions.userId, user.id));
       await db.delete(accounts).where(eq(accounts.userId, user.id));
     }
     for (const user of allUsers) {
       await db.delete(users).where(eq(users.id, user.id));
     }
-    await db.delete(verifications).where(eq(verifications.identifier, testEmail)).catch(() => {});
+    await db
+      .delete(verifications)
+      .where(eq(verifications.identifier, testEmail))
+      .catch(() => {});
     await db.delete(tenants).where(eq(tenants.subdomain, tenantSubdomain));
   });
 
@@ -762,7 +801,7 @@ describe("rate limiting", () => {
     const testIp = `10.0.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
 
     const makeSignInRequest = () => {
-      const request = new Request("http://localhost:3000/api/auth/sign-in/email", {
+      const request = new Request("http://localhost:4500/api/auth/sign-in/email", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -830,14 +869,20 @@ describe("tenant isolation", () => {
       where: eq(users.email, sharedEmail),
     });
     for (const user of allUsers) {
-      await db.delete(auditLogs).where(eq(auditLogs.actorId, user.id)).catch(() => {});
+      await db
+        .delete(auditLogs)
+        .where(eq(auditLogs.actorId, user.id))
+        .catch(() => {});
       await db.delete(sessions).where(eq(sessions.userId, user.id));
       await db.delete(accounts).where(eq(accounts.userId, user.id));
     }
     for (const user of allUsers) {
       await db.delete(users).where(eq(users.id, user.id));
     }
-    await db.delete(verifications).where(eq(verifications.identifier, sharedEmail)).catch(() => {});
+    await db
+      .delete(verifications)
+      .where(eq(verifications.identifier, sharedEmail))
+      .catch(() => {});
     await db.delete(tenants).where(eq(tenants.subdomain, tenantASubdomain));
     await db.delete(tenants).where(eq(tenants.subdomain, tenantBSubdomain));
   });

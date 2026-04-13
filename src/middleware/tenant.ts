@@ -16,7 +16,7 @@ export type TenantContext = {
 
 /**
  * Extracts the subdomain from a Host header.
- * Supports: tenant.localhost, tenant.platform.com, tenant.platform.com:3000
+ * Supports: tenant.localhost, tenant.platform.com, tenant.platform.com:4500
  * Returns null for bare domains (localhost, platform.com) or www.
  */
 export function extractSubdomain(host: string): string | null {
@@ -47,8 +47,8 @@ export function extractSubdomain(host: string): string | null {
  * Also sets the tenant ID in AsyncLocalStorage so the auth adapter
  * can scope user lookups to the current tenant.
  *
- * For local dev, use `tenant.localhost:3000` or set the `X-Tenant` header
- * (e.g., `myschool.localhost:3000`).
+ * For local dev, use `tenant.localhost:4500` or set the `X-Tenant` header
+ * (e.g., `myschool.localhost:4500`).
  */
 export const tenantMiddleware = createMiddleware().server(async ({ next, request }) => {
   const host = request.headers.get("x-tenant") ?? request.headers.get("host") ?? "";

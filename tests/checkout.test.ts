@@ -1,13 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vite-plus/test";
 import { eq, and, isNull } from "drizzle-orm";
 import { db } from "#/db/index.ts";
-import {
-  tenants,
-  courses,
-  payments,
-  enrollments,
-  plans,
-} from "#/db/schema/index.ts";
+import { tenants, courses, payments, enrollments, plans } from "#/db/schema/index.ts";
 
 // Mock email to prevent Resend API calls
 vi.mock("#/lib/email.ts", () => ({
@@ -126,10 +120,7 @@ describe("checkout", () => {
     expect(course.price).toBe("49.99");
 
     // Load tenant
-    const [tenant] = await db
-      .select()
-      .from(tenants)
-      .where(eq(tenants.id, tenantId));
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
     expect(tenant.stripeConnectAccountId).toBe(stripeConnectAccountId);
 
     // Load plan fee
@@ -142,9 +133,7 @@ describe("checkout", () => {
     // Calculate expected fee
     const amountInCents = Math.round(Number(course.price) * 100); // 4999
     const applicationFeePercent = Number(plan.applicationFeePercent); // 5
-    const applicationFeeAmount = Math.round(
-      amountInCents * (applicationFeePercent / 100),
-    ); // 250 (~$2.50)
+    const applicationFeeAmount = Math.round(amountInCents * (applicationFeePercent / 100)); // 250 (~$2.50)
 
     expect(amountInCents).toBe(4999);
     expect(applicationFeeAmount).toBe(250);
@@ -171,8 +160,8 @@ describe("checkout", () => {
           destination: stripeConnectAccountId,
         },
       },
-      success_url: `http://localhost:3000/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `http://localhost:3000/checkout/cancel`,
+      success_url: `http://localhost:4500/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `http://localhost:4500/checkout/cancel`,
       metadata: {
         tenantId,
         courseId,
@@ -184,9 +173,7 @@ describe("checkout", () => {
 
     // Verify the mock was called with Connect destination
     const callArgs = mockCheckoutSessionCreate.mock.calls[0][0];
-    expect(callArgs.payment_intent_data.transfer_data.destination).toBe(
-      stripeConnectAccountId,
-    );
+    expect(callArgs.payment_intent_data.transfer_data.destination).toBe(stripeConnectAccountId);
     expect(callArgs.payment_intent_data.application_fee_amount).toBe(250);
     expect(callArgs.line_items[0].price_data.unit_amount).toBe(4999);
     expect(callArgs.metadata.courseId).toBe(courseId);
@@ -266,9 +253,7 @@ describe("checkout", () => {
     expect(enrollment.revokedAt).toBeNull();
 
     // Cleanup
-    await db
-      .delete(enrollments)
-      .where(eq(enrollments.id, enrollment.id));
+    await db.delete(enrollments).where(eq(enrollments.id, enrollment.id));
   });
 
   it("prevents duplicate enrollments (unique constraint)", async () => {
@@ -292,12 +277,7 @@ describe("checkout", () => {
     // Cleanup
     await db
       .delete(enrollments)
-      .where(
-        and(
-          eq(enrollments.userId, enrollUserId),
-          eq(enrollments.courseId, courseId),
-        ),
-      );
+      .where(and(eq(enrollments.userId, enrollUserId), eq(enrollments.courseId, courseId)));
   });
 
   // ── Enrollment check ──────────────────────────────────
@@ -341,12 +321,7 @@ describe("checkout", () => {
     // Cleanup
     await db
       .delete(enrollments)
-      .where(
-        and(
-          eq(enrollments.userId, enrollUserId),
-          eq(enrollments.courseId, courseId),
-        ),
-      );
+      .where(and(eq(enrollments.userId, enrollUserId), eq(enrollments.courseId, courseId)));
   });
 
   // ── Application fee calculation ──────────────────────────
@@ -368,9 +343,7 @@ describe("checkout", () => {
   it("defaults to 10% fee when no plan is assigned", () => {
     const amountInCents = 4999;
     const defaultFeePercent = 10;
-    const feeAmount = Math.round(
-      amountInCents * (defaultFeePercent / 100),
-    ); // 500
+    const feeAmount = Math.round(amountInCents * (defaultFeePercent / 100)); // 500
 
     expect(feeAmount).toBe(500);
   });

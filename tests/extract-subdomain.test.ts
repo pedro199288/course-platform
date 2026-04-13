@@ -6,16 +6,16 @@ describe("extractSubdomain", () => {
     expect(extractSubdomain("myschool.localhost")).toBe("myschool");
   });
 
-  it("extracts subdomain from tenant.localhost:3000", () => {
-    expect(extractSubdomain("myschool.localhost:3000")).toBe("myschool");
+  it("extracts subdomain from tenant.localhost:4500", () => {
+    expect(extractSubdomain("myschool.localhost:4500")).toBe("myschool");
   });
 
   it("returns null for bare localhost", () => {
     expect(extractSubdomain("localhost")).toBeNull();
   });
 
-  it("returns null for localhost:3000", () => {
-    expect(extractSubdomain("localhost:3000")).toBeNull();
+  it("returns null for localhost:4500", () => {
+    expect(extractSubdomain("localhost:4500")).toBeNull();
   });
 
   it("extracts subdomain from tenant.platform.com", () => {

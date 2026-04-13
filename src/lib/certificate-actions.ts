@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-import { eq, and, asc, inArray } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { db } from "#/db/index.ts";
 import {
   tenants,
@@ -17,8 +17,7 @@ import { enqueueCertificateDelivery } from "./email-jobs.ts";
 
 async function requireTenant() {
   const request = getRequest();
-  const host =
-    request.headers.get("x-tenant") ?? request.headers.get("host") ?? "";
+  const host = request.headers.get("x-tenant") ?? request.headers.get("host") ?? "";
   const subdomain = extractSubdomain(host);
   if (!subdomain) throw new Error("No tenant");
 
@@ -131,7 +130,7 @@ export async function checkAndIssueCertificate(
       .where(eq(tenants.id, tenantId));
 
     if (user && course && tenant) {
-      const certificateUrl = `https://${tenant.subdomain}.${process.env.PLATFORM_DOMAIN || "localhost:3000"}/certificates/${cert.id}`;
+      const certificateUrl = `https://${tenant.subdomain}.${process.env.PLATFORM_DOMAIN || "localhost:4500"}/certificates/${cert.id}`;
       await enqueueCertificateDelivery({
         to: user.email,
         studentName: user.name,
@@ -169,12 +168,7 @@ export const getCertificateFn = createServerFn({ method: "GET" })
         generatedAt: certificates.generatedAt,
       })
       .from(certificates)
-      .where(
-        and(
-          eq(certificates.id, data.certificateId),
-          eq(certificates.tenantId, tenant.id),
-        ),
-      );
+      .where(and(eq(certificates.id, data.certificateId), eq(certificates.tenantId, tenant.id)));
 
     if (!cert) throw new Error("Certificate not found");
 
@@ -203,34 +197,27 @@ export const getCertificateFn = createServerFn({ method: "GET" })
  * Get all certificates for the current user in this tenant.
  * Used by the student dashboard to show download links.
  */
-export const getStudentCertificatesFn = createServerFn({ method: "GET" }).handler(
-  async () => {
-    const tenant = await requireTenant();
-    const user = await requireAuth();
+export const getStudentCertificatesFn = createServerFn({ method: "GET" }).handler(async () => {
+  const tenant = await requireTenant();
+  const user = await requireAuth();
 
-    const certs = await db
-      .select({
-        id: certificates.id,
-        courseId: certificates.courseId,
-        generatedAt: certificates.generatedAt,
-      })
-      .from(certificates)
-      .where(
-        and(
-          eq(certificates.userId, user.id),
-          eq(certificates.tenantId, tenant.id),
-        ),
-      );
+  const certs = await db
+    .select({
+      id: certificates.id,
+      courseId: certificates.courseId,
+      generatedAt: certificates.generatedAt,
+    })
+    .from(certificates)
+    .where(and(eq(certificates.userId, user.id), eq(certificates.tenantId, tenant.id)));
 
-    // Build a map of courseId → certificateId for easy lookup
-    const certMap: Record<string, { id: string; generatedAt: string }> = {};
-    for (const cert of certs) {
-      certMap[cert.courseId] = {
-        id: cert.id,
-        generatedAt: cert.generatedAt.toISOString(),
-      };
-    }
+  // Build a map of courseId → certificateId for easy lookup
+  const certMap: Record<string, { id: string; generatedAt: string }> = {};
+  for (const cert of certs) {
+    certMap[cert.courseId] = {
+      id: cert.id,
+      generatedAt: cert.generatedAt.toISOString(),
+    };
+  }
 
-    return certMap;
-  },
-);
+  return certMap;
+});
