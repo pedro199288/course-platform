@@ -23,6 +23,9 @@ async function requireTenant() {
       subdomain: true,
       stripeConnectAccountId: true,
       subscriptionPrice: true,
+      gaTrackingId: true,
+      fbPixelId: true,
+      aboutInstructor: true,
     },
   });
   if (!tenant) throw new Error("Tenant not found");

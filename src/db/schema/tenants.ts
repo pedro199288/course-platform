@@ -1,5 +1,15 @@
-import { index, numeric, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  index,
+  jsonb,
+  numeric,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { plans } from "./plans.ts";
+import type { RichTextDoc } from "#/lib/rich-text/types.ts";
 
 export const tenantStatus = pgEnum("tenant_status", ["active", "suspended", "inactive"]);
 
@@ -14,6 +24,9 @@ export const tenants = pgTable(
     subscriptionPrice: numeric("subscription_price", { precision: 10, scale: 2 }),
     planId: uuid("plan_id").references(() => plans.id),
     status: tenantStatus().notNull().default("active"),
+    gaTrackingId: text("ga_tracking_id"),
+    fbPixelId: text("fb_pixel_id"),
+    aboutInstructor: jsonb("about_instructor").$type<RichTextDoc | null>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

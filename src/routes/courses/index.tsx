@@ -1,6 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { listPublishedCoursesFn } from "#/lib/storefront-actions.ts";
 import { getStorefrontTestimonialsFn } from "#/lib/testimonial-actions.ts";
+import { TrackingScripts } from "#/components/TrackingScripts.tsx";
+import { RichTextViewer } from "#/components/RichTextViewer.tsx";
+import { isRichTextDoc } from "#/lib/rich-text/types.ts";
 
 export const Route = createFileRoute("/courses/")({
   loader: async () => {
@@ -18,6 +21,7 @@ function StorefrontPage() {
 
   return (
     <main className="page-wrap px-4 py-10">
+      <TrackingScripts gaTrackingId={tenant.gaTrackingId} fbPixelId={tenant.fbPixelId} />
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{tenant.name}</h1>
         <p className="mt-2 text-neutral-500 dark:text-neutral-400">Browse our available courses</p>
@@ -83,6 +87,18 @@ function StorefrontPage() {
               </div>
             </Link>
           ))}
+        </div>
+      )}
+
+      {/* About the Instructor */}
+      {isRichTextDoc(tenant.aboutInstructor) && (
+        <div className="mt-16">
+          <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">
+            About the Instructor
+          </h2>
+          <div className="mx-auto mt-6 max-w-2xl">
+            <RichTextViewer content={tenant.aboutInstructor} />
+          </div>
         </div>
       )}
 

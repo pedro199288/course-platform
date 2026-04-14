@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { getCourseBySlugFn } from "#/lib/storefront-actions.ts";
+import { TrackingScripts } from "#/components/TrackingScripts.tsx";
 import { getSessionFn } from "#/lib/auth-session.ts";
 import {
   createCheckoutSessionFn,
@@ -68,6 +69,7 @@ function CourseDetailPage() {
 
   return (
     <main className="page-wrap px-4 py-10">
+      <TrackingScripts gaTrackingId={tenant.gaTrackingId} fbPixelId={tenant.fbPixelId} />
       <div className="mb-6">
         <Link
           to="/courses"
