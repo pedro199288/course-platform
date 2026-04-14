@@ -181,3 +181,33 @@ export async function enqueueAnnouncementEmail(opts: {
     from: opts.from,
   });
 }
+
+/**
+ * Enqueue a drip content unlocked notification email.
+ */
+export async function enqueueDripUnlockEmail(opts: {
+  to: string;
+  studentName: string;
+  courseName: string;
+  schoolName: string;
+  courseUrl: string;
+  unlockedItems: string[];
+  from?: string;
+}): Promise<string | null> {
+  const { renderDripContentUnlocked } = await import(
+    "./email-templates/drip-content-unlocked.tsx"
+  );
+  const html = await renderDripContentUnlocked({
+    studentName: opts.studentName,
+    courseName: opts.courseName,
+    schoolName: opts.schoolName,
+    courseUrl: opts.courseUrl,
+    unlockedItems: opts.unlockedItems,
+  });
+  return enqueueEmail({
+    to: opts.to,
+    subject: `New content unlocked — ${opts.courseName}`,
+    html,
+    from: opts.from,
+  });
+}
