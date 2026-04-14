@@ -149,6 +149,18 @@ export async function checkAndIssueCertificate(
     // Email failure should not break certificate issuance
   }
 
+  // Dispatch course.completed webhook (best-effort)
+  try {
+    const { dispatchTenantWebhookEvent } = await import("./webhook-delivery-jobs.ts");
+    await dispatchTenantWebhookEvent(tenantId, "course.completed", {
+      userId,
+      courseId,
+      certificateId: cert.id,
+    });
+  } catch {
+    // Webhook dispatch failure should not break certificate issuance
+  }
+
   return { issued: true, certificateId: cert.id };
 }
 

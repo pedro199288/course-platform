@@ -173,6 +173,12 @@ function AdminDashboard() {
           Manage Testimonials
         </Link>
         <Link
+          to="/admin/webhooks"
+          className="inline-flex items-center gap-2 rounded-md border border-neutral-200 px-4 py-2 text-sm font-medium hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-800/50"
+        >
+          Webhooks
+        </Link>
+        <Link
           to="/admin/settings"
           className="inline-flex items-center gap-2 rounded-md border border-neutral-200 px-4 py-2 text-sm font-medium hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-800/50"
         >

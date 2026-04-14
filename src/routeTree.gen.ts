@@ -28,6 +28,7 @@ import { Route as CheckoutSuccessRouteImport } from './routes/checkout/success'
 import { Route as CheckoutCancelRouteImport } from './routes/checkout/cancel'
 import { Route as CertificatesCertificateIdRouteImport } from './routes/certificates/$certificateId'
 import { Route as ApiDomainCheckRouteImport } from './routes/api/domain-check'
+import { Route as AdminWebhooksRouteImport } from './routes/admin/webhooks'
 import { Route as AdminTestimonialsRouteImport } from './routes/admin/testimonials'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminOnboardingRouteImport } from './routes/admin/onboarding'
@@ -141,6 +142,11 @@ const ApiDomainCheckRoute = ApiDomainCheckRouteImport.update({
   path: '/api/domain-check',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminWebhooksRoute = AdminWebhooksRouteImport.update({
+  id: '/webhooks',
+  path: '/webhooks',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminTestimonialsRoute = AdminTestimonialsRouteImport.update({
   id: '/testimonials',
   path: '/testimonials',
@@ -241,6 +247,7 @@ export interface FileRoutesByFullPath {
   '/admin/onboarding': typeof AdminOnboardingRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/testimonials': typeof AdminTestimonialsRoute
+  '/admin/webhooks': typeof AdminWebhooksRoute
   '/api/domain-check': typeof ApiDomainCheckRoute
   '/certificates/$certificateId': typeof CertificatesCertificateIdRoute
   '/checkout/cancel': typeof CheckoutCancelRoute
@@ -276,6 +283,7 @@ export interface FileRoutesByTo {
   '/admin/onboarding': typeof AdminOnboardingRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/testimonials': typeof AdminTestimonialsRoute
+  '/admin/webhooks': typeof AdminWebhooksRoute
   '/api/domain-check': typeof ApiDomainCheckRoute
   '/certificates/$certificateId': typeof CertificatesCertificateIdRoute
   '/checkout/cancel': typeof CheckoutCancelRoute
@@ -314,6 +322,7 @@ export interface FileRoutesById {
   '/admin/onboarding': typeof AdminOnboardingRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/testimonials': typeof AdminTestimonialsRoute
+  '/admin/webhooks': typeof AdminWebhooksRoute
   '/api/domain-check': typeof ApiDomainCheckRoute
   '/certificates/$certificateId': typeof CertificatesCertificateIdRoute
   '/checkout/cancel': typeof CheckoutCancelRoute
@@ -353,6 +362,7 @@ export interface FileRouteTypes {
     | '/admin/onboarding'
     | '/admin/settings'
     | '/admin/testimonials'
+    | '/admin/webhooks'
     | '/api/domain-check'
     | '/certificates/$certificateId'
     | '/checkout/cancel'
@@ -388,6 +398,7 @@ export interface FileRouteTypes {
     | '/admin/onboarding'
     | '/admin/settings'
     | '/admin/testimonials'
+    | '/admin/webhooks'
     | '/api/domain-check'
     | '/certificates/$certificateId'
     | '/checkout/cancel'
@@ -425,6 +436,7 @@ export interface FileRouteTypes {
     | '/admin/onboarding'
     | '/admin/settings'
     | '/admin/testimonials'
+    | '/admin/webhooks'
     | '/api/domain-check'
     | '/certificates/$certificateId'
     | '/checkout/cancel'
@@ -606,6 +618,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDomainCheckRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/webhooks': {
+      id: '/admin/webhooks'
+      path: '/webhooks'
+      fullPath: '/admin/webhooks'
+      preLoaderRoute: typeof AdminWebhooksRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/testimonials': {
       id: '/admin/testimonials'
       path: '/testimonials'
@@ -726,6 +745,7 @@ interface AdminRouteRouteChildren {
   AdminOnboardingRoute: typeof AdminOnboardingRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminTestimonialsRoute: typeof AdminTestimonialsRoute
+  AdminWebhooksRoute: typeof AdminWebhooksRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminCoursesCourseIdRoute: typeof AdminCoursesCourseIdRoute
   AdminCoursesNewRoute: typeof AdminCoursesNewRoute
@@ -737,6 +757,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminOnboardingRoute: AdminOnboardingRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminTestimonialsRoute: AdminTestimonialsRoute,
+  AdminWebhooksRoute: AdminWebhooksRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminCoursesCourseIdRoute: AdminCoursesCourseIdRoute,
   AdminCoursesNewRoute: AdminCoursesNewRoute,

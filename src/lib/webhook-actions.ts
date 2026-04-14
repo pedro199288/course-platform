@@ -10,6 +10,7 @@ import {
 } from "#/db/schema/index.ts";
 import { sendJob } from "./job-queue.ts";
 import { enqueuePurchaseConfirmation, enqueueEnrollmentConfirmation } from "./email-jobs.ts";
+import { dispatchTenantWebhookEvent } from "./webhook-delivery-jobs.ts";
 
 // ---------------------------------------------------------------------------
 // Webhook event types we handle
@@ -116,6 +117,28 @@ async function handleCheckoutSessionCompleted(data: Record<string, unknown>): Pr
       userId: metadata.userId,
       courseId: metadata.courseId,
     });
+
+    // Dispatch enrollment.created webhook (best-effort)
+    try {
+      await dispatchTenantWebhookEvent(metadata.tenantId, "enrollment.created", {
+        userId: metadata.userId,
+        courseId: metadata.courseId,
+      });
+    } catch {
+      // Webhook dispatch failure should not break payment processing
+    }
+  }
+
+  // Dispatch payment.completed webhook (best-effort)
+  try {
+    await dispatchTenantWebhookEvent(metadata.tenantId, "payment.completed", {
+      userId: metadata.userId,
+      courseId: metadata.courseId,
+      amount: amountDecimal,
+      currency,
+    });
+  } catch {
+    // Webhook dispatch failure should not break payment processing
   }
 
   // Queue confirmation emails (best-effort — don't fail the webhook)
@@ -190,6 +213,20 @@ async function handleChargeRefunded(data: Record<string, unknown>): Promise<void
         isNull(enrollments.revokedAt),
       ),
     );
+
+  // Dispatch webhook events (best-effort)
+  try {
+    await dispatchTenantWebhookEvent(payment.tenantId, "payment.refunded", {
+      userId: payment.userId,
+      courseId: payment.courseId,
+    });
+    await dispatchTenantWebhookEvent(payment.tenantId, "enrollment.revoked", {
+      userId: payment.userId,
+      courseId: payment.courseId,
+    });
+  } catch {
+    // Webhook dispatch failure should not break refund processing
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -225,6 +262,16 @@ async function handleSubscriptionCreated(data: Record<string, unknown>): Promise
     currentPeriodStart: currentPeriod ? new Date(currentPeriod * 1000) : null,
     currentPeriodEnd: currentPeriodEnd ? new Date(currentPeriodEnd * 1000) : null,
   });
+
+  // Dispatch subscription.created webhook (best-effort)
+  try {
+    await dispatchTenantWebhookEvent(metadata.tenantId, "subscription.created", {
+      userId: metadata.userId,
+      stripeSubscriptionId: subscriptionId,
+    });
+  } catch {
+    // Webhook dispatch failure should not break subscription processing
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -269,6 +316,12 @@ async function handleSubscriptionUpdated(data: Record<string, unknown>): Promise
 async function handleSubscriptionDeleted(data: Record<string, unknown>): Promise<void> {
   const subscriptionId = data.id as string;
 
+  // Look up subscription before updating to get tenantId/userId for webhook
+  const [sub] = await db
+    .select({ tenantId: subscriptions.tenantId, userId: subscriptions.userId })
+    .from(subscriptions)
+    .where(eq(subscriptions.stripeSubscriptionId, subscriptionId));
+
   await db
     .update(subscriptions)
     .set({
@@ -276,6 +329,18 @@ async function handleSubscriptionDeleted(data: Record<string, unknown>): Promise
       canceledAt: new Date(),
     })
     .where(eq(subscriptions.stripeSubscriptionId, subscriptionId));
+
+  // Dispatch subscription.canceled webhook (best-effort)
+  if (sub) {
+    try {
+      await dispatchTenantWebhookEvent(sub.tenantId, "subscription.canceled", {
+        userId: sub.userId,
+        stripeSubscriptionId: subscriptionId,
+      });
+    } catch {
+      // Webhook dispatch failure should not break subscription processing
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------

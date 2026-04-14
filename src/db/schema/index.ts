@@ -10,3 +10,4 @@ export * from "./quiz-results.ts";
 export * from "./announcements.ts";
 export * from "./bulk-emails.ts";
 export * from "./testimonials.ts";
+export * from "./webhooks.ts";
