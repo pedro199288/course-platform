@@ -1,3 +1,4 @@
+import "@tanstack/react-start/server-only";
 import Stripe from "stripe";
 
 let stripeInstance: Stripe | null = null;

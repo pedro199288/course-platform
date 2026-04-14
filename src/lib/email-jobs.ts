@@ -1,3 +1,4 @@
+import "@tanstack/react-start/server-only";
 import { sendEmail } from "./email.ts";
 import { registerHandler, sendJob } from "./job-queue.ts";
 
@@ -194,9 +195,7 @@ export async function enqueueDripUnlockEmail(opts: {
   unlockedItems: string[];
   from?: string;
 }): Promise<string | null> {
-  const { renderDripContentUnlocked } = await import(
-    "./email-templates/drip-content-unlocked.tsx"
-  );
+  const { renderDripContentUnlocked } = await import("./email-templates/drip-content-unlocked.tsx");
   const html = await renderDripContentUnlocked({
     studentName: opts.studentName,
     courseName: opts.courseName,

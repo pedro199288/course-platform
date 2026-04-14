@@ -1,3 +1,4 @@
+import "@tanstack/react-start/server-only";
 import crypto from "node:crypto";
 import { eq, and } from "drizzle-orm";
 import { db } from "#/db/index.ts";
@@ -30,10 +31,7 @@ export function registerWebhookDeliveryHandler(): void {
 
 // ── Delivery execution ─────────────────────────────────────────────
 
-async function executeWebhookDelivery(
-  deliveryId: string,
-  endpointId: string,
-): Promise<void> {
+async function executeWebhookDelivery(deliveryId: string, endpointId: string): Promise<void> {
   const [endpoint] = await db
     .select()
     .from(webhookEndpoints)
@@ -93,8 +91,7 @@ async function executeWebhookDelivery(
       .set({
         statusCode,
         responseBody:
-          responseBody?.slice(0, 2000) ??
-          (err instanceof Error ? err.message : "Unknown error"),
+          responseBody?.slice(0, 2000) ?? (err instanceof Error ? err.message : "Unknown error"),
         attemptNumber: delivery.attemptNumber + 1,
       })
       .where(eq(webhookDeliveries.id, deliveryId));

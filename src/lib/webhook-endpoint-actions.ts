@@ -5,20 +5,9 @@ import { eq, and, desc } from "drizzle-orm";
 import { db } from "#/db/index.ts";
 import { webhookEndpoints, webhookDeliveries } from "#/db/schema/index.ts";
 import { auth } from "./auth.ts";
+import { WEBHOOK_EVENTS, type WebhookEvent } from "./webhook-events.ts";
 
-// ── Supported webhook events ───────────────────────────────────────
-
-export const WEBHOOK_EVENTS = [
-  "enrollment.created",
-  "enrollment.revoked",
-  "payment.completed",
-  "payment.refunded",
-  "course.completed",
-  "subscription.created",
-  "subscription.canceled",
-] as const;
-
-export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number];
+export { WEBHOOK_EVENTS, type WebhookEvent };
 
 // ── Admin helpers ──────────────────────────────────────────────────
 
@@ -46,12 +35,7 @@ export const listWebhookEndpointsFn = createServerFn({ method: "GET" }).handler(
 });
 
 export const createWebhookEndpointFn = createServerFn({ method: "POST" })
-  .inputValidator(
-    (d: {
-      url: string;
-      events: string[];
-    }) => d,
-  )
+  .inputValidator((d: { url: string; events: string[] }) => d)
   .handler(async ({ data }) => {
     const user = await requireAdmin();
 
@@ -92,14 +76,7 @@ export const createWebhookEndpointFn = createServerFn({ method: "POST" })
   });
 
 export const updateWebhookEndpointFn = createServerFn({ method: "POST" })
-  .inputValidator(
-    (d: {
-      endpointId: string;
-      url: string;
-      events: string[];
-      active: boolean;
-    }) => d,
-  )
+  .inputValidator((d: { endpointId: string; url: string; events: string[]; active: boolean }) => d)
   .handler(async ({ data }) => {
     const user = await requireAdmin();
 
@@ -128,10 +105,7 @@ export const updateWebhookEndpointFn = createServerFn({ method: "POST" })
         active: data.active,
       })
       .where(
-        and(
-          eq(webhookEndpoints.id, data.endpointId),
-          eq(webhookEndpoints.tenantId, user.tenantId),
-        ),
+        and(eq(webhookEndpoints.id, data.endpointId), eq(webhookEndpoints.tenantId, user.tenantId)),
       )
       .returning();
     if (!updated) throw new Error("Endpoint not found");
@@ -145,10 +119,7 @@ export const deleteWebhookEndpointFn = createServerFn({ method: "POST" })
     const [deleted] = await db
       .delete(webhookEndpoints)
       .where(
-        and(
-          eq(webhookEndpoints.id, data.endpointId),
-          eq(webhookEndpoints.tenantId, user.tenantId),
-        ),
+        and(eq(webhookEndpoints.id, data.endpointId), eq(webhookEndpoints.tenantId, user.tenantId)),
       )
       .returning();
     if (!deleted) throw new Error("Endpoint not found");
@@ -163,10 +134,7 @@ export const toggleWebhookEndpointFn = createServerFn({ method: "POST" })
       .update(webhookEndpoints)
       .set({ active: data.active })
       .where(
-        and(
-          eq(webhookEndpoints.id, data.endpointId),
-          eq(webhookEndpoints.tenantId, user.tenantId),
-        ),
+        and(eq(webhookEndpoints.id, data.endpointId), eq(webhookEndpoints.tenantId, user.tenantId)),
       )
       .returning();
     if (!updated) throw new Error("Endpoint not found");
@@ -185,10 +153,7 @@ export const listWebhookDeliveriesFn = createServerFn({ method: "GET" })
       .select({ id: webhookEndpoints.id })
       .from(webhookEndpoints)
       .where(
-        and(
-          eq(webhookEndpoints.id, data.endpointId),
-          eq(webhookEndpoints.tenantId, user.tenantId),
-        ),
+        and(eq(webhookEndpoints.id, data.endpointId), eq(webhookEndpoints.tenantId, user.tenantId)),
       );
     if (!endpoint) throw new Error("Endpoint not found");
 

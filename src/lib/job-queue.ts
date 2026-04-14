@@ -1,3 +1,4 @@
+import "@tanstack/react-start/server-only";
 import PgBoss from "pg-boss";
 
 let boss: PgBoss | null = null;

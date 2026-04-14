@@ -6,8 +6,8 @@ import {
   deleteWebhookEndpointFn,
   toggleWebhookEndpointFn,
   listWebhookDeliveriesFn,
-  WEBHOOK_EVENTS,
 } from "#/lib/webhook-endpoint-actions.ts";
+import { WEBHOOK_EVENTS } from "#/lib/webhook-events.ts";
 
 interface WebhookEndpoint {
   id: string;

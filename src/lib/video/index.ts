@@ -1,3 +1,4 @@
+import "@tanstack/react-start/server-only";
 import type { VideoProvider } from "./types.ts";
 import { BunnyStreamProvider } from "./bunny-stream.ts";
 

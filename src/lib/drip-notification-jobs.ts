@@ -1,3 +1,4 @@
+import "@tanstack/react-start/server-only";
 import { and, eq, isNotNull, isNull, or } from "drizzle-orm";
 import { db } from "#/db/index.ts";
 import { courses, lessons, modules } from "#/db/schema/courses.ts";
