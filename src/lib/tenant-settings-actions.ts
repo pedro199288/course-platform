@@ -5,6 +5,7 @@ import { db } from "#/db/index.ts";
 import { tenants } from "#/db/schema/index.ts";
 import { auth } from "./auth.ts";
 import type { RichTextDoc } from "#/lib/rich-text/types.ts";
+import { createPresignedUploadUrl, createPresignedDownloadUrl } from "./storage/s3.ts";
 
 async function requireAdmin() {
   const request = getRequest();
@@ -29,10 +30,32 @@ export const getTenantSettingsFn = createServerFn({ method: "GET" }).handler(asy
       gaTrackingId: true,
       fbPixelId: true,
       aboutInstructor: true,
+      logoUrl: true,
+      faviconUrl: true,
+      primaryColor: true,
+      accentColor: true,
+      brandName: true,
     },
   });
   if (!tenant) throw new Error("Tenant not found");
-  return tenant;
+
+  // Resolve S3 keys to presigned URLs for admin preview
+  let logoPreviewUrl: string | null = null;
+  let faviconPreviewUrl: string | null = null;
+  try {
+    if (tenant.logoUrl) {
+      const { url } = await createPresignedDownloadUrl({ key: tenant.logoUrl, expiresInSeconds: 3600 });
+      logoPreviewUrl = url;
+    }
+    if (tenant.faviconUrl) {
+      const { url } = await createPresignedDownloadUrl({ key: tenant.faviconUrl, expiresInSeconds: 3600 });
+      faviconPreviewUrl = url;
+    }
+  } catch {
+    // S3 unavailable — show no preview
+  }
+
+  return { ...tenant, logoPreviewUrl, faviconPreviewUrl };
 });
 
 /**
@@ -79,6 +102,87 @@ export const updateAboutInstructorFn = createServerFn({ method: "POST" })
       .set({
         aboutInstructor: data.aboutInstructor,
       })
+      .where(eq(tenants.id, user.tenantId));
+
+    return { ok: true };
+  });
+
+/**
+ * Update branding fields (colors + brand name).
+ */
+export const updateBrandingFn = createServerFn({ method: "POST" })
+  .inputValidator(
+    (d: {
+      primaryColor: string | null;
+      accentColor: string | null;
+      brandName: string | null;
+    }) => d,
+  )
+  .handler(async ({ data }) => {
+    const user = await requireAdmin();
+
+    const hexPattern = /^#[0-9a-fA-F]{6}$/;
+    if (data.primaryColor && !hexPattern.test(data.primaryColor)) {
+      throw new Error("Invalid primary color format (use #RRGGBB)");
+    }
+    if (data.accentColor && !hexPattern.test(data.accentColor)) {
+      throw new Error("Invalid accent color format (use #RRGGBB)");
+    }
+    if (data.brandName && data.brandName.length > 100) {
+      throw new Error("Brand name must be 100 characters or fewer");
+    }
+
+    await db
+      .update(tenants)
+      .set({
+        primaryColor: data.primaryColor || null,
+        accentColor: data.accentColor || null,
+        brandName: data.brandName?.trim() || null,
+      })
+      .where(eq(tenants.id, user.tenantId));
+
+    return { ok: true };
+  });
+
+/**
+ * Get a presigned upload URL for branding images (logo or favicon).
+ */
+export const getBrandingUploadUrlFn = createServerFn({ method: "POST" })
+  .inputValidator((d: { field: "logo" | "favicon"; contentType: string }) => d)
+  .handler(async ({ data }) => {
+    const user = await requireAdmin();
+
+    const allowedTypes = ["image/png", "image/jpeg", "image/svg+xml", "image/webp", "image/x-icon"];
+    if (!allowedTypes.includes(data.contentType)) {
+      throw new Error("Invalid image type. Use PNG, JPEG, SVG, WebP, or ICO.");
+    }
+
+    const ext = data.contentType.split("/").pop()?.replace("x-icon", "ico") ?? "png";
+    const key = `tenants/${user.tenantId}/branding/${data.field}.${ext}`;
+
+    const { url } = await createPresignedUploadUrl({
+      key,
+      contentType: data.contentType,
+      expiresInSeconds: 3600,
+    });
+
+    return { uploadUrl: url, key };
+  });
+
+/**
+ * Save the S3 key for a branding image after upload completes.
+ */
+export const saveBrandingImageFn = createServerFn({ method: "POST" })
+  .inputValidator((d: { field: "logo" | "favicon"; key: string | null }) => d)
+  .handler(async ({ data }) => {
+    const user = await requireAdmin();
+
+    const setData =
+      data.field === "logo" ? { logoUrl: data.key } : { faviconUrl: data.key };
+
+    await db
+      .update(tenants)
+      .set(setData)
       .where(eq(tenants.id, user.tenantId));
 
     return { ok: true };

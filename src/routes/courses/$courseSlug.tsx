@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { getCourseBySlugFn } from "#/lib/storefront-actions.ts";
 import { TrackingScripts } from "#/components/TrackingScripts.tsx";
+import { StorefrontBranding } from "#/components/StorefrontBranding.tsx";
 import { getSessionFn } from "#/lib/auth-session.ts";
 import {
   createCheckoutSessionFn,
@@ -70,6 +71,12 @@ function CourseDetailPage() {
   return (
     <main className="page-wrap px-4 py-10">
       <TrackingScripts gaTrackingId={tenant.gaTrackingId} fbPixelId={tenant.fbPixelId} />
+      <StorefrontBranding
+        primaryColor={tenant.primaryColor}
+        accentColor={tenant.accentColor}
+        faviconUrl={tenant.faviconUrl}
+        hidesPlatformBranding={!!(tenant.logoUrl || tenant.brandName || tenant.primaryColor)}
+      />
       <div className="mb-6">
         <Link
           to="/courses"
@@ -85,7 +92,7 @@ function CourseDetailPage() {
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{course.title}</h1>
 
           <div className="mt-2 flex items-center gap-3 text-sm text-neutral-500 dark:text-neutral-400">
-            <span>{tenant.name}</span>
+            <span>{tenant.brandName ?? tenant.name}</span>
             <span>&middot;</span>
             <span>
               {curriculum.length} {curriculum.length === 1 ? "module" : "modules"}

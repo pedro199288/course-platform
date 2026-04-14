@@ -4,6 +4,7 @@ import { eq, and, asc } from "drizzle-orm";
 import { db } from "#/db/index.ts";
 import { courses, modules, lessons, tenants } from "#/db/schema/index.ts";
 import { extractSubdomain } from "#/middleware/tenant.ts";
+import { createPresignedDownloadUrl } from "./storage/s3.ts";
 
 /**
  * Resolve the tenant from the current request headers.
@@ -26,10 +27,34 @@ async function requireTenant() {
       gaTrackingId: true,
       fbPixelId: true,
       aboutInstructor: true,
+      logoUrl: true,
+      faviconUrl: true,
+      primaryColor: true,
+      accentColor: true,
+      brandName: true,
     },
   });
   if (!tenant) throw new Error("Tenant not found");
-  return tenant;
+
+  // Resolve branding image S3 keys to presigned download URLs
+  let resolvedLogoUrl = tenant.logoUrl;
+  let resolvedFaviconUrl = tenant.faviconUrl;
+  try {
+    if (tenant.logoUrl) {
+      const { url } = await createPresignedDownloadUrl({ key: tenant.logoUrl, expiresInSeconds: 86400 });
+      resolvedLogoUrl = url;
+    }
+    if (tenant.faviconUrl) {
+      const { url } = await createPresignedDownloadUrl({ key: tenant.faviconUrl, expiresInSeconds: 86400 });
+      resolvedFaviconUrl = url;
+    }
+  } catch {
+    // If S3 is unavailable, fall back to null
+    resolvedLogoUrl = null;
+    resolvedFaviconUrl = null;
+  }
+
+  return { ...tenant, logoUrl: resolvedLogoUrl, faviconUrl: resolvedFaviconUrl };
 }
 
 /**

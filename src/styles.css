@@ -348,6 +348,23 @@ a {
   background: color-mix(in oklab, var(--header-bg) 84%, transparent 16%);
 }
 
+/* Tenant branding overrides — applied when StorefrontBranding sets CSS vars */
+:root[style*="--tenant-primary"] {
+  --primary: var(--tenant-primary);
+  --primary-foreground: #fff;
+  --lagoon-deep: var(--tenant-primary);
+}
+
+:root[style*="--tenant-accent"] {
+  --lagoon: var(--tenant-accent);
+  --lagoon-deep: var(--tenant-accent);
+}
+
+/* Hide platform branding on white-labeled storefronts */
+.white-label [data-platform-branding] {
+  display: none;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

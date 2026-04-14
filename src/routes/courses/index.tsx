@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { listPublishedCoursesFn } from "#/lib/storefront-actions.ts";
 import { getStorefrontTestimonialsFn } from "#/lib/testimonial-actions.ts";
 import { TrackingScripts } from "#/components/TrackingScripts.tsx";
+import { StorefrontBranding } from "#/components/StorefrontBranding.tsx";
 import { RichTextViewer } from "#/components/RichTextViewer.tsx";
 import { isRichTextDoc } from "#/lib/rich-text/types.ts";
 
@@ -22,8 +23,25 @@ function StorefrontPage() {
   return (
     <main className="page-wrap px-4 py-10">
       <TrackingScripts gaTrackingId={tenant.gaTrackingId} fbPixelId={tenant.fbPixelId} />
+      <StorefrontBranding
+        primaryColor={tenant.primaryColor}
+        accentColor={tenant.accentColor}
+        faviconUrl={tenant.faviconUrl}
+        hidesPlatformBranding={!!(tenant.logoUrl || tenant.brandName || tenant.primaryColor)}
+      />
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{tenant.name}</h1>
+        {tenant.logoUrl ? (
+          <div className="mb-4 flex justify-center">
+            <img
+              src={tenant.logoUrl}
+              alt={tenant.brandName ?? tenant.name}
+              className="h-14 max-w-[280px] object-contain"
+            />
+          </div>
+        ) : null}
+        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+          {tenant.brandName ?? tenant.name}
+        </h1>
         <p className="mt-2 text-neutral-500 dark:text-neutral-400">Browse our available courses</p>
       </div>
 
