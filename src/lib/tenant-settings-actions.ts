@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-import { eq } from "drizzle-orm";
+import { eq, and, ne } from "drizzle-orm";
 import { db } from "#/db/index.ts";
 import { tenants } from "#/db/schema/index.ts";
 import { auth } from "./auth.ts";
@@ -35,6 +35,7 @@ export const getTenantSettingsFn = createServerFn({ method: "GET" }).handler(asy
       primaryColor: true,
       accentColor: true,
       brandName: true,
+      customDomain: true,
     },
   });
   if (!tenant) throw new Error("Tenant not found");
@@ -183,6 +184,45 @@ export const saveBrandingImageFn = createServerFn({ method: "POST" })
     await db
       .update(tenants)
       .set(setData)
+      .where(eq(tenants.id, user.tenantId));
+
+    return { ok: true };
+  });
+
+/**
+ * Update the custom domain for the current tenant.
+ */
+export const updateCustomDomainFn = createServerFn({ method: "POST" })
+  .inputValidator((d: { customDomain: string | null }) => d)
+  .handler(async ({ data }) => {
+    const user = await requireAdmin();
+
+    const domain = data.customDomain?.trim().toLowerCase() || null;
+
+    if (domain) {
+      // Validate domain format (basic check: no protocol, no path, has a dot)
+      if (
+        domain.includes("://") ||
+        domain.includes("/") ||
+        domain.includes(" ") ||
+        !domain.includes(".")
+      ) {
+        throw new Error("Invalid domain format. Enter a bare domain like cursos.example.com");
+      }
+
+      // Check uniqueness (another tenant may already have this domain)
+      const existing = await db.query.tenants.findFirst({
+        where: and(eq(tenants.customDomain, domain), ne(tenants.id, user.tenantId)),
+        columns: { id: true },
+      });
+      if (existing) {
+        throw new Error("This domain is already in use by another school");
+      }
+    }
+
+    await db
+      .update(tenants)
+      .set({ customDomain: domain })
       .where(eq(tenants.id, user.tenantId));
 
     return { ok: true };

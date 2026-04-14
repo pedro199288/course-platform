@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   index,
   jsonb,
@@ -6,6 +7,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { plans } from "./plans.ts";
@@ -32,11 +34,17 @@ export const tenants = pgTable(
     gaTrackingId: text("ga_tracking_id"),
     fbPixelId: text("fb_pixel_id"),
     aboutInstructor: jsonb("about_instructor").$type<RichTextDoc | null>(),
+    customDomain: text("custom_domain"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
       .notNull()
       .$onUpdate(() => new Date()),
   },
-  (table) => [index("tenants_subdomain_idx").on(table.subdomain)],
+  (table) => [
+    index("tenants_subdomain_idx").on(table.subdomain),
+    uniqueIndex("tenants_custom_domain_idx")
+      .on(table.customDomain)
+      .where(sql`"custom_domain" IS NOT NULL`),
+  ],
 );

@@ -53,26 +53,43 @@ export function extractSubdomain(host: string): string | null {
 export const tenantMiddleware = createMiddleware().server(async ({ next, request }) => {
   const host = request.headers.get("x-tenant") ?? request.headers.get("host") ?? "";
 
+  const tenantColumns = {
+    id: true,
+    name: true,
+    subdomain: true,
+    planId: true,
+    stripeConnectAccountId: true,
+  } as const;
+
+  // 1. Try subdomain resolution first (most common path)
   const subdomain = extractSubdomain(host);
 
-  if (!subdomain) {
-    return tenantIdStore.run(null, () => next());
+  if (subdomain) {
+    const tenant = await db.query.tenants.findFirst({
+      where: eq(tenants.subdomain, subdomain),
+      columns: tenantColumns,
+    });
+
+    if (!tenant) {
+      return new Response("Tenant not found", { status: 404 });
+    }
+
+    return tenantIdStore.run(tenant.id, () => next({ context: { tenant } }));
   }
 
-  const tenant = await db.query.tenants.findFirst({
-    where: eq(tenants.subdomain, subdomain),
-    columns: {
-      id: true,
-      name: true,
-      subdomain: true,
-      planId: true,
-      stripeConnectAccountId: true,
-    },
-  });
+  // 2. Try custom domain resolution (full hostname without port)
+  const hostname = host.split(":")[0];
+  if (hostname && hostname !== "localhost") {
+    const tenant = await db.query.tenants.findFirst({
+      where: eq(tenants.customDomain, hostname),
+      columns: tenantColumns,
+    });
 
-  if (!tenant) {
-    return new Response("Tenant not found", { status: 404 });
+    if (tenant) {
+      return tenantIdStore.run(tenant.id, () => next({ context: { tenant } }));
+    }
   }
 
-  return tenantIdStore.run(tenant.id, () => next({ context: { tenant } }));
+  // 3. No tenant context (platform domain)
+  return tenantIdStore.run(null, () => next());
 });

@@ -27,6 +27,7 @@ import { Route as CoursesCourseSlugRouteImport } from './routes/courses/$courseS
 import { Route as CheckoutSuccessRouteImport } from './routes/checkout/success'
 import { Route as CheckoutCancelRouteImport } from './routes/checkout/cancel'
 import { Route as CertificatesCertificateIdRouteImport } from './routes/certificates/$certificateId'
+import { Route as ApiDomainCheckRouteImport } from './routes/api/domain-check'
 import { Route as AdminTestimonialsRouteImport } from './routes/admin/testimonials'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminOnboardingRouteImport } from './routes/admin/onboarding'
@@ -135,6 +136,11 @@ const CertificatesCertificateIdRoute =
     path: '/certificates/$certificateId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiDomainCheckRoute = ApiDomainCheckRouteImport.update({
+  id: '/api/domain-check',
+  path: '/api/domain-check',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminTestimonialsRoute = AdminTestimonialsRouteImport.update({
   id: '/testimonials',
   path: '/testimonials',
@@ -235,6 +241,7 @@ export interface FileRoutesByFullPath {
   '/admin/onboarding': typeof AdminOnboardingRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/testimonials': typeof AdminTestimonialsRoute
+  '/api/domain-check': typeof ApiDomainCheckRoute
   '/certificates/$certificateId': typeof CertificatesCertificateIdRoute
   '/checkout/cancel': typeof CheckoutCancelRoute
   '/checkout/success': typeof CheckoutSuccessRoute
@@ -269,6 +276,7 @@ export interface FileRoutesByTo {
   '/admin/onboarding': typeof AdminOnboardingRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/testimonials': typeof AdminTestimonialsRoute
+  '/api/domain-check': typeof ApiDomainCheckRoute
   '/certificates/$certificateId': typeof CertificatesCertificateIdRoute
   '/checkout/cancel': typeof CheckoutCancelRoute
   '/checkout/success': typeof CheckoutSuccessRoute
@@ -306,6 +314,7 @@ export interface FileRoutesById {
   '/admin/onboarding': typeof AdminOnboardingRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/testimonials': typeof AdminTestimonialsRoute
+  '/api/domain-check': typeof ApiDomainCheckRoute
   '/certificates/$certificateId': typeof CertificatesCertificateIdRoute
   '/checkout/cancel': typeof CheckoutCancelRoute
   '/checkout/success': typeof CheckoutSuccessRoute
@@ -344,6 +353,7 @@ export interface FileRouteTypes {
     | '/admin/onboarding'
     | '/admin/settings'
     | '/admin/testimonials'
+    | '/api/domain-check'
     | '/certificates/$certificateId'
     | '/checkout/cancel'
     | '/checkout/success'
@@ -378,6 +388,7 @@ export interface FileRouteTypes {
     | '/admin/onboarding'
     | '/admin/settings'
     | '/admin/testimonials'
+    | '/api/domain-check'
     | '/certificates/$certificateId'
     | '/checkout/cancel'
     | '/checkout/success'
@@ -414,6 +425,7 @@ export interface FileRouteTypes {
     | '/admin/onboarding'
     | '/admin/settings'
     | '/admin/testimonials'
+    | '/api/domain-check'
     | '/certificates/$certificateId'
     | '/checkout/cancel'
     | '/checkout/success'
@@ -447,6 +459,7 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
+  ApiDomainCheckRoute: typeof ApiDomainCheckRoute
   CertificatesCertificateIdRoute: typeof CertificatesCertificateIdRoute
   CheckoutCancelRoute: typeof CheckoutCancelRoute
   CheckoutSuccessRoute: typeof CheckoutSuccessRoute
@@ -584,6 +597,13 @@ declare module '@tanstack/react-router' {
       path: '/certificates/$certificateId'
       fullPath: '/certificates/$certificateId'
       preLoaderRoute: typeof CertificatesCertificateIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/domain-check': {
+      id: '/api/domain-check'
+      path: '/api/domain-check'
+      fullPath: '/api/domain-check'
+      preLoaderRoute: typeof ApiDomainCheckRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/testimonials': {
@@ -770,6 +790,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   VerifyEmailRoute: VerifyEmailRoute,
+  ApiDomainCheckRoute: ApiDomainCheckRoute,
   CertificatesCertificateIdRoute: CertificatesCertificateIdRoute,
   CheckoutCancelRoute: CheckoutCancelRoute,
   CheckoutSuccessRoute: CheckoutSuccessRoute,

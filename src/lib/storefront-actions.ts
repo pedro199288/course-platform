@@ -13,27 +13,42 @@ import { createPresignedDownloadUrl } from "./storage/s3.ts";
 async function requireTenant() {
   const request = getRequest();
   const host = request.headers.get("x-tenant") ?? request.headers.get("host") ?? "";
-  const subdomain = extractSubdomain(host);
-  if (!subdomain) throw new Error("No tenant");
 
-  const tenant = await db.query.tenants.findFirst({
-    where: eq(tenants.subdomain, subdomain),
-    columns: {
-      id: true,
-      name: true,
-      subdomain: true,
-      stripeConnectAccountId: true,
-      subscriptionPrice: true,
-      gaTrackingId: true,
-      fbPixelId: true,
-      aboutInstructor: true,
-      logoUrl: true,
-      faviconUrl: true,
-      primaryColor: true,
-      accentColor: true,
-      brandName: true,
-    },
-  });
+  const columns = {
+    id: true,
+    name: true,
+    subdomain: true,
+    stripeConnectAccountId: true,
+    subscriptionPrice: true,
+    gaTrackingId: true,
+    fbPixelId: true,
+    aboutInstructor: true,
+    logoUrl: true,
+    faviconUrl: true,
+    primaryColor: true,
+    accentColor: true,
+    brandName: true,
+  } as const;
+
+  // Try subdomain first, then custom domain
+  const subdomain = extractSubdomain(host);
+  let tenant;
+
+  if (subdomain) {
+    tenant = await db.query.tenants.findFirst({
+      where: eq(tenants.subdomain, subdomain),
+      columns,
+    });
+  } else {
+    const hostname = host.split(":")[0];
+    if (hostname && hostname !== "localhost") {
+      tenant = await db.query.tenants.findFirst({
+        where: eq(tenants.customDomain, hostname),
+        columns,
+      });
+    }
+  }
+
   if (!tenant) throw new Error("Tenant not found");
 
   // Resolve branding image S3 keys to presigned download URLs

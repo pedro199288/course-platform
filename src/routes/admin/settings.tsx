@@ -7,6 +7,7 @@ import {
   updateBrandingFn,
   getBrandingUploadUrlFn,
   saveBrandingImageFn,
+  updateCustomDomainFn,
 } from "#/lib/tenant-settings-actions.ts";
 import { RichTextEditor } from "#/components/RichTextEditor.tsx";
 import { isRichTextDoc, type RichTextDoc } from "#/lib/rich-text/types.ts";
@@ -31,6 +32,8 @@ function SettingsPage() {
         <h1 className="mt-2 text-2xl font-bold tracking-tight">School Settings</h1>
       </div>
 
+      <CustomDomainSection customDomain={settings.customDomain} />
+
       <BrandingSection
         logoPreviewUrl={settings.logoPreviewUrl}
         faviconPreviewUrl={settings.faviconPreviewUrl}
@@ -49,6 +52,96 @@ function SettingsPage() {
           isRichTextDoc(settings.aboutInstructor) ? settings.aboutInstructor : null
         }
       />
+    </div>
+  );
+}
+
+function CustomDomainSection({ customDomain }: { customDomain: string | null }) {
+  const router = useRouter();
+  const [domain, setDomain] = useState(customDomain ?? "");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setSaved(false);
+    setError(null);
+    try {
+      await updateCustomDomainFn({
+        data: { customDomain: domain.trim() || null },
+      });
+      setSaved(true);
+      void router.invalidate();
+    } catch (err: any) {
+      setError(err.message ?? "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div>
+      <h2 className="text-lg font-semibold">Custom Domain</h2>
+      <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+        Serve your school from your own domain. SSL certificates are provisioned automatically.
+      </p>
+      <form onSubmit={(e) => void handleSave(e)} className="mt-4 space-y-4">
+        <div className="space-y-1.5">
+          <label htmlFor="customDomain" className="block text-sm font-medium">
+            Domain
+          </label>
+          <input
+            id="customDomain"
+            type="text"
+            value={domain}
+            onChange={(e) => setDomain(e.target.value)}
+            placeholder="cursos.example.com"
+            className="w-full max-w-sm rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 dark:border-neutral-700 dark:bg-neutral-900"
+          />
+          <p className="text-xs text-neutral-400 dark:text-neutral-500">
+            Enter a bare domain without http:// (e.g. cursos.example.com)
+          </p>
+        </div>
+
+        <div className="rounded-md border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-700 dark:bg-neutral-900">
+          <h3 className="text-sm font-medium">DNS Configuration</h3>
+          <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+            Add a CNAME record pointing your domain to the platform:
+          </p>
+          <div className="mt-2 rounded bg-neutral-100 p-2 font-mono text-xs dark:bg-neutral-800">
+            <div className="grid grid-cols-3 gap-2">
+              <span className="text-neutral-500">Type</span>
+              <span className="text-neutral-500">Name</span>
+              <span className="text-neutral-500">Value</span>
+              <span>CNAME</span>
+              <span>{domain || "cursos"}</span>
+              <span>{typeof window !== "undefined" ? window.location.hostname : "platform.com"}</span>
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+            DNS changes may take up to 48 hours to propagate. SSL will be provisioned automatically
+            once DNS is configured correctly.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            disabled={saving}
+            className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
+          >
+            {saving ? "Saving..." : "Save Domain"}
+          </button>
+          {saved && (
+            <span className="text-sm text-green-600 dark:text-green-400">Saved</span>
+          )}
+          {error && (
+            <span className="text-sm text-red-600 dark:text-red-400">{error}</span>
+          )}
+        </div>
+      </form>
     </div>
   );
 }
