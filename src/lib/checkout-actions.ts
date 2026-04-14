@@ -27,7 +27,7 @@ async function requireAdmin() {
  * Uses Stripe Connect with destination charge and platform application fee.
  */
 export const createCheckoutSessionFn = createServerFn({ method: "POST" })
-  .inputValidator((d: { courseId: string }) => d)
+  .inputValidator((d: { courseId: string; promotionCodeId?: string }) => d)
   .handler(async ({ data }) => {
     const { user, request } = await requireStudent();
 
@@ -98,7 +98,7 @@ export const createCheckoutSessionFn = createServerFn({ method: "POST" })
       `${request.headers.get("x-forwarded-proto") ?? "http"}://${request.headers.get("host")}`;
 
     const stripe = getStripe();
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
       mode: "payment",
       line_items: [
         {
@@ -126,7 +126,13 @@ export const createCheckoutSessionFn = createServerFn({ method: "POST" })
         courseId: course.id,
         userId: user.id,
       },
-    });
+    };
+
+    if (data.promotionCodeId) {
+      sessionParams.discounts = [{ promotion_code: data.promotionCodeId }];
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     return { url: session.url };
   });
@@ -182,7 +188,9 @@ export const getCheckoutResultFn = createServerFn({ method: "GET" })
  * Subscription gives access to all published courses for the tenant.
  * Uses Stripe Connect with application_fee_percent for recurring billing.
  */
-export const createSubscriptionCheckoutFn = createServerFn({ method: "POST" }).handler(async () => {
+export const createSubscriptionCheckoutFn = createServerFn({ method: "POST" })
+  .inputValidator((d: { promotionCodeId?: string }) => d)
+  .handler(async ({ data }) => {
   const { user, request } = await requireStudent();
 
   // Check if already has an active subscription
@@ -238,7 +246,7 @@ export const createSubscriptionCheckoutFn = createServerFn({ method: "POST" }).h
     `${request.headers.get("x-forwarded-proto") ?? "http"}://${request.headers.get("host")}`;
 
   const stripe = getStripe();
-  const session = await stripe.checkout.sessions.create({
+  const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
     mode: "subscription",
     line_items: [
       {
@@ -271,7 +279,13 @@ export const createSubscriptionCheckoutFn = createServerFn({ method: "POST" }).h
       userId: user.id,
       type: "subscription",
     },
-  });
+  };
+
+  if (data?.promotionCodeId) {
+    sessionParams.discounts = [{ promotion_code: data.promotionCodeId }];
+  }
+
+  const session = await stripe.checkout.sessions.create(sessionParams);
 
   return { url: session.url };
 });

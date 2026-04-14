@@ -32,6 +32,7 @@ import { Route as AdminWebhooksRouteImport } from './routes/admin/webhooks'
 import { Route as AdminTestimonialsRouteImport } from './routes/admin/testimonials'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminOnboardingRouteImport } from './routes/admin/onboarding'
+import { Route as AdminCouponsRouteImport } from './routes/admin/coupons'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin/analytics'
 import { Route as PlatformAdminTenantsIndexRouteImport } from './routes/platform-admin/tenants/index'
 import { Route as PlatformAdminPlansIndexRouteImport } from './routes/platform-admin/plans/index'
@@ -162,6 +163,11 @@ const AdminOnboardingRoute = AdminOnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminCouponsRoute = AdminCouponsRouteImport.update({
+  id: '/coupons',
+  path: '/coupons',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
   id: '/analytics',
   path: '/analytics',
@@ -244,6 +250,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/verify-email': typeof VerifyEmailRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/coupons': typeof AdminCouponsRoute
   '/admin/onboarding': typeof AdminOnboardingRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/testimonials': typeof AdminTestimonialsRoute
@@ -280,6 +287,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/verify-email': typeof VerifyEmailRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/coupons': typeof AdminCouponsRoute
   '/admin/onboarding': typeof AdminOnboardingRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/testimonials': typeof AdminTestimonialsRoute
@@ -319,6 +327,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/verify-email': typeof VerifyEmailRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/coupons': typeof AdminCouponsRoute
   '/admin/onboarding': typeof AdminOnboardingRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/testimonials': typeof AdminTestimonialsRoute
@@ -359,6 +368,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/verify-email'
     | '/admin/analytics'
+    | '/admin/coupons'
     | '/admin/onboarding'
     | '/admin/settings'
     | '/admin/testimonials'
@@ -395,6 +405,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/verify-email'
     | '/admin/analytics'
+    | '/admin/coupons'
     | '/admin/onboarding'
     | '/admin/settings'
     | '/admin/testimonials'
@@ -433,6 +444,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/verify-email'
     | '/admin/analytics'
+    | '/admin/coupons'
     | '/admin/onboarding'
     | '/admin/settings'
     | '/admin/testimonials'
@@ -646,6 +658,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminOnboardingRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/coupons': {
+      id: '/admin/coupons'
+      path: '/coupons'
+      fullPath: '/admin/coupons'
+      preLoaderRoute: typeof AdminCouponsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/analytics': {
       id: '/admin/analytics'
       path: '/analytics'
@@ -742,6 +761,7 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteRouteChildren {
   AdminAnalyticsRoute: typeof AdminAnalyticsRoute
+  AdminCouponsRoute: typeof AdminCouponsRoute
   AdminOnboardingRoute: typeof AdminOnboardingRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminTestimonialsRoute: typeof AdminTestimonialsRoute
@@ -754,6 +774,7 @@ interface AdminRouteRouteChildren {
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminAnalyticsRoute: AdminAnalyticsRoute,
+  AdminCouponsRoute: AdminCouponsRoute,
   AdminOnboardingRoute: AdminOnboardingRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminTestimonialsRoute: AdminTestimonialsRoute,

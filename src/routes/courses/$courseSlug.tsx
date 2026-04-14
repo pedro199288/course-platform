@@ -9,6 +9,7 @@ import {
   createSubscriptionCheckoutFn,
   getSubscriptionStatusFn,
 } from "#/lib/checkout-actions.ts";
+import { validatePromotionCodeFn } from "#/lib/coupon-actions.ts";
 import { checkEnrollmentFn } from "#/lib/lesson-actions.ts";
 import { getCourseAnnouncementsFn } from "#/lib/announcement-actions.ts";
 import { getCourseTestimonialsFn } from "#/lib/testimonial-actions.ts";
@@ -270,13 +271,12 @@ function CourseDetailPage() {
                 Start learning
               </Link>
             ) : session ? (
-              <div className="space-y-2">
-                {(course.pricingModel === "one_time" || course.pricingModel === "both") && (
-                  <BuyButton courseId={course.id} hasPrice={!!course.price} />
-                )}
-                {(course.pricingModel === "subscription" || course.pricingModel === "both") &&
-                  tenant.subscriptionPrice && <SubscribeButton price={tenant.subscriptionPrice} />}
-              </div>
+              <CheckoutSection
+                courseId={course.id}
+                pricingModel={course.pricingModel}
+                hasPrice={!!course.price}
+                subscriptionPrice={tenant.subscriptionPrice}
+              />
             ) : (
               <Link
                 to="/login"
@@ -303,18 +303,82 @@ function CourseDetailPage() {
   );
 }
 
-function BuyButton({ courseId, hasPrice }: { courseId: string; hasPrice: boolean }) {
+function CheckoutSection({
+  courseId,
+  pricingModel,
+  hasPrice,
+  subscriptionPrice,
+}: {
+  courseId: string;
+  pricingModel: string;
+  hasPrice: boolean;
+  subscriptionPrice: string | null;
+}) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [couponCode, setCouponCode] = useState("");
+  const [couponOpen, setCouponOpen] = useState(false);
+  const [validating, setValidating] = useState(false);
+  const [appliedPromo, setAppliedPromo] = useState<{
+    id: string;
+    discount: string;
+  } | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
 
-  async function handleClick() {
+  async function handleApplyCoupon() {
+    if (!couponCode.trim()) return;
+    setValidating(true);
+    setCouponError(null);
+    try {
+      const result = await validatePromotionCodeFn({
+        data: { code: couponCode.trim(), courseId },
+      });
+      if (result.valid) {
+        setAppliedPromo({ id: result.promotionCodeId, discount: result.discount });
+        setCouponError(null);
+      } else {
+        setAppliedPromo(null);
+        setCouponError(result.error);
+      }
+    } catch (e: any) {
+      setCouponError(e.message ?? "Failed to validate coupon");
+      setAppliedPromo(null);
+    } finally {
+      setValidating(false);
+    }
+  }
+
+  function handleRemoveCoupon() {
+    setAppliedPromo(null);
+    setCouponCode("");
+    setCouponError(null);
+  }
+
+  async function handleBuy() {
     setLoading(true);
     setError(null);
     try {
-      const result = await createCheckoutSessionFn({ data: { courseId } });
-      if (result.url) {
-        window.location.href = result.url;
-      }
+      const result = await createCheckoutSessionFn({
+        data: {
+          courseId,
+          promotionCodeId: appliedPromo?.id,
+        },
+      });
+      if (result.url) window.location.href = result.url;
+    } catch (e: any) {
+      setError(e.message ?? "Something went wrong");
+      setLoading(false);
+    }
+  }
+
+  async function handleSubscribe() {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await createSubscriptionCheckoutFn({
+        data: { promotionCodeId: appliedPromo?.id },
+      });
+      if (result.url) window.location.href = result.url;
     } catch (e: any) {
       setError(e.message ?? "Something went wrong");
       setLoading(false);
@@ -322,49 +386,90 @@ function BuyButton({ courseId, hasPrice }: { courseId: string; hasPrice: boolean
   }
 
   return (
-    <div>
-      <button
-        type="button"
-        onClick={handleClick}
-        disabled={loading}
-        className="w-full rounded-md bg-neutral-900 px-4 py-3 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
-      >
-        {loading ? "Redirecting..." : hasPrice ? "Buy now" : "Enroll for free"}
-      </button>
-      {error && <p className="mt-2 text-xs text-red-600 dark:text-red-400">{error}</p>}
-    </div>
-  );
-}
+    <div className="space-y-3">
+      {/* Coupon input */}
+      {hasPrice && (
+        <div>
+          {!couponOpen && !appliedPromo ? (
+            <button
+              type="button"
+              onClick={() => setCouponOpen(true)}
+              className="text-sm text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
+            >
+              Have a coupon?
+            </button>
+          ) : appliedPromo ? (
+            <div className="flex items-center justify-between rounded-md border border-green-200 bg-green-50 px-3 py-2 dark:border-green-800 dark:bg-green-900/20">
+              <div className="text-sm">
+                <span className="font-mono font-medium">{couponCode}</span>
+                <span className="ml-2 text-green-700 dark:text-green-400">
+                  {appliedPromo.discount}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleRemoveCoupon}
+                className="text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
+              >
+                Remove
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                  placeholder="Enter code"
+                  className="flex-1 rounded-md border border-neutral-300 bg-white px-3 py-2 font-mono text-sm uppercase outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 dark:border-neutral-700 dark:bg-neutral-900"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void handleApplyCoupon();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => void handleApplyCoupon()}
+                  disabled={validating || !couponCode.trim()}
+                  className="rounded-md border border-neutral-300 px-3 py-2 text-sm font-medium hover:bg-neutral-50 disabled:opacity-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                >
+                  {validating ? "..." : "Apply"}
+                </button>
+              </div>
+              {couponError && (
+                <p className="text-xs text-red-600 dark:text-red-400">{couponError}</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
-function SubscribeButton({ price }: { price: string }) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+      {/* Purchase buttons */}
+      {(pricingModel === "one_time" || pricingModel === "both") && (
+        <button
+          type="button"
+          onClick={() => void handleBuy()}
+          disabled={loading}
+          className="w-full rounded-md bg-neutral-900 px-4 py-3 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
+        >
+          {loading ? "Redirecting..." : hasPrice ? "Buy now" : "Enroll for free"}
+        </button>
+      )}
+      {(pricingModel === "subscription" || pricingModel === "both") && subscriptionPrice && (
+        <button
+          type="button"
+          onClick={() => void handleSubscribe()}
+          disabled={loading}
+          className="w-full rounded-md border border-neutral-300 px-4 py-3 text-sm font-medium text-neutral-900 hover:bg-neutral-50 disabled:opacity-50 dark:border-neutral-700 dark:text-neutral-100 dark:hover:bg-neutral-800"
+        >
+          {loading ? "Redirecting..." : `Subscribe — $${subscriptionPrice}/mo`}
+        </button>
+      )}
 
-  async function handleClick() {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await createSubscriptionCheckoutFn();
-      if (result.url) {
-        window.location.href = result.url;
-      }
-    } catch (e: any) {
-      setError(e.message ?? "Something went wrong");
-      setLoading(false);
-    }
-  }
-
-  return (
-    <div>
-      <button
-        type="button"
-        onClick={handleClick}
-        disabled={loading}
-        className="w-full rounded-md border border-neutral-300 px-4 py-3 text-sm font-medium text-neutral-900 hover:bg-neutral-50 disabled:opacity-50 dark:border-neutral-700 dark:text-neutral-100 dark:hover:bg-neutral-800"
-      >
-        {loading ? "Redirecting..." : `Subscribe — $${price}/mo`}
-      </button>
-      {error && <p className="mt-2 text-xs text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>}
     </div>
   );
 }
