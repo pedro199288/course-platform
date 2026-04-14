@@ -9,6 +9,7 @@ import {
 } from "#/lib/checkout-actions.ts";
 import { checkEnrollmentFn } from "#/lib/lesson-actions.ts";
 import { getCourseAnnouncementsFn } from "#/lib/announcement-actions.ts";
+import { getCourseTestimonialsFn } from "#/lib/testimonial-actions.ts";
 
 export const Route = createFileRoute("/courses/$courseSlug")({
   loader: async ({ params }) => {
@@ -29,23 +30,35 @@ export const Route = createFileRoute("/courses/$courseSlug")({
       (subscriptionStatus.hasSubscription &&
         "status" in subscriptionStatus &&
         subscriptionStatus.status === "active");
-    const courseAnnouncements = hasAccess
-      ? await getCourseAnnouncementsFn({ data: { courseSlug: params.courseSlug } }).catch(() => [])
-      : [];
+    const [courseAnnouncements, courseTestimonials] = await Promise.all([
+      hasAccess
+        ? getCourseAnnouncementsFn({ data: { courseSlug: params.courseSlug } }).catch(() => [])
+        : Promise.resolve([]),
+      getCourseTestimonialsFn({ data: { courseId: data.course.id } }).catch(() => []),
+    ]);
     return {
       ...data,
       session,
       enrolled: enrollment.enrolled,
       subscriptionStatus,
       courseAnnouncements,
+      courseTestimonials,
     };
   },
   component: CourseDetailPage,
 });
 
 function CourseDetailPage() {
-  const { tenant, course, curriculum, session, enrolled, subscriptionStatus, courseAnnouncements } =
-    Route.useLoaderData();
+  const {
+    tenant,
+    course,
+    curriculum,
+    session,
+    enrolled,
+    subscriptionStatus,
+    courseAnnouncements,
+    courseTestimonials,
+  } = Route.useLoaderData();
   const hasActiveSubscription =
     subscriptionStatus.hasSubscription &&
     "status" in subscriptionStatus &&
@@ -162,6 +175,34 @@ function CourseDetailPage() {
                     </div>
                     <p className="mt-2 text-sm text-neutral-600 whitespace-pre-wrap dark:text-neutral-400">
                       {a.body}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Testimonials */}
+          {courseTestimonials.length > 0 && (
+            <div className="mt-8">
+              <h2 className="text-xl font-semibold">What students say</h2>
+              <div className="mt-4 space-y-4">
+                {courseTestimonials.map((t) => (
+                  <div
+                    key={t.id}
+                    className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{t.authorName}</span>
+                      {t.rating != null && (
+                        <span className="text-sm text-amber-500">
+                          {"★".repeat(t.rating)}
+                          {"☆".repeat(5 - t.rating)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-2 text-sm leading-relaxed text-neutral-600 whitespace-pre-wrap dark:text-neutral-400">
+                      {t.body}
                     </p>
                   </div>
                 ))}

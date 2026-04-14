@@ -1,13 +1,20 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { listPublishedCoursesFn } from "#/lib/storefront-actions.ts";
+import { getStorefrontTestimonialsFn } from "#/lib/testimonial-actions.ts";
 
 export const Route = createFileRoute("/courses/")({
-  loader: () => listPublishedCoursesFn(),
+  loader: async () => {
+    const [data, testimonials] = await Promise.all([
+      listPublishedCoursesFn(),
+      getStorefrontTestimonialsFn().catch(() => []),
+    ]);
+    return { ...data, testimonials };
+  },
   component: StorefrontPage,
 });
 
 function StorefrontPage() {
-  const { tenant, courses } = Route.useLoaderData();
+  const { tenant, courses, testimonials } = Route.useLoaderData();
 
   return (
     <main className="page-wrap px-4 py-10">
@@ -76,6 +83,36 @@ function StorefrontPage() {
               </div>
             </Link>
           ))}
+        </div>
+      )}
+
+      {/* Testimonials */}
+      {testimonials.length > 0 && (
+        <div className="mt-16">
+          <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">
+            What our students say
+          </h2>
+          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {testimonials.map((t) => (
+              <div
+                key={t.id}
+                className="rounded-xl border border-neutral-200 bg-white p-6 dark:border-neutral-800 dark:bg-neutral-900"
+              >
+                {t.rating != null && (
+                  <div className="mb-3 text-amber-500">
+                    {"★".repeat(t.rating)}
+                    {"☆".repeat(5 - t.rating)}
+                  </div>
+                )}
+                <p className="text-sm leading-relaxed text-neutral-600 whitespace-pre-wrap dark:text-neutral-400">
+                  {t.body}
+                </p>
+                <p className="mt-4 text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                  {t.authorName}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </main>

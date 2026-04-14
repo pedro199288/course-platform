@@ -27,6 +27,7 @@ import { Route as CoursesCourseSlugRouteImport } from './routes/courses/$courseS
 import { Route as CheckoutSuccessRouteImport } from './routes/checkout/success'
 import { Route as CheckoutCancelRouteImport } from './routes/checkout/cancel'
 import { Route as CertificatesCertificateIdRouteImport } from './routes/certificates/$certificateId'
+import { Route as AdminTestimonialsRouteImport } from './routes/admin/testimonials'
 import { Route as AdminOnboardingRouteImport } from './routes/admin/onboarding'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin/analytics'
 import { Route as PlatformAdminTenantsIndexRouteImport } from './routes/platform-admin/tenants/index'
@@ -133,6 +134,11 @@ const CertificatesCertificateIdRoute =
     path: '/certificates/$certificateId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AdminTestimonialsRoute = AdminTestimonialsRouteImport.update({
+  id: '/testimonials',
+  path: '/testimonials',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminOnboardingRoute = AdminOnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
@@ -221,6 +227,7 @@ export interface FileRoutesByFullPath {
   '/verify-email': typeof VerifyEmailRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/onboarding': typeof AdminOnboardingRoute
+  '/admin/testimonials': typeof AdminTestimonialsRoute
   '/certificates/$certificateId': typeof CertificatesCertificateIdRoute
   '/checkout/cancel': typeof CheckoutCancelRoute
   '/checkout/success': typeof CheckoutSuccessRoute
@@ -253,6 +260,7 @@ export interface FileRoutesByTo {
   '/verify-email': typeof VerifyEmailRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/onboarding': typeof AdminOnboardingRoute
+  '/admin/testimonials': typeof AdminTestimonialsRoute
   '/certificates/$certificateId': typeof CertificatesCertificateIdRoute
   '/checkout/cancel': typeof CheckoutCancelRoute
   '/checkout/success': typeof CheckoutSuccessRoute
@@ -288,6 +296,7 @@ export interface FileRoutesById {
   '/verify-email': typeof VerifyEmailRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/onboarding': typeof AdminOnboardingRoute
+  '/admin/testimonials': typeof AdminTestimonialsRoute
   '/certificates/$certificateId': typeof CertificatesCertificateIdRoute
   '/checkout/cancel': typeof CheckoutCancelRoute
   '/checkout/success': typeof CheckoutSuccessRoute
@@ -324,6 +333,7 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/admin/analytics'
     | '/admin/onboarding'
+    | '/admin/testimonials'
     | '/certificates/$certificateId'
     | '/checkout/cancel'
     | '/checkout/success'
@@ -356,6 +366,7 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/admin/analytics'
     | '/admin/onboarding'
+    | '/admin/testimonials'
     | '/certificates/$certificateId'
     | '/checkout/cancel'
     | '/checkout/success'
@@ -390,6 +401,7 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/admin/analytics'
     | '/admin/onboarding'
+    | '/admin/testimonials'
     | '/certificates/$certificateId'
     | '/checkout/cancel'
     | '/checkout/success'
@@ -562,6 +574,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CertificatesCertificateIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/testimonials': {
+      id: '/admin/testimonials'
+      path: '/testimonials'
+      fullPath: '/admin/testimonials'
+      preLoaderRoute: typeof AdminTestimonialsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/onboarding': {
       id: '/admin/onboarding'
       path: '/onboarding'
@@ -666,6 +685,7 @@ declare module '@tanstack/react-router' {
 interface AdminRouteRouteChildren {
   AdminAnalyticsRoute: typeof AdminAnalyticsRoute
   AdminOnboardingRoute: typeof AdminOnboardingRoute
+  AdminTestimonialsRoute: typeof AdminTestimonialsRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminCoursesCourseIdRoute: typeof AdminCoursesCourseIdRoute
   AdminCoursesNewRoute: typeof AdminCoursesNewRoute
@@ -675,6 +695,7 @@ interface AdminRouteRouteChildren {
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminAnalyticsRoute: AdminAnalyticsRoute,
   AdminOnboardingRoute: AdminOnboardingRoute,
+  AdminTestimonialsRoute: AdminTestimonialsRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminCoursesCourseIdRoute: AdminCoursesCourseIdRoute,
   AdminCoursesNewRoute: AdminCoursesNewRoute,

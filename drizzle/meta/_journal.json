@@ -78,6 +78,13 @@
       "when": 1776355200000,
       "tag": "0011_bulk_emails",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1776441600000,
+      "tag": "0012_testimonials",
+      "breakpoints": true
     }
   ]
 }
