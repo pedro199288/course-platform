@@ -8,3 +8,4 @@ export * from "./certificates.ts";
 export * from "./audit-logs.ts";
 export * from "./quiz-results.ts";
 export * from "./announcements.ts";
+export * from "./bulk-emails.ts";

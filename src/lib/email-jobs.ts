@@ -127,6 +127,34 @@ export async function enqueueCertificateDelivery(opts: {
 }
 
 /**
+ * Enqueue a bulk email to a course student.
+ */
+export async function enqueueBulkEmail(opts: {
+  to: string;
+  studentName: string;
+  courseName: string;
+  schoolName: string;
+  subject: string;
+  body: string;
+  from?: string;
+}): Promise<string | null> {
+  const { renderBulkEmail } = await import("./email-templates/bulk-email.tsx");
+  const html = await renderBulkEmail({
+    studentName: opts.studentName,
+    courseName: opts.courseName,
+    schoolName: opts.schoolName,
+    subject: opts.subject,
+    body: opts.body,
+  });
+  return enqueueEmail({
+    to: opts.to,
+    subject: `${opts.subject} — ${opts.courseName}`,
+    html,
+    from: opts.from,
+  });
+}
+
+/**
  * Enqueue a course announcement email.
  */
 export async function enqueueAnnouncementEmail(opts: {

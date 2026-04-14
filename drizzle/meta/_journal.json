@@ -71,6 +71,13 @@
       "when": 1776105251195,
       "tag": "0010_announcements",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1776355200000,
+      "tag": "0011_bulk_emails",
+      "breakpoints": true
     }
   ]
 }
