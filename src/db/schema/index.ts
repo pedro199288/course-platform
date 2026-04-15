@@ -12,3 +12,4 @@ export * from "./announcements.ts";
 export * from "./bulk-emails.ts";
 export * from "./testimonials.ts";
 export * from "./webhooks.ts";
+export * from "./invitations.ts";

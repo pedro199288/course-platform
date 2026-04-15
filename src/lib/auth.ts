@@ -9,6 +9,7 @@ import { tenantIdStore } from "./tenant-context.ts";
 import { sendEmail } from "./email.ts";
 import { renderVerifyEmail, renderResetPassword } from "./email-templates/index.ts";
 import { BASE_URL, PORT } from "./config.ts";
+import { claimPendingInvitations } from "./invitation-actions.ts";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -29,6 +30,15 @@ export const auth = betterAuth({
   }),
   databaseHooks: {
     user: {
+      create: {
+        after: async (user) => {
+          if (!user) return;
+          const u = user as { id: string; email?: string };
+          if (u.email) {
+            await claimPendingInvitations(u.email, u.id).catch(() => {});
+          }
+        },
+      },
       update: {
         after: async (user) => {
           if (!user) return;

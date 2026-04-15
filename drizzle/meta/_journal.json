@@ -99,6 +99,13 @@
       "when": 1776614400000,
       "tag": "0017_user_tenants",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1776700800000,
+      "tag": "0018_invitations",
+      "breakpoints": true
     }
   ]
 }

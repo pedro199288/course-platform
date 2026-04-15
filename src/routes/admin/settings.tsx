@@ -9,16 +9,28 @@ import {
   saveBrandingImageFn,
   updateCustomDomainFn,
 } from "#/lib/tenant-settings-actions.ts";
+import {
+  listTeamMembersFn,
+  inviteTenantAdminFn,
+  revokeInvitationFn,
+  removeTeamMemberFn,
+} from "#/lib/invitation-actions.ts";
 import { RichTextEditor } from "#/components/RichTextEditor.tsx";
 import { isRichTextDoc, type RichTextDoc } from "#/lib/rich-text/types.ts";
 
 export const Route = createFileRoute("/admin/settings")({
-  loader: () => getTenantSettingsFn(),
+  loader: async () => {
+    const [settings, team] = await Promise.all([
+      getTenantSettingsFn(),
+      listTeamMembersFn().catch(() => null),
+    ]);
+    return { settings, team };
+  },
   component: SettingsPage,
 });
 
 function SettingsPage() {
-  const settings = Route.useLoaderData();
+  const { settings, team } = Route.useLoaderData();
 
   return (
     <div className="space-y-8">
@@ -32,6 +44,8 @@ function SettingsPage() {
         <h1 className="mt-2 text-2xl font-bold tracking-tight">School Settings</h1>
       </div>
 
+      {team && <TeamSection members={team.members} pendingInvitations={team.pendingInvitations} />}
+
       <CustomDomainSection customDomain={settings.customDomain} />
 
       <BrandingSection
@@ -42,15 +56,10 @@ function SettingsPage() {
         brandName={settings.brandName}
       />
 
-      <TrackingSection
-        gaTrackingId={settings.gaTrackingId}
-        fbPixelId={settings.fbPixelId}
-      />
+      <TrackingSection gaTrackingId={settings.gaTrackingId} fbPixelId={settings.fbPixelId} />
 
       <AboutSection
-        aboutInstructor={
-          isRichTextDoc(settings.aboutInstructor) ? settings.aboutInstructor : null
-        }
+        aboutInstructor={isRichTextDoc(settings.aboutInstructor) ? settings.aboutInstructor : null}
       />
     </div>
   );
@@ -117,7 +126,9 @@ function CustomDomainSection({ customDomain }: { customDomain: string | null }) 
               <span className="text-neutral-500">Value</span>
               <span>CNAME</span>
               <span>{domain || "cursos"}</span>
-              <span>{typeof window !== "undefined" ? window.location.hostname : "platform.com"}</span>
+              <span>
+                {typeof window !== "undefined" ? window.location.hostname : "platform.com"}
+              </span>
             </div>
           </div>
           <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
@@ -134,12 +145,8 @@ function CustomDomainSection({ customDomain }: { customDomain: string | null }) 
           >
             {saving ? "Saving..." : "Save Domain"}
           </button>
-          {saved && (
-            <span className="text-sm text-green-600 dark:text-green-400">Saved</span>
-          )}
-          {error && (
-            <span className="text-sm text-red-600 dark:text-red-400">{error}</span>
-          )}
+          {saved && <span className="text-sm text-green-600 dark:text-green-400">Saved</span>}
+          {error && <span className="text-sm text-red-600 dark:text-red-400">{error}</span>}
         </div>
       </form>
     </div>
@@ -230,23 +237,15 @@ function TrackingSection({
           >
             {saving ? "Saving..." : "Save Tracking IDs"}
           </button>
-          {saved && (
-            <span className="text-sm text-green-600 dark:text-green-400">Saved</span>
-          )}
-          {error && (
-            <span className="text-sm text-red-600 dark:text-red-400">{error}</span>
-          )}
+          {saved && <span className="text-sm text-green-600 dark:text-green-400">Saved</span>}
+          {error && <span className="text-sm text-red-600 dark:text-red-400">{error}</span>}
         </div>
       </form>
     </div>
   );
 }
 
-function AboutSection({
-  aboutInstructor,
-}: {
-  aboutInstructor: RichTextDoc | null;
-}) {
+function AboutSection({ aboutInstructor }: { aboutInstructor: RichTextDoc | null }) {
   const router = useRouter();
   const [content, setContent] = useState<RichTextDoc | null>(aboutInstructor);
   const [saving, setSaving] = useState(false);
@@ -292,9 +291,7 @@ function AboutSection({
         >
           {saving ? "Saving..." : "Save About Section"}
         </button>
-        {saved && (
-          <span className="text-sm text-green-600 dark:text-green-400">Saved</span>
-        )}
+        {saved && <span className="text-sm text-green-600 dark:text-green-400">Saved</span>}
       </div>
     </div>
   );
@@ -408,9 +405,7 @@ function BrandingSection({
                   className="w-28 rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 dark:border-neutral-700 dark:bg-neutral-900"
                 />
               </div>
-              <p className="text-xs text-neutral-400 dark:text-neutral-500">
-                Buttons and CTAs
-              </p>
+              <p className="text-xs text-neutral-400 dark:text-neutral-500">Buttons and CTAs</p>
             </div>
 
             <div className="space-y-1.5">
@@ -433,9 +428,7 @@ function BrandingSection({
                   className="w-28 rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 dark:border-neutral-700 dark:bg-neutral-900"
                 />
               </div>
-              <p className="text-xs text-neutral-400 dark:text-neutral-500">
-                Links and highlights
-              </p>
+              <p className="text-xs text-neutral-400 dark:text-neutral-500">Links and highlights</p>
             </div>
           </div>
 
@@ -467,12 +460,8 @@ function BrandingSection({
             >
               {saving ? "Saving..." : "Save Branding"}
             </button>
-            {saved && (
-              <span className="text-sm text-green-600 dark:text-green-400">Saved</span>
-            )}
-            {error && (
-              <span className="text-sm text-red-600 dark:text-red-400">{error}</span>
-            )}
+            {saved && <span className="text-sm text-green-600 dark:text-green-400">Saved</span>}
+            {error && <span className="text-sm text-red-600 dark:text-red-400">{error}</span>}
           </div>
         </form>
       </div>
@@ -554,9 +543,7 @@ function ImageUploadField({
               src={preview}
               alt={`${label} preview`}
               className={
-                field === "logo"
-                  ? "h-10 max-w-[200px] object-contain"
-                  : "h-8 w-8 object-contain"
+                field === "logo" ? "h-10 max-w-[200px] object-contain" : "h-8 w-8 object-contain"
               }
             />
             <button
@@ -595,6 +582,184 @@ function ImageUploadField({
       </div>
       <p className="text-xs text-neutral-400 dark:text-neutral-500">{hint}</p>
       {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+    </div>
+  );
+}
+
+function TeamSection({
+  members: initialMembers,
+  pendingInvitations: initialInvitations,
+}: {
+  members: Array<{
+    userId: string;
+    role: string;
+    createdAt: Date;
+    name: string | null;
+    email: string;
+  }>;
+  pendingInvitations: Array<{
+    id: string;
+    email: string;
+    role: string;
+    createdAt: Date;
+    expiresAt: Date;
+  }>;
+}) {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [inviting, setInviting] = useState(false);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  async function handleInvite(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setInviting(true);
+    setMessage(null);
+    try {
+      const result = await inviteTenantAdminFn({ data: { email: email.trim() } });
+      setEmail("");
+      setMessage({
+        type: "success",
+        text:
+          result.status === "membership_created"
+            ? "User added as admin"
+            : "Invitation sent",
+      });
+      void router.invalidate();
+    } catch (err: any) {
+      setMessage({ type: "error", text: err.message ?? "Failed to invite" });
+    } finally {
+      setInviting(false);
+    }
+  }
+
+  async function handleRevoke(invitationId: string) {
+    try {
+      await revokeInvitationFn({ data: { invitationId } });
+      void router.invalidate();
+    } catch (err: any) {
+      setMessage({ type: "error", text: err.message ?? "Failed to revoke" });
+    }
+  }
+
+  async function handleRemove(memberUserId: string) {
+    try {
+      await removeTeamMemberFn({ data: { memberUserId } });
+      void router.invalidate();
+    } catch (err: any) {
+      setMessage({ type: "error", text: err.message ?? "Failed to remove" });
+    }
+  }
+
+  const roleLabel = (role: string) => {
+    switch (role) {
+      case "tenant_owner":
+        return "Owner";
+      case "tenant_admin":
+        return "Admin";
+      case "student":
+        return "Student";
+      default:
+        return role;
+    }
+  };
+
+  return (
+    <div>
+      <h2 className="text-lg font-semibold">Team Members</h2>
+      <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+        Manage who has admin access to your school.
+      </p>
+
+      {/* Invite form */}
+      <form onSubmit={(e) => void handleInvite(e)} className="mt-4 flex items-end gap-3">
+        <div className="flex-1 space-y-1.5">
+          <label htmlFor="inviteEmail" className="block text-sm font-medium">
+            Invite Admin
+          </label>
+          <input
+            id="inviteEmail"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="colleague@example.com"
+            className="w-full max-w-sm rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 dark:border-neutral-700 dark:bg-neutral-900"
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={inviting || !email.trim()}
+          className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
+        >
+          {inviting ? "Inviting..." : "Send Invite"}
+        </button>
+      </form>
+      {message && (
+        <p
+          className={`mt-2 text-sm ${message.type === "success" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
+        >
+          {message.text}
+        </p>
+      )}
+
+      {/* Current members */}
+      <div className="mt-6">
+        <h3 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+          Current Members
+        </h3>
+        <div className="mt-2 divide-y divide-neutral-200 rounded-md border border-neutral-200 dark:divide-neutral-700 dark:border-neutral-700">
+          {initialMembers.map((member) => (
+            <div key={member.userId} className="flex items-center justify-between px-4 py-3">
+              <div>
+                <span className="text-sm font-medium">{member.name || member.email}</span>
+                {member.name && (
+                  <span className="ml-2 text-xs text-neutral-500">{member.email}</span>
+                )}
+                <span className="ml-2 inline-block rounded bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
+                  {roleLabel(member.role)}
+                </span>
+              </div>
+              {member.role !== "tenant_owner" && (
+                <button
+                  type="button"
+                  onClick={() => void handleRemove(member.userId)}
+                  className="text-xs text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Pending invitations */}
+      {initialInvitations.length > 0 && (
+        <div className="mt-4">
+          <h3 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+            Pending Invitations
+          </h3>
+          <div className="mt-2 divide-y divide-neutral-200 rounded-md border border-neutral-200 dark:divide-neutral-700 dark:border-neutral-700">
+            {initialInvitations.map((inv) => (
+              <div key={inv.id} className="flex items-center justify-between px-4 py-3">
+                <div>
+                  <span className="text-sm">{inv.email}</span>
+                  <span className="ml-2 inline-block rounded bg-yellow-50 px-1.5 py-0.5 text-xs font-medium text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
+                    Pending
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void handleRevoke(inv.id)}
+                  className="text-xs text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                >
+                  Revoke
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
