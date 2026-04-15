@@ -35,7 +35,7 @@ async function requireAuth() {
   const request = getRequest();
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) throw new Error("Unauthorized");
-  return session.user as { id: string; tenantId: string };
+  return session.user as { id: string };
 }
 
 /**

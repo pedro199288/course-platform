@@ -85,7 +85,7 @@ export const getLessonFn = createServerFn({ method: "GET" })
       throw new Error("Unauthorized");
     }
 
-    const user = session.user as { id: string; tenantId: string };
+    const user = session.user as { id: string };
 
     // Load the course by slug (must be published and belong to tenant)
     const [course] = await db

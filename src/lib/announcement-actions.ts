@@ -7,6 +7,7 @@ import { users } from "#/db/schema/auth.ts";
 import { auth } from "./auth.ts";
 import { enqueueAnnouncementEmail } from "./email-jobs.ts";
 import { extractSubdomain } from "#/middleware/tenant.ts";
+import { tenantIdStore } from "./tenant-context.ts";
 
 // ── Admin helpers ───────────────────────────────────────────────────
 
@@ -15,11 +16,12 @@ async function requireAdmin() {
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) throw new Error("Unauthorized");
 
-  const user = session.user as { id: string; role: string; tenantId: string };
+  const user = session.user as { id: string; role: string };
   if (!["platform_admin", "tenant_owner", "tenant_admin"].includes(user.role)) {
     throw new Error("Forbidden");
   }
-  return user;
+  const tenantId = tenantIdStore.getStore()!;
+  return { ...user, tenantId };
 }
 
 // ── Student helpers ─────────────────────────────────────────────────
@@ -42,7 +44,9 @@ async function requireAuth() {
   const request = getRequest();
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) throw new Error("Unauthorized");
-  return session.user as { id: string; tenantId: string };
+  const user = session.user as { id: string };
+  const tenantId = tenantIdStore.getStore()!;
+  return { ...user, tenantId };
 }
 
 // ── Admin: CRUD ─────────────────────────────────────────────────────

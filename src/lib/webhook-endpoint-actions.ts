@@ -6,6 +6,7 @@ import { db } from "#/db/index.ts";
 import { webhookEndpoints, webhookDeliveries } from "#/db/schema/index.ts";
 import { auth } from "./auth.ts";
 import { WEBHOOK_EVENTS, type WebhookEvent } from "./webhook-events.ts";
+import { tenantIdStore } from "./tenant-context.ts";
 
 export { WEBHOOK_EVENTS, type WebhookEvent };
 
@@ -16,11 +17,12 @@ async function requireAdmin() {
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) throw new Error("Unauthorized");
 
-  const user = session.user as { id: string; role: string; tenantId: string };
+  const user = session.user as { id: string; role: string };
   if (!["platform_admin", "tenant_owner", "tenant_admin"].includes(user.role)) {
     throw new Error("Forbidden");
   }
-  return user;
+  const tenantId = tenantIdStore.getStore()!;
+  return { ...user, tenantId };
 }
 
 // ── CRUD ───────────────────────────────────────────────────────────

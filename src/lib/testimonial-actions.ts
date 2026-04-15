@@ -5,6 +5,7 @@ import { db } from "#/db/index.ts";
 import { testimonials, tenants } from "#/db/schema/index.ts";
 import { auth } from "./auth.ts";
 import { extractSubdomain } from "#/middleware/tenant.ts";
+import { tenantIdStore } from "./tenant-context.ts";
 
 // ── Admin helpers ───────────────────────────────────────────────────
 
@@ -13,11 +14,12 @@ async function requireAdmin() {
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) throw new Error("Unauthorized");
 
-  const user = session.user as { id: string; role: string; tenantId: string };
+  const user = session.user as { id: string; role: string };
   if (!["platform_admin", "tenant_owner", "tenant_admin"].includes(user.role)) {
     throw new Error("Forbidden");
   }
-  return user;
+  const tenantId = tenantIdStore.getStore()!;
+  return { ...user, tenantId };
 }
 
 // ── Storefront helpers ──────────────────────────────────────────────
@@ -49,12 +51,7 @@ export const listTestimonialsFn = createServerFn({ method: "GET" }).handler(asyn
 
 export const createTestimonialFn = createServerFn({ method: "POST" })
   .inputValidator(
-    (d: {
-      courseId: string | null;
-      authorName: string;
-      body: string;
-      rating: number | null;
-    }) => d,
+    (d: { courseId: string | null; authorName: string; body: string; rating: number | null }) => d,
   )
   .handler(async ({ data }) => {
     const user = await requireAdmin();

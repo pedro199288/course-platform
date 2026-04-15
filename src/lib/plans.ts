@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { and, count, eq } from "drizzle-orm";
 import { db } from "#/db/index.ts";
-import { courses, plans, tenants, users } from "#/db/schema/index.ts";
+import { courses, plans, tenants, userTenants } from "#/db/schema/index.ts";
 import { auth } from "./auth.ts";
 
 // ── Plan shape helpers ───────────────────────────────────────────────
@@ -250,8 +250,8 @@ export async function assertCanAddStudent(tenantId: string): Promise<void> {
 
   const [row] = await db
     .select({ total: count() })
-    .from(users)
-    .where(and(eq(users.tenantId, tenantId), eq(users.role, "student")));
+    .from(userTenants)
+    .where(and(eq(userTenants.tenantId, tenantId), eq(userTenants.role, "student")));
   const current = row?.total ?? 0;
 
   if (current >= plan.maxStudents) {

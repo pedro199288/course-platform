@@ -6,10 +6,11 @@ import { courses, modules, lessons } from "#/db/schema/index.ts";
 import { enrollments } from "#/db/schema/enrollments.ts";
 import { auth } from "./auth.ts";
 import { getVideoProvider } from "./video/index.ts";
+import { tenantIdStore } from "./tenant-context.ts";
 
-type SessionUser = { id: string; role: string; tenantId: string };
+type SessionUser = { id: string; role: string };
 
-async function requireInstructor(): Promise<SessionUser> {
+async function requireInstructor(): Promise<SessionUser & { tenantId: string }> {
   const request = getRequest();
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) throw new Error("Unauthorized");
@@ -19,23 +20,25 @@ async function requireInstructor(): Promise<SessionUser> {
     throw new Error("Forbidden");
   }
 
-  return user;
+  const tenantId = tenantIdStore.getStore()!;
+  return { ...user, tenantId };
 }
 
-async function requireEnrolledStudent(courseId: string): Promise<SessionUser> {
+async function requireEnrolledStudent(courseId: string): Promise<SessionUser & { tenantId: string }> {
   const request = getRequest();
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) throw new Error("Unauthorized");
 
   const user = session.user as SessionUser;
+  const tenantId = tenantIdStore.getStore()!;
 
   // Instructors always have access to their own courses
   if (user.role && ["tenant_owner", "tenant_admin"].includes(user.role)) {
     const course = await db.query.courses.findFirst({
-      where: and(eq(courses.id, courseId), eq(courses.tenantId, user.tenantId)),
+      where: and(eq(courses.id, courseId), eq(courses.tenantId, tenantId)),
       columns: { id: true },
     });
-    if (course) return user;
+    if (course) return { ...user, tenantId };
   }
 
   // Students must be enrolled and not revoked
@@ -49,7 +52,7 @@ async function requireEnrolledStudent(courseId: string): Promise<SessionUser> {
 
   if (!enrollment) throw new Error("Forbidden: not enrolled in this course");
 
-  return user;
+  return { ...user, tenantId };
 }
 
 /**

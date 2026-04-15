@@ -92,6 +92,13 @@
       "when": 1776528000000,
       "tag": "0013_tracking_about",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1776614400000,
+      "tag": "0017_user_tenants",
+      "breakpoints": true
     }
   ]
 }

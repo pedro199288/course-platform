@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { count, eq, sql } from "drizzle-orm";
 import { db } from "#/db/index.ts";
-import { courses, payments, tenants, users, plans } from "#/db/schema/index.ts";
+import { courses, payments, tenants, users, userTenants, plans } from "#/db/schema/index.ts";
 import { auth } from "./auth.ts";
 
 async function requirePlatformAdmin() {
@@ -37,15 +37,15 @@ export const listTenantsFn = createServerFn({ method: "GET" }).handler(async () 
     .leftJoin(plans, eq(tenants.planId, plans.id))
     .orderBy(tenants.createdAt);
 
-  // Get student counts per tenant
+  // Get student counts per tenant from user_tenants
   const studentCounts = await db
     .select({
-      tenantId: users.tenantId,
+      tenantId: userTenants.tenantId,
       count: count(),
     })
-    .from(users)
-    .where(eq(users.role, "student"))
-    .groupBy(users.tenantId);
+    .from(userTenants)
+    .where(eq(userTenants.role, "student"))
+    .groupBy(userTenants.tenantId);
 
   const countMap = new Map(studentCounts.map((sc) => [sc.tenantId, sc.count]));
 
@@ -74,8 +74,8 @@ export const getTenantDetailFn = createServerFn({ method: "GET" })
 
     const [studentCountResult] = await db
       .select({ count: count() })
-      .from(users)
-      .where(eq(users.tenantId, tenant.id));
+      .from(userTenants)
+      .where(eq(userTenants.tenantId, tenant.id));
 
     return {
       ...tenant,

@@ -5,16 +5,18 @@ import { db } from "#/db/index.ts";
 import { courses } from "#/db/schema/index.ts";
 import { auth } from "./auth.ts";
 import { getStripe } from "./stripe.ts";
+import { tenantIdStore } from "./tenant-context.ts";
 
 async function requireAdmin() {
   const request = getRequest();
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) throw new Error("Unauthorized");
-  const user = session.user as { id: string; role: string; tenantId: string };
+  const user = session.user as { id: string; role: string };
   if (!["tenant_owner", "tenant_admin"].includes(user.role)) {
     throw new Error("Forbidden");
   }
-  return user;
+  const tenantId = tenantIdStore.getStore()!;
+  return { ...user, tenantId };
 }
 
 /**
@@ -191,7 +193,7 @@ export const validatePromotionCodeFn = createServerFn({ method: "POST" })
     const request = getRequest();
     const session = await auth.api.getSession({ headers: request.headers });
     if (!session) throw new Error("Unauthorized");
-    const user = session.user as { id: string; tenantId: string };
+    const tenantId = tenantIdStore.getStore()!;
 
     const stripe = getStripe();
     const code = data.code.trim().toUpperCase();
@@ -204,7 +206,7 @@ export const validatePromotionCodeFn = createServerFn({ method: "POST" })
     });
 
     // Find one that belongs to this tenant
-    const match = promos.data.find((p) => p.metadata?.tenantId === user.tenantId);
+    const match = promos.data.find((p) => p.metadata?.tenantId === tenantId);
     if (!match) {
       return { valid: false as const, error: "Invalid or expired coupon code" };
     }
@@ -226,8 +228,7 @@ export const validatePromotionCodeFn = createServerFn({ method: "POST" })
     }
 
     // Build discount description from promotion.coupon
-    const coupon =
-      typeof match.promotion.coupon === "object" ? match.promotion.coupon : null;
+    const coupon = typeof match.promotion.coupon === "object" ? match.promotion.coupon : null;
     let discount = "";
     if (coupon?.percent_off) {
       discount = `${coupon.percent_off}% off`;

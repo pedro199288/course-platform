@@ -1,7 +1,7 @@
 import { and, count, eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vite-plus/test";
 import { db } from "#/db/index.ts";
-import { courses, payments, plans, tenants, users } from "#/db/schema/index.ts";
+import { courses, payments, plans, tenants, users, userTenants } from "#/db/schema/index.ts";
 import {
   assertCanAddStudent,
   assertCanCreateCourse,
@@ -80,7 +80,16 @@ describe("plans: configuration, enforcement, and metrics", () => {
     for (const tid of allTenantIds) {
       await db.delete(payments).where(eq(payments.tenantId, tid));
       await db.delete(courses).where(eq(courses.tenantId, tid));
-      await db.delete(users).where(eq(users.tenantId, tid));
+      await db.delete(userTenants).where(eq(userTenants.tenantId, tid));
+    }
+    // Clean up any test users created for student membership tests
+    const testUsers = await db.query.users.findMany({
+      where: sql`email LIKE 'ps%${sql.raw(String(ts))}%@test.com' OR email LIKE 'np-%${sql.raw(String(ts))}%@test.com'`,
+    });
+    for (const u of testUsers) {
+      await db.delete(users).where(eq(users.id, u.id));
+    }
+    for (const tid of allTenantIds) {
       await db.delete(tenants).where(eq(tenants.id, tid));
     }
     await db.delete(plans).where(eq(plans.id, smallPlanId));
@@ -198,73 +207,58 @@ describe("plans: configuration, enforcement, and metrics", () => {
   });
 
   describe("student signup constraint validation", () => {
-    it("allows adding students under the plan cap", async () => {
-      await db.insert(users).values({
-        name: "Student 1",
-        email: `ps1-${ts}@test.com`,
-        tenantId: tenantSmallId,
-        role: "student",
-      });
-      await expect(assertCanAddStudent(tenantSmallId)).resolves.toBeUndefined();
+    // Helper: create a user + student membership in user_tenants
+    async function createStudentMembership(tenantId: string, emailPrefix: string) {
+      const [user] = await db
+        .insert(users)
+        .values({ name: emailPrefix, email: `${emailPrefix}-${ts}@test.com` })
+        .returning();
+      await db.insert(userTenants).values({ userId: user.id, tenantId, role: "student" });
+      return user.id;
+    }
 
-      await db
-        .delete(users)
-        .where(and(eq(users.tenantId, tenantSmallId), eq(users.role, "student")));
+    async function cleanupMemberships(tenantId: string) {
+      const memberships = await db.query.userTenants.findMany({
+        where: eq(userTenants.tenantId, tenantId),
+      });
+      await db.delete(userTenants).where(eq(userTenants.tenantId, tenantId));
+      for (const m of memberships) {
+        await db.delete(users).where(eq(users.id, m.userId)).catch(() => {});
+      }
+    }
+
+    it("allows adding students under the plan cap", async () => {
+      await createStudentMembership(tenantSmallId, "ps1");
+      await expect(assertCanAddStudent(tenantSmallId)).resolves.toBeUndefined();
+      await cleanupMemberships(tenantSmallId);
     });
 
     it("blocks adding students once the plan cap is reached", async () => {
-      await db.insert(users).values({
-        name: "S1",
-        email: `psblock1-${ts}@test.com`,
-        tenantId: tenantSmallId,
-        role: "student",
-      });
-      await db.insert(users).values({
-        name: "S2",
-        email: `psblock2-${ts}@test.com`,
-        tenantId: tenantSmallId,
-        role: "student",
-      });
+      await createStudentMembership(tenantSmallId, "psblock1");
+      await createStudentMembership(tenantSmallId, "psblock2");
 
       await expect(assertCanAddStudent(tenantSmallId)).rejects.toThrow(/Plan limit reached/);
-
-      await db
-        .delete(users)
-        .where(and(eq(users.tenantId, tenantSmallId), eq(users.role, "student")));
+      await cleanupMemberships(tenantSmallId);
     });
 
-    it("only counts users with role=student toward the cap", async () => {
-      await db.insert(users).values({
-        name: "Owner",
-        email: `owner-${ts}@test.com`,
-        tenantId: tenantSmallId,
-        role: "tenant_owner",
-      });
-      await db.insert(users).values({
-        name: "Admin",
-        email: `admin-${ts}@test.com`,
-        tenantId: tenantSmallId,
-        role: "tenant_admin",
-      });
+    it("only counts student role memberships toward the cap", async () => {
+      const [ownerUser] = await db.insert(users).values({ name: "Owner", email: `owner-${ts}@test.com` }).returning();
+      const [adminUser] = await db.insert(users).values({ name: "Admin", email: `admin-${ts}@test.com` }).returning();
+      await db.insert(userTenants).values({ userId: ownerUser.id, tenantId: tenantSmallId, role: "tenant_owner" });
+      await db.insert(userTenants).values({ userId: adminUser.id, tenantId: tenantSmallId, role: "tenant_admin" });
 
-      // Two non-student users shouldn't consume student slots
+      // Two non-student memberships shouldn't consume student slots
       await expect(assertCanAddStudent(tenantSmallId)).resolves.toBeUndefined();
 
-      await db.delete(users).where(eq(users.tenantId, tenantSmallId));
+      await cleanupMemberships(tenantSmallId);
     });
 
     it("treats tenants without a plan as unlimited", async () => {
       for (let i = 0; i < 10; i++) {
-        await db.insert(users).values({
-          name: `Np${i}`,
-          email: `np-${ts}-${i}@test.com`,
-          tenantId: tenantNoPlanId,
-          role: "student",
-        });
+        await createStudentMembership(tenantNoPlanId, `np-${i}`);
       }
       await expect(assertCanAddStudent(tenantNoPlanId)).resolves.toBeUndefined();
-
-      await db.delete(users).where(eq(users.tenantId, tenantNoPlanId));
+      await cleanupMemberships(tenantNoPlanId);
     });
   });
 

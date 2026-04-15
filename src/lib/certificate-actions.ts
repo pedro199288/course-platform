@@ -13,6 +13,7 @@ import {
 } from "#/db/schema/index.ts";
 import { auth } from "./auth.ts";
 import { extractSubdomain } from "#/middleware/tenant.ts";
+
 import { enqueueCertificateDelivery } from "./email-jobs.ts";
 import { PLATFORM_DOMAIN } from "./config.ts";
 
@@ -34,7 +35,7 @@ async function requireAuth() {
   const request = getRequest();
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) throw new Error("Unauthorized");
-  return session.user as { id: string; tenantId: string; name: string; email: string };
+  return session.user as { id: string; name: string; email: string };
 }
 
 /**

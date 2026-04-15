@@ -5,13 +5,15 @@ import { db } from "#/db/index.ts";
 import { courses, tenants, payments, enrollments, subscriptions } from "#/db/schema/index.ts";
 import { auth } from "./auth.ts";
 import { getStripe } from "./stripe.ts";
+import { tenantIdStore } from "./tenant-context.ts";
 
 async function requireStudent() {
   const request = getRequest();
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) throw new Error("Unauthorized");
-  const user = session.user as { id: string; role: string; tenantId: string };
-  return { user, request };
+  const user = session.user as { id: string; role: string };
+  const tenantId = tenantIdStore.getStore()!;
+  return { user: { ...user, tenantId }, request };
 }
 
 async function requireAdmin() {
@@ -191,104 +193,104 @@ export const getCheckoutResultFn = createServerFn({ method: "GET" })
 export const createSubscriptionCheckoutFn = createServerFn({ method: "POST" })
   .inputValidator((d: { promotionCodeId?: string }) => d)
   .handler(async ({ data }) => {
-  const { user, request } = await requireStudent();
+    const { user, request } = await requireStudent();
 
-  // Check if already has an active subscription
-  const [existingSub] = await db
-    .select({ id: subscriptions.id })
-    .from(subscriptions)
-    .where(
-      and(
-        eq(subscriptions.userId, user.id),
-        eq(subscriptions.tenantId, user.tenantId),
-        eq(subscriptions.status, "active"),
-      ),
-    );
-  if (existingSub) throw new Error("Already have an active subscription");
+    // Check if already has an active subscription
+    const [existingSub] = await db
+      .select({ id: subscriptions.id })
+      .from(subscriptions)
+      .where(
+        and(
+          eq(subscriptions.userId, user.id),
+          eq(subscriptions.tenantId, user.tenantId),
+          eq(subscriptions.status, "active"),
+        ),
+      );
+    if (existingSub) throw new Error("Already have an active subscription");
 
-  // Load tenant to get Stripe Connect account + subscription price
-  const [tenant] = await db
-    .select({
-      id: tenants.id,
-      name: tenants.name,
-      subdomain: tenants.subdomain,
-      stripeConnectAccountId: tenants.stripeConnectAccountId,
-      subscriptionPrice: tenants.subscriptionPrice,
-      planId: tenants.planId,
-    })
-    .from(tenants)
-    .where(eq(tenants.id, user.tenantId));
-  if (!tenant) throw new Error("Tenant not found");
-  if (!tenant.stripeConnectAccountId) {
-    throw new Error("Instructor has not connected Stripe");
-  }
-  if (!tenant.subscriptionPrice || Number(tenant.subscriptionPrice) <= 0) {
-    throw new Error("Subscription pricing not configured");
-  }
-
-  // Calculate application fee percentage from plan (default 10%)
-  let applicationFeePercent = 10;
-  if (tenant.planId) {
-    const { plans } = await import("#/db/schema/index.ts");
-    const [plan] = await db
-      .select({ applicationFeePercent: plans.applicationFeePercent })
-      .from(plans)
-      .where(eq(plans.id, tenant.planId));
-    if (plan?.applicationFeePercent) {
-      applicationFeePercent = Number(plan.applicationFeePercent);
+    // Load tenant to get Stripe Connect account + subscription price
+    const [tenant] = await db
+      .select({
+        id: tenants.id,
+        name: tenants.name,
+        subdomain: tenants.subdomain,
+        stripeConnectAccountId: tenants.stripeConnectAccountId,
+        subscriptionPrice: tenants.subscriptionPrice,
+        planId: tenants.planId,
+      })
+      .from(tenants)
+      .where(eq(tenants.id, user.tenantId));
+    if (!tenant) throw new Error("Tenant not found");
+    if (!tenant.stripeConnectAccountId) {
+      throw new Error("Instructor has not connected Stripe");
     }
-  }
+    if (!tenant.subscriptionPrice || Number(tenant.subscriptionPrice) <= 0) {
+      throw new Error("Subscription pricing not configured");
+    }
 
-  const amountInCents = Math.round(Number(tenant.subscriptionPrice) * 100);
+    // Calculate application fee percentage from plan (default 10%)
+    let applicationFeePercent = 10;
+    if (tenant.planId) {
+      const { plans } = await import("#/db/schema/index.ts");
+      const [plan] = await db
+        .select({ applicationFeePercent: plans.applicationFeePercent })
+        .from(plans)
+        .where(eq(plans.id, tenant.planId));
+      if (plan?.applicationFeePercent) {
+        applicationFeePercent = Number(plan.applicationFeePercent);
+      }
+    }
 
-  const origin =
-    request.headers.get("origin") ??
-    `${request.headers.get("x-forwarded-proto") ?? "http"}://${request.headers.get("host")}`;
+    const amountInCents = Math.round(Number(tenant.subscriptionPrice) * 100);
 
-  const stripe = getStripe();
-  const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
-    mode: "subscription",
-    line_items: [
-      {
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: `${tenant.name} — Monthly Access`,
-            description: "Monthly subscription for access to all courses",
+    const origin =
+      request.headers.get("origin") ??
+      `${request.headers.get("x-forwarded-proto") ?? "http"}://${request.headers.get("host")}`;
+
+    const stripe = getStripe();
+    const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
+      mode: "subscription",
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: `${tenant.name} — Monthly Access`,
+              description: "Monthly subscription for access to all courses",
+            },
+            unit_amount: amountInCents,
+            recurring: { interval: "month" },
           },
-          unit_amount: amountInCents,
-          recurring: { interval: "month" },
+          quantity: 1,
         },
-        quantity: 1,
+      ],
+      subscription_data: {
+        application_fee_percent: applicationFeePercent,
+        transfer_data: {
+          destination: tenant.stripeConnectAccountId,
+        },
+        metadata: {
+          tenantId: tenant.id,
+          userId: user.id,
+        },
       },
-    ],
-    subscription_data: {
-      application_fee_percent: applicationFeePercent,
-      transfer_data: {
-        destination: tenant.stripeConnectAccountId,
-      },
+      success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}&type=subscription`,
+      cancel_url: `${origin}/checkout/cancel`,
       metadata: {
         tenantId: tenant.id,
         userId: user.id,
+        type: "subscription",
       },
-    },
-    success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}&type=subscription`,
-    cancel_url: `${origin}/checkout/cancel`,
-    metadata: {
-      tenantId: tenant.id,
-      userId: user.id,
-      type: "subscription",
-    },
-  };
+    };
 
-  if (data?.promotionCodeId) {
-    sessionParams.discounts = [{ promotion_code: data.promotionCodeId }];
-  }
+    if (data?.promotionCodeId) {
+      sessionParams.discounts = [{ promotion_code: data.promotionCodeId }];
+    }
 
-  const session = await stripe.checkout.sessions.create(sessionParams);
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
-  return { url: session.url };
-});
+    return { url: session.url };
+  });
 
 /**
  * Cancel the current user's active subscription.

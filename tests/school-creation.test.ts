@@ -1,53 +1,23 @@
-import { afterAll, beforeAll, describe, expect, it } from "vite-plus/test";
-import { eq } from "drizzle-orm";
+import { afterAll, describe, expect, it } from "vite-plus/test";
+import { eq, and } from "drizzle-orm";
 import { db } from "#/db/index.ts";
-import { tenants, users, accounts, sessions } from "#/db/schema/index.ts";
+import { tenants, users, accounts, sessions, userTenants } from "#/db/schema/index.ts";
 
 describe("school creation (integration)", () => {
   const timestamp = Date.now();
-  const platformTenantSubdomain = `platform-${timestamp}`;
-  let platformTenantId: string;
 
   // Subdomains created during tests, to clean up
   const createdSubdomains: string[] = [];
-
-  beforeAll(async () => {
-    // Create a "platform" tenant for the user to initially belong to
-    const [platformTenant] = await db
-      .insert(tenants)
-      .values({ name: "Platform", subdomain: platformTenantSubdomain })
-      .returning();
-    platformTenantId = platformTenant.id;
-  });
+  const createdUserIds: string[] = [];
 
   afterAll(async () => {
-    // Clean up users and their sessions/accounts
-    const testUsers = await db.query.users.findMany({
-      where: eq(users.tenantId, platformTenantId),
-      columns: { id: true },
-    });
-    const userIds = testUsers.map((u) => u.id);
-
-    // Also find users on created tenants
-    for (const sub of createdSubdomains) {
-      const tenant = await db.query.tenants.findFirst({
-        where: eq(tenants.subdomain, sub),
-        columns: { id: true },
-      });
-      if (tenant) {
-        const tenantUsers = await db.query.users.findMany({
-          where: eq(users.tenantId, tenant.id),
-          columns: { id: true },
-        });
-        userIds.push(...tenantUsers.map((u) => u.id));
-      }
-    }
-
-    for (const userId of userIds) {
+    // Clean up user_tenants, sessions, accounts, then users
+    for (const userId of createdUserIds) {
+      await db.delete(userTenants).where(eq(userTenants.userId, userId)).catch(() => {});
       await db.delete(sessions).where(eq(sessions.userId, userId));
       await db.delete(accounts).where(eq(accounts.userId, userId));
     }
-    for (const userId of userIds) {
+    for (const userId of createdUserIds) {
       await db.delete(users).where(eq(users.id, userId));
     }
 
@@ -55,9 +25,6 @@ describe("school creation (integration)", () => {
     for (const sub of createdSubdomains) {
       await db.delete(tenants).where(eq(tenants.subdomain, sub));
     }
-
-    // Delete platform tenant
-    await db.delete(tenants).where(eq(tenants.id, platformTenantId));
   });
 
   describe("tenant creation", () => {
@@ -79,7 +46,7 @@ describe("school creation (integration)", () => {
       expect(tenant.planId).toBeNull();
     });
 
-    it("sets the creator as tenant_owner", async () => {
+    it("sets the creator as tenant_owner via user_tenants membership", async () => {
       const subdomain = `school-${timestamp}-2`;
       createdSubdomains.push(subdomain);
 
@@ -88,28 +55,35 @@ describe("school creation (integration)", () => {
         .values({ name: "Test School 2", subdomain })
         .returning();
 
-      // Create a user on the platform tenant, then update them
+      // Create a user (no tenantId — global identity)
       const [user] = await db
         .insert(users)
         .values({
           name: "Owner",
           email: `owner-${timestamp}@test.com`,
-          tenantId: platformTenantId,
-          role: "student",
         })
         .returning();
+      createdUserIds.push(user.id);
 
-      await db
-        .update(users)
-        .set({ role: "tenant_owner", tenantId: tenant.id })
-        .where(eq(users.id, user.id));
-
-      const updated = await db.query.users.findFirst({
-        where: eq(users.id, user.id),
+      // Create membership
+      await db.insert(userTenants).values({
+        userId: user.id,
+        tenantId: tenant.id,
+        role: "tenant_owner",
       });
 
-      expect(updated!.role).toBe("tenant_owner");
-      expect(updated!.tenantId).toBe(tenant.id);
+      // Verify membership exists
+      const membership = await db.query.userTenants.findFirst({
+        where: and(eq(userTenants.userId, user.id), eq(userTenants.tenantId, tenant.id)),
+      });
+      expect(membership).toBeDefined();
+      expect(membership!.role).toBe("tenant_owner");
+
+      // User's global role should remain "user"
+      const updatedUser = await db.query.users.findFirst({
+        where: eq(users.id, user.id),
+      });
+      expect(updatedUser!.role).toBe("user");
     });
   });
 
@@ -201,7 +175,6 @@ describe("school creation (integration)", () => {
         stripeConnectAccountId: accountId,
       });
 
-      // Simulate what the webhook handler does
       const result = await db
         .update(tenants)
         .set({ stripeOnboardingComplete: "true" })

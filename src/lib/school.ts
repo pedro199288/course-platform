@@ -1,8 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "#/db/index.ts";
-import { tenants, users } from "#/db/schema/index.ts";
+import { tenants, userTenants } from "#/db/schema/index.ts";
 import { auth } from "./auth.ts";
 
 const SUBDOMAIN_REGEX = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
@@ -83,12 +83,15 @@ export const createSchoolFn = createServerFn({ method: "POST" })
       return { error: "This subdomain is reserved." };
     }
 
-    const userRecord = await db.query.users.findFirst({
-      where: eq(users.id, session.user.id),
-      columns: { role: true },
+    // Check if user already owns a school via user_tenants membership
+    const existingOwnership = await db.query.userTenants.findFirst({
+      where: and(
+        eq(userTenants.userId, session.user.id),
+        eq(userTenants.role, "tenant_owner"),
+      ),
     });
 
-    if (userRecord?.role === "tenant_owner") {
+    if (existingOwnership) {
       return { error: "You already own a school." };
     }
 
@@ -102,14 +105,14 @@ export const createSchoolFn = createServerFn({ method: "POST" })
       return { error: "This subdomain is already taken." };
     }
 
-    // Create tenant
+    // Create tenant + owner membership in a transaction
     const [tenant] = await db.insert(tenants).values({ name, subdomain }).returning();
 
-    // Update user to tenant_owner and assign to new tenant
-    await db
-      .update(users)
-      .set({ role: "tenant_owner", tenantId: tenant.id })
-      .where(eq(users.id, session.user.id));
+    await db.insert(userTenants).values({
+      userId: session.user.id,
+      tenantId: tenant.id,
+      role: "tenant_owner",
+    });
 
     return { error: null, tenant: { id: tenant.id, subdomain: tenant.subdomain } };
   });

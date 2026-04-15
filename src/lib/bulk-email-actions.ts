@@ -6,6 +6,7 @@ import { bulkEmails, courses, enrollments, tenants } from "#/db/schema/index.ts"
 import { users } from "#/db/schema/auth.ts";
 import { auth } from "./auth.ts";
 import { enqueueBulkEmail } from "./email-jobs.ts";
+import { tenantIdStore } from "./tenant-context.ts";
 
 // ── Admin helpers ───────────────────────────────────────────────────
 
@@ -14,11 +15,12 @@ async function requireAdmin() {
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) throw new Error("Unauthorized");
 
-  const user = session.user as { id: string; role: string; tenantId: string };
+  const user = session.user as { id: string; role: string };
   if (!["platform_admin", "tenant_owner", "tenant_admin"].includes(user.role)) {
     throw new Error("Forbidden");
   }
-  return user;
+  const tenantId = tenantIdStore.getStore()!;
+  return { ...user, tenantId };
 }
 
 // ── Send bulk email ─────────────────────────────────────────────────

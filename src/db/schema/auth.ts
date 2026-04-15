@@ -14,6 +14,9 @@ import { tenants } from "./tenants.ts";
 
 export const userRole = pgEnum("user_role", [
   "platform_admin",
+  "user",
+  // Legacy values kept during migration — will be removed once all
+  // business queries are migrated to user_tenants (issue #64).
   "tenant_owner",
   "tenant_admin",
   "student",
@@ -23,14 +26,14 @@ export const users = pgTable(
   "users",
   {
     id: uuid().primaryKey().defaultRandom(),
-    tenantId: uuid("tenant_id")
-      .notNull()
-      .references(() => tenants.id),
+    // Nullable during migration. Will be dropped entirely after issue #64
+    // migrates all business queries to tenantIdStore / user_tenants.
+    tenantId: uuid("tenant_id").references(() => tenants.id),
     name: text().notNull(),
     email: text().notNull(),
     emailVerified: boolean("email_verified").notNull().default(false),
     image: text(),
-    role: userRole().notNull().default("student"),
+    role: userRole().notNull().default("user"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -38,8 +41,7 @@ export const users = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
-    index("users_tenant_id_idx").on(table.tenantId),
-    uniqueIndex("users_email_tenant_unique").on(table.email, table.tenantId),
+    uniqueIndex("users_email_unique").on(table.email),
   ],
 );
 

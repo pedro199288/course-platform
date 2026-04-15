@@ -6,6 +6,7 @@ import { tenants, users } from "#/db/schema/index.ts";
 import { auth } from "./auth.ts";
 import { getStripe } from "./stripe.ts";
 import { BASE_URL } from "./config.ts";
+import { tenantIdStore } from "./tenant-context.ts";
 
 /**
  * Creates a Stripe Connect Standard account for the tenant and returns
@@ -19,9 +20,11 @@ export const createStripeConnectLinkFn = createServerFn({ method: "POST" }).hand
     return { error: "Not authenticated.", url: null };
   }
 
+  const tenantId = tenantIdStore.getStore()!;
+
   const user = await db.query.users.findFirst({
     where: eq(users.id, session.user.id),
-    columns: { role: true, tenantId: true },
+    columns: { role: true },
   });
 
   if (!user || user.role !== "tenant_owner") {
@@ -29,7 +32,7 @@ export const createStripeConnectLinkFn = createServerFn({ method: "POST" }).hand
   }
 
   const tenant = await db.query.tenants.findFirst({
-    where: eq(tenants.id, user.tenantId),
+    where: eq(tenants.id, tenantId),
   });
 
   if (!tenant) {
@@ -77,9 +80,11 @@ export const getStripeConnectStatusFn = createServerFn({ method: "GET" }).handle
     return { connected: false, detailsSubmitted: false, chargesEnabled: false, accountId: null };
   }
 
+  const tenantId = tenantIdStore.getStore()!;
+
   const user = await db.query.users.findFirst({
     where: eq(users.id, session.user.id),
-    columns: { role: true, tenantId: true },
+    columns: { role: true },
   });
 
   if (!user || user.role !== "tenant_owner") {
@@ -87,7 +92,7 @@ export const getStripeConnectStatusFn = createServerFn({ method: "GET" }).handle
   }
 
   const tenant = await db.query.tenants.findFirst({
-    where: eq(tenants.id, user.tenantId),
+    where: eq(tenants.id, tenantId),
     columns: { stripeConnectAccountId: true, stripeOnboardingComplete: true },
   });
 
@@ -106,7 +111,7 @@ export const getStripeConnectStatusFn = createServerFn({ method: "GET" }).handle
       await db
         .update(tenants)
         .set({ stripeOnboardingComplete: "true" })
-        .where(eq(tenants.id, user.tenantId));
+        .where(eq(tenants.id, tenantId));
     }
 
     return {

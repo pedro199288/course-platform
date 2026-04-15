@@ -6,17 +6,19 @@ import { tenants } from "#/db/schema/index.ts";
 import { auth } from "./auth.ts";
 import type { RichTextDoc } from "#/lib/rich-text/types.ts";
 import { createPresignedUploadUrl, createPresignedDownloadUrl } from "./storage/s3.ts";
+import { tenantIdStore } from "./tenant-context.ts";
 
 async function requireAdmin() {
   const request = getRequest();
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) throw new Error("Unauthorized");
 
-  const user = session.user as { id: string; role: string; tenantId: string };
+  const user = session.user as { id: string; role: string };
   if (!["platform_admin", "tenant_owner", "tenant_admin"].includes(user.role)) {
     throw new Error("Forbidden");
   }
-  return user;
+  const tenantId = tenantIdStore.getStore()!;
+  return { ...user, tenantId };
 }
 
 /**
@@ -45,11 +47,17 @@ export const getTenantSettingsFn = createServerFn({ method: "GET" }).handler(asy
   let faviconPreviewUrl: string | null = null;
   try {
     if (tenant.logoUrl) {
-      const { url } = await createPresignedDownloadUrl({ key: tenant.logoUrl, expiresInSeconds: 3600 });
+      const { url } = await createPresignedDownloadUrl({
+        key: tenant.logoUrl,
+        expiresInSeconds: 3600,
+      });
       logoPreviewUrl = url;
     }
     if (tenant.faviconUrl) {
-      const { url } = await createPresignedDownloadUrl({ key: tenant.faviconUrl, expiresInSeconds: 3600 });
+      const { url } = await createPresignedDownloadUrl({
+        key: tenant.faviconUrl,
+        expiresInSeconds: 3600,
+      });
       faviconPreviewUrl = url;
     }
   } catch {
@@ -63,9 +71,7 @@ export const getTenantSettingsFn = createServerFn({ method: "GET" }).handler(asy
  * Update tracking IDs (GA + Facebook Pixel).
  */
 export const updateTrackingIdsFn = createServerFn({ method: "POST" })
-  .inputValidator(
-    (d: { gaTrackingId: string | null; fbPixelId: string | null }) => d,
-  )
+  .inputValidator((d: { gaTrackingId: string | null; fbPixelId: string | null }) => d)
   .handler(async ({ data }) => {
     const user = await requireAdmin();
 
@@ -113,11 +119,7 @@ export const updateAboutInstructorFn = createServerFn({ method: "POST" })
  */
 export const updateBrandingFn = createServerFn({ method: "POST" })
   .inputValidator(
-    (d: {
-      primaryColor: string | null;
-      accentColor: string | null;
-      brandName: string | null;
-    }) => d,
+    (d: { primaryColor: string | null; accentColor: string | null; brandName: string | null }) => d,
   )
   .handler(async ({ data }) => {
     const user = await requireAdmin();
@@ -178,13 +180,9 @@ export const saveBrandingImageFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const user = await requireAdmin();
 
-    const setData =
-      data.field === "logo" ? { logoUrl: data.key } : { faviconUrl: data.key };
+    const setData = data.field === "logo" ? { logoUrl: data.key } : { faviconUrl: data.key };
 
-    await db
-      .update(tenants)
-      .set(setData)
-      .where(eq(tenants.id, user.tenantId));
+    await db.update(tenants).set(setData).where(eq(tenants.id, user.tenantId));
 
     return { ok: true };
   });
@@ -220,10 +218,7 @@ export const updateCustomDomainFn = createServerFn({ method: "POST" })
       }
     }
 
-    await db
-      .update(tenants)
-      .set({ customDomain: domain })
-      .where(eq(tenants.id, user.tenantId));
+    await db.update(tenants).set({ customDomain: domain }).where(eq(tenants.id, user.tenantId));
 
     return { ok: true };
   });

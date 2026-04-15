@@ -6,10 +6,11 @@ import { courses, modules, lessons } from "#/db/schema/index.ts";
 import type { LessonContent } from "#/lib/rich-text/types.ts";
 import { auth } from "./auth.ts";
 import { assertCanCreateCourse } from "./plans.ts";
+import { tenantIdStore } from "./tenant-context.ts";
 
-type SessionUser = { id: string; role: string; tenantId: string };
+type SessionUser = { id: string; role: string };
 
-async function requireInstructor(): Promise<SessionUser> {
+async function requireInstructor(): Promise<SessionUser & { tenantId: string }> {
   const request = getRequest();
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) throw new Error("Unauthorized");
@@ -19,7 +20,8 @@ async function requireInstructor(): Promise<SessionUser> {
     throw new Error("Forbidden");
   }
 
-  return user;
+  const tenantId = tenantIdStore.getStore()!;
+  return { ...user, tenantId };
 }
 
 function slugify(text: string): string {

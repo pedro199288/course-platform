@@ -1,14 +1,13 @@
+import "@tanstack/react-start/server-only";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
-import { and, eq } from "drizzle-orm";
 import { db } from "#/db/index.ts";
 import * as schema from "#/db/schema/index.ts";
 import { auditLogs } from "#/db/schema/audit-logs.ts";
 import { tenantIdStore } from "./tenant-context.ts";
 import { sendEmail } from "./email.ts";
 import { renderVerifyEmail, renderResetPassword } from "./email-templates/index.ts";
-import { assertCanAddStudent } from "./plans.ts";
 import { BASE_URL, PORT } from "./config.ts";
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -30,25 +29,6 @@ export const auth = betterAuth({
   }),
   databaseHooks: {
     user: {
-      create: {
-        before: async (user) => {
-          const tenantId = tenantIdStore.getStore();
-          if (tenantId) {
-            const role = (user as { role?: string }).role || "student";
-            // Enforce plan student cap for student signups
-            if (role === "student") {
-              await assertCanAddStudent(tenantId);
-            }
-            return {
-              data: {
-                ...user,
-                tenantId,
-                role,
-              },
-            };
-          }
-        },
-      },
       update: {
         after: async (user) => {
           if (!user) return;
@@ -56,7 +36,7 @@ export const auth = betterAuth({
           await db.insert(auditLogs).values({
             event: "user.updated",
             actorId: (user as any).id,
-            tenantId: tenantId ?? (user as any).tenantId ?? null,
+            tenantId: tenantId ?? null,
             metadata: { email: (user as any).email },
           });
         },
@@ -133,11 +113,6 @@ export const auth = betterAuth({
   },
   user: {
     additionalFields: {
-      tenantId: {
-        type: "string",
-        required: false,
-        input: false,
-      },
       role: {
         type: "string",
         required: false,
@@ -149,7 +124,7 @@ export const auth = betterAuth({
     cookieCache: {
       enabled: true,
       maxAge: 60 * 5, // 5 minutes
-      strategy: "jwe", // Encrypted — session contains tenantId and role
+      strategy: "jwe", // Encrypted — session contains user-level data only
     },
   },
   rateLimit: {
@@ -180,52 +155,6 @@ export const auth = betterAuth({
   },
   trustedOrigins,
   plugins: [tanstackStartCookies()],
-});
-
-/**
- * Monkey-patch: scope findUserByEmail by tenantId.
- *
- * Better Auth's internal findUserByEmail only filters by email. For multi-tenant
- * isolation (same email on different tenants), we replace it with a direct Drizzle
- * query that includes the tenantId from AsyncLocalStorage.
- *
- * Why a monkey-patch? Better Auth's hooks API (plugin hooks.before, global
- * hooks.before, plugin init) cannot intercept findUserByEmail:
- * - Plugin init runs before internalAdapter is created
- * - hooks.before context merging via defu doesn't reliably override adapter methods
- * - There is no database hook or adapter extension point for user lookups
- *
- * The better-auth version is pinned in package.json to prevent silent breakage.
- * A regression test in tests/auth.test.ts verifies this patch works correctly.
- * See issue #37 for revisiting when Better Auth adds hooks support for user lookups.
- *
- * This runs via .then() on the context promise, which resolves before any API call
- * since API methods also await the same promise (and .then() is registered first).
- */
-void (auth.$context as Promise<any>).then((ctx: any) => {
-  const originalFindUserByEmail = ctx.internalAdapter.findUserByEmail.bind(ctx.internalAdapter);
-
-  ctx.internalAdapter.findUserByEmail = async (
-    email: string,
-    options?: { includeAccounts?: boolean },
-  ) => {
-    const tenantId = tenantIdStore.getStore();
-    if (!tenantId) return originalFindUserByEmail(email, options);
-
-    const user = await db.query.users.findFirst({
-      where: and(eq(schema.users.email, email.toLowerCase()), eq(schema.users.tenantId, tenantId)),
-    });
-    if (!user) return null;
-
-    let userAccounts: (typeof schema.accounts.$inferSelect)[] = [];
-    if (options?.includeAccounts) {
-      userAccounts = await db.query.accounts.findMany({
-        where: eq(schema.accounts.userId, user.id),
-      });
-    }
-
-    return { user, accounts: userAccounts };
-  };
 });
 
 export type Session = typeof auth.$Infer.Session;

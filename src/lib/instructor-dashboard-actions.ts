@@ -6,17 +6,19 @@ import { courses, modules, lessons, enrollments, payments } from "#/db/schema/in
 import { lessonProgress } from "#/db/schema/enrollments.ts";
 import { users } from "#/db/schema/auth.ts";
 import { auth } from "./auth.ts";
+import { tenantIdStore } from "./tenant-context.ts";
 
 async function requireAdmin() {
   const request = getRequest();
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) throw new Error("Unauthorized");
 
-  const user = session.user as { id: string; role: string; tenantId: string };
+  const user = session.user as { id: string; role: string };
   if (!["platform_admin", "tenant_owner", "tenant_admin"].includes(user.role)) {
     throw new Error("Forbidden");
   }
-  return user;
+  const tenantId = tenantIdStore.getStore()!;
+  return { ...user, tenantId };
 }
 
 export interface DashboardMetrics {
