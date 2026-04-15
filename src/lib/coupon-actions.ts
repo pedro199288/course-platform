@@ -4,20 +4,9 @@ import { eq } from "drizzle-orm";
 import { db } from "#/db/index.ts";
 import { courses } from "#/db/schema/index.ts";
 import { auth } from "./auth.ts";
+import { requireMembership } from "./authorization.ts";
 import { getStripe } from "./stripe.ts";
 import { tenantIdStore } from "./tenant-context.ts";
-
-async function requireAdmin() {
-  const request = getRequest();
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) throw new Error("Unauthorized");
-  const user = session.user as { id: string; role: string };
-  if (!["tenant_owner", "tenant_admin"].includes(user.role)) {
-    throw new Error("Forbidden");
-  }
-  const tenantId = tenantIdStore.getStore()!;
-  return { ...user, tenantId };
-}
 
 /**
  * Create a Stripe coupon + promotion code on the platform account,
@@ -35,7 +24,7 @@ export const createCouponFn = createServerFn({ method: "POST" })
     }) => d,
   )
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
     const stripe = getStripe();
 
     // Validate code format
@@ -67,7 +56,7 @@ export const createCouponFn = createServerFn({ method: "POST" })
     // Create Stripe coupon
     const couponParams: Record<string, unknown> = {
       metadata: {
-        tenantId: user.tenantId,
+        tenantId,
         ...(data.courseId ? { courseId: data.courseId } : {}),
       },
     };
@@ -97,7 +86,7 @@ export const createCouponFn = createServerFn({ method: "POST" })
         ? Math.floor(new Date(data.expiresAt).getTime() / 1000)
         : undefined,
       metadata: {
-        tenantId: user.tenantId,
+        tenantId,
         ...(data.courseId ? { courseId: data.courseId } : {}),
       },
     });
@@ -110,7 +99,7 @@ export const createCouponFn = createServerFn({ method: "POST" })
  * Fetches from Stripe API filtered by tenant metadata.
  */
 export const listCouponsFn = createServerFn({ method: "GET" }).handler(async () => {
-  const user = await requireAdmin();
+  const { tenantId } = await requireMembership("tenant_admin");
   const stripe = getStripe();
 
   // Stripe doesn't support filtering by metadata, so we fetch all active + inactive
@@ -121,7 +110,7 @@ export const listCouponsFn = createServerFn({ method: "GET" }).handler(async () 
   ]);
 
   const allPromos = [...activePromos.data, ...inactivePromos.data];
-  const tenantPromos = allPromos.filter((p) => p.metadata?.tenantId === user.tenantId);
+  const tenantPromos = allPromos.filter((p) => p.metadata?.tenantId === tenantId);
 
   // Map promo codes to response shape, extracting coupon details from promotion.coupon
   const results = tenantPromos.map((promo) => {
@@ -152,12 +141,12 @@ export const listCouponsFn = createServerFn({ method: "GET" }).handler(async () 
 export const deactivateCouponFn = createServerFn({ method: "POST" })
   .inputValidator((d: { promotionCodeId: string }) => d)
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
     const stripe = getStripe();
 
     // Verify ownership
     const promo = await stripe.promotionCodes.retrieve(data.promotionCodeId);
-    if (promo.metadata?.tenantId !== user.tenantId) {
+    if (promo.metadata?.tenantId !== tenantId) {
       throw new Error("Not found");
     }
 
@@ -171,11 +160,11 @@ export const deactivateCouponFn = createServerFn({ method: "POST" })
 export const activateCouponFn = createServerFn({ method: "POST" })
   .inputValidator((d: { promotionCodeId: string }) => d)
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
     const stripe = getStripe();
 
     const promo = await stripe.promotionCodes.retrieve(data.promotionCodeId);
-    if (promo.metadata?.tenantId !== user.tenantId) {
+    if (promo.metadata?.tenantId !== tenantId) {
       throw new Error("Not found");
     }
 

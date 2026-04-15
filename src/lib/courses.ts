@@ -1,28 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getRequest } from "@tanstack/react-start/server";
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "#/db/index.ts";
 import { courses, modules, lessons } from "#/db/schema/index.ts";
 import type { LessonContent } from "#/lib/rich-text/types.ts";
-import { auth } from "./auth.ts";
 import { assertCanCreateCourse } from "./plans.ts";
-import { tenantIdStore } from "./tenant-context.ts";
-
-type SessionUser = { id: string; role: string };
-
-async function requireInstructor(): Promise<SessionUser & { tenantId: string }> {
-  const request = getRequest();
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) throw new Error("Unauthorized");
-
-  const user = session.user as SessionUser;
-  if (!user.role || !["tenant_owner", "tenant_admin"].includes(user.role)) {
-    throw new Error("Forbidden");
-  }
-
-  const tenantId = tenantIdStore.getStore()!;
-  return { ...user, tenantId };
-}
+import { requireMembership } from "./authorization.ts";
 
 function slugify(text: string): string {
   return text
@@ -36,10 +18,10 @@ function slugify(text: string): string {
 // ── Courses ──────────────────────────────────────────────────────────
 
 export const listCoursesFn = createServerFn({ method: "GET" }).handler(async () => {
-  const user = await requireInstructor();
+  const { tenantId } = await requireMembership("tenant_admin");
 
   return db.query.courses.findMany({
-    where: eq(courses.tenantId, user.tenantId),
+    where: eq(courses.tenantId, tenantId),
     orderBy: [asc(courses.createdAt)],
   });
 });
@@ -47,10 +29,10 @@ export const listCoursesFn = createServerFn({ method: "GET" }).handler(async () 
 export const getCourseByIdFn = createServerFn({ method: "GET" })
   .inputValidator((input: { courseId: string }) => input)
   .handler(async ({ data }) => {
-    const user = await requireInstructor();
+    const { tenantId } = await requireMembership("tenant_admin");
 
     const course = await db.query.courses.findFirst({
-      where: and(eq(courses.id, data.courseId), eq(courses.tenantId, user.tenantId)),
+      where: and(eq(courses.id, data.courseId), eq(courses.tenantId, tenantId)),
     });
 
     if (!course) throw new Error("Course not found");
@@ -69,7 +51,7 @@ export const createCourseFn = createServerFn({ method: "POST" })
     }) => input,
   )
   .handler(async ({ data }) => {
-    const user = await requireInstructor();
+    const { tenantId } = await requireMembership("tenant_admin");
 
     const title = data.title.trim();
     if (!title) throw new Error("Title is required");
@@ -79,18 +61,18 @@ export const createCourseFn = createServerFn({ method: "POST" })
 
     // Check slug uniqueness within tenant
     const existing = await db.query.courses.findFirst({
-      where: and(eq(courses.slug, slug), eq(courses.tenantId, user.tenantId)),
+      where: and(eq(courses.slug, slug), eq(courses.tenantId, tenantId)),
       columns: { id: true },
     });
     if (existing) throw new Error("A course with this slug already exists");
 
     // Enforce plan constraints (max courses per tenant)
-    await assertCanCreateCourse(user.tenantId);
+    await assertCanCreateCourse(tenantId);
 
     const [course] = await db
       .insert(courses)
       .values({
-        tenantId: user.tenantId,
+        tenantId,
         title,
         description: data.description?.trim() || null,
         slug,
@@ -118,11 +100,11 @@ export const updateCourseFn = createServerFn({ method: "POST" })
     }) => input,
   )
   .handler(async ({ data }) => {
-    const user = await requireInstructor();
+    const { tenantId } = await requireMembership("tenant_admin");
 
     // Verify ownership
     const existing = await db.query.courses.findFirst({
-      where: and(eq(courses.id, data.courseId), eq(courses.tenantId, user.tenantId)),
+      where: and(eq(courses.id, data.courseId), eq(courses.tenantId, tenantId)),
       columns: { id: true },
     });
     if (!existing) throw new Error("Course not found");
@@ -130,7 +112,7 @@ export const updateCourseFn = createServerFn({ method: "POST" })
     // If slug is changing, check uniqueness
     if (data.slug) {
       const slugConflict = await db.query.courses.findFirst({
-        where: and(eq(courses.slug, data.slug), eq(courses.tenantId, user.tenantId)),
+        where: and(eq(courses.slug, data.slug), eq(courses.tenantId, tenantId)),
         columns: { id: true },
       });
       if (slugConflict && slugConflict.id !== data.courseId) {
@@ -159,10 +141,10 @@ export const updateCourseFn = createServerFn({ method: "POST" })
 export const deleteCourseFn = createServerFn({ method: "POST" })
   .inputValidator((input: { courseId: string }) => input)
   .handler(async ({ data }) => {
-    const user = await requireInstructor();
+    const { tenantId } = await requireMembership("tenant_admin");
 
     const existing = await db.query.courses.findFirst({
-      where: and(eq(courses.id, data.courseId), eq(courses.tenantId, user.tenantId)),
+      where: and(eq(courses.id, data.courseId), eq(courses.tenantId, tenantId)),
       columns: { id: true },
     });
     if (!existing) throw new Error("Course not found");
@@ -176,11 +158,11 @@ export const deleteCourseFn = createServerFn({ method: "POST" })
 export const listModulesFn = createServerFn({ method: "GET" })
   .inputValidator((input: { courseId: string }) => input)
   .handler(async ({ data }) => {
-    const user = await requireInstructor();
+    const { tenantId } = await requireMembership("tenant_admin");
 
     // Verify course ownership
     const course = await db.query.courses.findFirst({
-      where: and(eq(courses.id, data.courseId), eq(courses.tenantId, user.tenantId)),
+      where: and(eq(courses.id, data.courseId), eq(courses.tenantId, tenantId)),
       columns: { id: true },
     });
     if (!course) throw new Error("Course not found");
@@ -194,11 +176,11 @@ export const listModulesFn = createServerFn({ method: "GET" })
 export const createModuleFn = createServerFn({ method: "POST" })
   .inputValidator((input: { courseId: string; title: string; position?: number }) => input)
   .handler(async ({ data }) => {
-    const user = await requireInstructor();
+    const { tenantId } = await requireMembership("tenant_admin");
 
     // Verify course ownership
     const course = await db.query.courses.findFirst({
-      where: and(eq(courses.id, data.courseId), eq(courses.tenantId, user.tenantId)),
+      where: and(eq(courses.id, data.courseId), eq(courses.tenantId, tenantId)),
       columns: { id: true },
     });
     if (!course) throw new Error("Course not found");
@@ -231,7 +213,7 @@ export const createModuleFn = createServerFn({ method: "POST" })
 export const updateModuleFn = createServerFn({ method: "POST" })
   .inputValidator((input: { moduleId: string; title?: string; position?: number }) => input)
   .handler(async ({ data }) => {
-    const user = await requireInstructor();
+    const { tenantId } = await requireMembership("tenant_admin");
 
     // Verify module belongs to a course owned by tenant
     const mod = await db.query.modules.findFirst({
@@ -240,7 +222,7 @@ export const updateModuleFn = createServerFn({ method: "POST" })
     if (!mod) throw new Error("Module not found");
 
     const course = await db.query.courses.findFirst({
-      where: and(eq(courses.id, mod.courseId), eq(courses.tenantId, user.tenantId)),
+      where: and(eq(courses.id, mod.courseId), eq(courses.tenantId, tenantId)),
       columns: { id: true },
     });
     if (!course) throw new Error("Module not found");
@@ -261,7 +243,7 @@ export const updateModuleFn = createServerFn({ method: "POST" })
 export const deleteModuleFn = createServerFn({ method: "POST" })
   .inputValidator((input: { moduleId: string }) => input)
   .handler(async ({ data }) => {
-    const user = await requireInstructor();
+    const { tenantId } = await requireMembership("tenant_admin");
 
     const mod = await db.query.modules.findFirst({
       where: eq(modules.id, data.moduleId),
@@ -269,7 +251,7 @@ export const deleteModuleFn = createServerFn({ method: "POST" })
     if (!mod) throw new Error("Module not found");
 
     const course = await db.query.courses.findFirst({
-      where: and(eq(courses.id, mod.courseId), eq(courses.tenantId, user.tenantId)),
+      where: and(eq(courses.id, mod.courseId), eq(courses.tenantId, tenantId)),
       columns: { id: true },
     });
     if (!course) throw new Error("Module not found");
@@ -281,11 +263,11 @@ export const deleteModuleFn = createServerFn({ method: "POST" })
 export const reorderModulesFn = createServerFn({ method: "POST" })
   .inputValidator((input: { courseId: string; moduleIds: string[] }) => input)
   .handler(async ({ data }) => {
-    const user = await requireInstructor();
+    const { tenantId } = await requireMembership("tenant_admin");
 
     // Verify course ownership
     const course = await db.query.courses.findFirst({
-      where: and(eq(courses.id, data.courseId), eq(courses.tenantId, user.tenantId)),
+      where: and(eq(courses.id, data.courseId), eq(courses.tenantId, tenantId)),
       columns: { id: true },
     });
     if (!course) throw new Error("Course not found");
@@ -330,7 +312,7 @@ export const reorderModulesFn = createServerFn({ method: "POST" })
 export const listLessonsFn = createServerFn({ method: "GET" })
   .inputValidator((input: { moduleId: string }) => input)
   .handler(async ({ data }) => {
-    const user = await requireInstructor();
+    const { tenantId } = await requireMembership("tenant_admin");
 
     // Verify module → course → tenant ownership chain
     const mod = await db.query.modules.findFirst({
@@ -339,7 +321,7 @@ export const listLessonsFn = createServerFn({ method: "GET" })
     if (!mod) throw new Error("Module not found");
 
     const course = await db.query.courses.findFirst({
-      where: and(eq(courses.id, mod.courseId), eq(courses.tenantId, user.tenantId)),
+      where: and(eq(courses.id, mod.courseId), eq(courses.tenantId, tenantId)),
       columns: { id: true },
     });
     if (!course) throw new Error("Module not found");
@@ -361,7 +343,7 @@ export const createLessonFn = createServerFn({ method: "POST" })
     }) => input,
   )
   .handler(async ({ data }) => {
-    const user = await requireInstructor();
+    const { tenantId } = await requireMembership("tenant_admin");
 
     // Verify module → course → tenant chain
     const mod = await db.query.modules.findFirst({
@@ -370,7 +352,7 @@ export const createLessonFn = createServerFn({ method: "POST" })
     if (!mod) throw new Error("Module not found");
 
     const course = await db.query.courses.findFirst({
-      where: and(eq(courses.id, mod.courseId), eq(courses.tenantId, user.tenantId)),
+      where: and(eq(courses.id, mod.courseId), eq(courses.tenantId, tenantId)),
       columns: { id: true },
     });
     if (!course) throw new Error("Module not found");
@@ -412,7 +394,7 @@ export const updateLessonFn = createServerFn({ method: "POST" })
     }) => input,
   )
   .handler(async ({ data }) => {
-    const user = await requireInstructor();
+    const { tenantId } = await requireMembership("tenant_admin");
 
     const lesson = await db.query.lessons.findFirst({
       where: eq(lessons.id, data.lessonId),
@@ -425,7 +407,7 @@ export const updateLessonFn = createServerFn({ method: "POST" })
     if (!mod) throw new Error("Lesson not found");
 
     const course = await db.query.courses.findFirst({
-      where: and(eq(courses.id, mod.courseId), eq(courses.tenantId, user.tenantId)),
+      where: and(eq(courses.id, mod.courseId), eq(courses.tenantId, tenantId)),
       columns: { id: true },
     });
     if (!course) throw new Error("Lesson not found");
@@ -448,7 +430,7 @@ export const updateLessonFn = createServerFn({ method: "POST" })
 export const deleteLessonFn = createServerFn({ method: "POST" })
   .inputValidator((input: { lessonId: string }) => input)
   .handler(async ({ data }) => {
-    const user = await requireInstructor();
+    const { tenantId } = await requireMembership("tenant_admin");
 
     const lesson = await db.query.lessons.findFirst({
       where: eq(lessons.id, data.lessonId),
@@ -461,7 +443,7 @@ export const deleteLessonFn = createServerFn({ method: "POST" })
     if (!mod) throw new Error("Lesson not found");
 
     const course = await db.query.courses.findFirst({
-      where: and(eq(courses.id, mod.courseId), eq(courses.tenantId, user.tenantId)),
+      where: and(eq(courses.id, mod.courseId), eq(courses.tenantId, tenantId)),
       columns: { id: true },
     });
     if (!course) throw new Error("Lesson not found");
@@ -473,7 +455,7 @@ export const deleteLessonFn = createServerFn({ method: "POST" })
 export const reorderLessonsFn = createServerFn({ method: "POST" })
   .inputValidator((input: { moduleId: string; lessonIds: string[] }) => input)
   .handler(async ({ data }) => {
-    const user = await requireInstructor();
+    const { tenantId } = await requireMembership("tenant_admin");
 
     // Verify module → course → tenant chain
     const mod = await db.query.modules.findFirst({
@@ -482,7 +464,7 @@ export const reorderLessonsFn = createServerFn({ method: "POST" })
     if (!mod) throw new Error("Module not found");
 
     const course = await db.query.courses.findFirst({
-      where: and(eq(courses.id, mod.courseId), eq(courses.tenantId, user.tenantId)),
+      where: and(eq(courses.id, mod.courseId), eq(courses.tenantId, tenantId)),
       columns: { id: true },
     });
     if (!course) throw new Error("Module not found");

@@ -1,25 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getRequest } from "@tanstack/react-start/server";
 import { eq, and, sql, desc, isNull, asc } from "drizzle-orm";
 import { db } from "#/db/index.ts";
 import { courses, modules, lessons, enrollments, payments } from "#/db/schema/index.ts";
 import { lessonProgress } from "#/db/schema/enrollments.ts";
 import { users } from "#/db/schema/auth.ts";
-import { auth } from "./auth.ts";
-import { tenantIdStore } from "./tenant-context.ts";
-
-async function requireAdmin() {
-  const request = getRequest();
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) throw new Error("Unauthorized");
-
-  const user = session.user as { id: string; role: string };
-  if (!["platform_admin", "tenant_owner", "tenant_admin"].includes(user.role)) {
-    throw new Error("Forbidden");
-  }
-  const tenantId = tenantIdStore.getStore()!;
-  return { ...user, tenantId };
-}
+import { requireMembership } from "./authorization.ts";
 
 export interface DashboardMetrics {
   totalCourses: number;
@@ -45,8 +30,7 @@ export interface DashboardMetrics {
 
 export const getInstructorDashboardFn = createServerFn({ method: "GET" }).handler(
   async (): Promise<DashboardMetrics> => {
-    const user = await requireAdmin();
-    const tenantId = user.tenantId;
+    const { tenantId } = await requireMembership("tenant_admin");
 
     // Run independent queries in parallel
     const [
@@ -167,8 +151,7 @@ export interface CourseCompletionRate {
 
 export const getCourseCompletionRatesFn = createServerFn({ method: "GET" }).handler(
   async (): Promise<CourseCompletionRate[]> => {
-    const user = await requireAdmin();
-    const tenantId = user.tenantId;
+    const { tenantId } = await requireMembership("tenant_admin");
 
     // For each published course, count enrolled students and students who completed all lessons.
     // A student "completed" a course when they have a completed lessonProgress row for every lesson in the course.
@@ -246,8 +229,7 @@ export interface ModuleCompletionRate {
 export const getModuleCompletionRatesFn = createServerFn({ method: "POST" })
   .inputValidator((data: { courseId: string }) => data)
   .handler(async ({ data }): Promise<ModuleCompletionRate[]> => {
-    const user = await requireAdmin();
-    const tenantId = user.tenantId;
+    const { tenantId } = await requireMembership("tenant_admin");
     const { courseId } = data;
 
     // Verify course belongs to tenant
@@ -348,8 +330,7 @@ export interface LessonDropOff {
 export const getLessonDropOffFn = createServerFn({ method: "POST" })
   .inputValidator((data: { courseId: string }) => data)
   .handler(async ({ data }): Promise<LessonDropOff[]> => {
-    const user = await requireAdmin();
-    const tenantId = user.tenantId;
+    const { tenantId } = await requireMembership("tenant_admin");
     const { courseId } = data;
 
     // Verify course belongs to tenant
@@ -410,8 +391,7 @@ export interface AverageProgress {
 export const getAverageProgressFn = createServerFn({ method: "POST" })
   .inputValidator((data: { courseId: string }) => data)
   .handler(async ({ data }): Promise<AverageProgress> => {
-    const user = await requireAdmin();
-    const tenantId = user.tenantId;
+    const { tenantId } = await requireMembership("tenant_admin");
     const { courseId } = data;
 
     // Verify course belongs to tenant and get title

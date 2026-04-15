@@ -1,45 +1,28 @@
 import crypto from "node:crypto";
 import { createServerFn } from "@tanstack/react-start";
-import { getRequest } from "@tanstack/react-start/server";
 import { eq, and, desc } from "drizzle-orm";
 import { db } from "#/db/index.ts";
 import { webhookEndpoints, webhookDeliveries } from "#/db/schema/index.ts";
-import { auth } from "./auth.ts";
+import { requireMembership } from "./authorization.ts";
 import { WEBHOOK_EVENTS, type WebhookEvent } from "./webhook-events.ts";
-import { tenantIdStore } from "./tenant-context.ts";
 
 export { WEBHOOK_EVENTS, type WebhookEvent };
-
-// ── Admin helpers ──────────────────────────────────────────────────
-
-async function requireAdmin() {
-  const request = getRequest();
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) throw new Error("Unauthorized");
-
-  const user = session.user as { id: string; role: string };
-  if (!["platform_admin", "tenant_owner", "tenant_admin"].includes(user.role)) {
-    throw new Error("Forbidden");
-  }
-  const tenantId = tenantIdStore.getStore()!;
-  return { ...user, tenantId };
-}
 
 // ── CRUD ───────────────────────────────────────────────────────────
 
 export const listWebhookEndpointsFn = createServerFn({ method: "GET" }).handler(async () => {
-  const user = await requireAdmin();
+  const { tenantId } = await requireMembership("tenant_admin");
   return db
     .select()
     .from(webhookEndpoints)
-    .where(eq(webhookEndpoints.tenantId, user.tenantId))
+    .where(eq(webhookEndpoints.tenantId, tenantId))
     .orderBy(desc(webhookEndpoints.createdAt));
 });
 
 export const createWebhookEndpointFn = createServerFn({ method: "POST" })
   .inputValidator((d: { url: string; events: string[] }) => d)
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
 
     // Validate URL
     try {
@@ -67,7 +50,7 @@ export const createWebhookEndpointFn = createServerFn({ method: "POST" })
     const [endpoint] = await db
       .insert(webhookEndpoints)
       .values({
-        tenantId: user.tenantId,
+        tenantId,
         url: data.url,
         secret,
         events: data.events,
@@ -80,7 +63,7 @@ export const createWebhookEndpointFn = createServerFn({ method: "POST" })
 export const updateWebhookEndpointFn = createServerFn({ method: "POST" })
   .inputValidator((d: { endpointId: string; url: string; events: string[]; active: boolean }) => d)
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
 
     // Validate URL
     try {
@@ -107,7 +90,7 @@ export const updateWebhookEndpointFn = createServerFn({ method: "POST" })
         active: data.active,
       })
       .where(
-        and(eq(webhookEndpoints.id, data.endpointId), eq(webhookEndpoints.tenantId, user.tenantId)),
+        and(eq(webhookEndpoints.id, data.endpointId), eq(webhookEndpoints.tenantId, tenantId)),
       )
       .returning();
     if (!updated) throw new Error("Endpoint not found");
@@ -117,11 +100,11 @@ export const updateWebhookEndpointFn = createServerFn({ method: "POST" })
 export const deleteWebhookEndpointFn = createServerFn({ method: "POST" })
   .inputValidator((d: { endpointId: string }) => d)
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
     const [deleted] = await db
       .delete(webhookEndpoints)
       .where(
-        and(eq(webhookEndpoints.id, data.endpointId), eq(webhookEndpoints.tenantId, user.tenantId)),
+        and(eq(webhookEndpoints.id, data.endpointId), eq(webhookEndpoints.tenantId, tenantId)),
       )
       .returning();
     if (!deleted) throw new Error("Endpoint not found");
@@ -131,12 +114,12 @@ export const deleteWebhookEndpointFn = createServerFn({ method: "POST" })
 export const toggleWebhookEndpointFn = createServerFn({ method: "POST" })
   .inputValidator((d: { endpointId: string; active: boolean }) => d)
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
     const [updated] = await db
       .update(webhookEndpoints)
       .set({ active: data.active })
       .where(
-        and(eq(webhookEndpoints.id, data.endpointId), eq(webhookEndpoints.tenantId, user.tenantId)),
+        and(eq(webhookEndpoints.id, data.endpointId), eq(webhookEndpoints.tenantId, tenantId)),
       )
       .returning();
     if (!updated) throw new Error("Endpoint not found");
@@ -148,14 +131,14 @@ export const toggleWebhookEndpointFn = createServerFn({ method: "POST" })
 export const listWebhookDeliveriesFn = createServerFn({ method: "GET" })
   .inputValidator((d: { endpointId: string }) => d)
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
 
     // Verify endpoint belongs to tenant
     const [endpoint] = await db
       .select({ id: webhookEndpoints.id })
       .from(webhookEndpoints)
       .where(
-        and(eq(webhookEndpoints.id, data.endpointId), eq(webhookEndpoints.tenantId, user.tenantId)),
+        and(eq(webhookEndpoints.id, data.endpointId), eq(webhookEndpoints.tenantId, tenantId)),
       );
     if (!endpoint) throw new Error("Endpoint not found");
 

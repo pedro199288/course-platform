@@ -5,24 +5,9 @@ import { db } from "#/db/index.ts";
 import { announcements, courses, enrollments, tenants } from "#/db/schema/index.ts";
 import { users } from "#/db/schema/auth.ts";
 import { auth } from "./auth.ts";
+import { requireMembership } from "./authorization.ts";
 import { enqueueAnnouncementEmail } from "./email-jobs.ts";
 import { extractSubdomain } from "#/middleware/tenant.ts";
-import { tenantIdStore } from "./tenant-context.ts";
-
-// ── Admin helpers ───────────────────────────────────────────────────
-
-async function requireAdmin() {
-  const request = getRequest();
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) throw new Error("Unauthorized");
-
-  const user = session.user as { id: string; role: string };
-  if (!["platform_admin", "tenant_owner", "tenant_admin"].includes(user.role)) {
-    throw new Error("Forbidden");
-  }
-  const tenantId = tenantIdStore.getStore()!;
-  return { ...user, tenantId };
-}
 
 // ── Student helpers ─────────────────────────────────────────────────
 
@@ -40,13 +25,11 @@ async function requireTenant() {
   return tenant;
 }
 
-async function requireAuth() {
+async function requireAuth(): Promise<{ userId: string }> {
   const request = getRequest();
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) throw new Error("Unauthorized");
-  const user = session.user as { id: string };
-  const tenantId = tenantIdStore.getStore()!;
-  return { ...user, tenantId };
+  return { userId: session.user.id };
 }
 
 // ── Admin: CRUD ─────────────────────────────────────────────────────
@@ -54,12 +37,12 @@ async function requireAuth() {
 export const listAnnouncementsFn = createServerFn({ method: "GET" })
   .inputValidator((d: { courseId: string }) => d)
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
     return db
       .select()
       .from(announcements)
       .where(
-        and(eq(announcements.courseId, data.courseId), eq(announcements.tenantId, user.tenantId)),
+        and(eq(announcements.courseId, data.courseId), eq(announcements.tenantId, tenantId)),
       )
       .orderBy(desc(announcements.createdAt));
   });
@@ -67,19 +50,19 @@ export const listAnnouncementsFn = createServerFn({ method: "GET" })
 export const createAnnouncementFn = createServerFn({ method: "POST" })
   .inputValidator((d: { courseId: string; title: string; body: string; sendEmail: boolean }) => d)
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
 
     // Verify course belongs to tenant
     const [course] = await db
       .select({ id: courses.id, title: courses.title })
       .from(courses)
-      .where(and(eq(courses.id, data.courseId), eq(courses.tenantId, user.tenantId)));
+      .where(and(eq(courses.id, data.courseId), eq(courses.tenantId, tenantId)));
     if (!course) throw new Error("Course not found");
 
     const [announcement] = await db
       .insert(announcements)
       .values({
-        tenantId: user.tenantId,
+        tenantId,
         courseId: data.courseId,
         title: data.title,
         body: data.body,
@@ -99,7 +82,7 @@ export const createAnnouncementFn = createServerFn({ method: "POST" })
         .where(
           and(
             eq(enrollments.courseId, data.courseId),
-            eq(enrollments.tenantId, user.tenantId),
+            eq(enrollments.tenantId, tenantId),
             isNull(enrollments.revokedAt),
           ),
         );
@@ -108,7 +91,7 @@ export const createAnnouncementFn = createServerFn({ method: "POST" })
       const [tenant] = await db
         .select({ name: tenants.name })
         .from(tenants)
-        .where(eq(tenants.id, user.tenantId));
+        .where(eq(tenants.id, tenantId));
 
       for (const student of enrolledStudents) {
         await enqueueAnnouncementEmail({
@@ -128,11 +111,11 @@ export const createAnnouncementFn = createServerFn({ method: "POST" })
 export const deleteAnnouncementFn = createServerFn({ method: "POST" })
   .inputValidator((d: { announcementId: string }) => d)
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
     const [deleted] = await db
       .delete(announcements)
       .where(
-        and(eq(announcements.id, data.announcementId), eq(announcements.tenantId, user.tenantId)),
+        and(eq(announcements.id, data.announcementId), eq(announcements.tenantId, tenantId)),
       )
       .returning();
     if (!deleted) throw new Error("Announcement not found");
@@ -148,7 +131,7 @@ export const getCourseAnnouncementsFn = createServerFn({ method: "GET" })
   .inputValidator((d: { courseSlug: string }) => d)
   .handler(async ({ data }) => {
     const tenant = await requireTenant();
-    const user = await requireAuth();
+    const { userId } = await requireAuth();
 
     // Find the course
     const [course] = await db
@@ -169,7 +152,7 @@ export const getCourseAnnouncementsFn = createServerFn({ method: "GET" })
       .from(enrollments)
       .where(
         and(
-          eq(enrollments.userId, user.id),
+          eq(enrollments.userId, userId),
           eq(enrollments.courseId, course.id),
           eq(enrollments.tenantId, tenant.id),
           isNull(enrollments.revokedAt),
@@ -194,7 +177,7 @@ export const getCourseAnnouncementsFn = createServerFn({ method: "GET" })
  */
 export const getRecentAnnouncementsFn = createServerFn({ method: "GET" }).handler(async () => {
   const tenant = await requireTenant();
-  const user = await requireAuth();
+  const { userId } = await requireAuth();
 
   // Get enrolled course IDs
   const enrolledCourses = await db
@@ -202,7 +185,7 @@ export const getRecentAnnouncementsFn = createServerFn({ method: "GET" }).handle
     .from(enrollments)
     .where(
       and(
-        eq(enrollments.userId, user.id),
+        eq(enrollments.userId, userId),
         eq(enrollments.tenantId, tenant.id),
         isNull(enrollments.revokedAt),
       ),

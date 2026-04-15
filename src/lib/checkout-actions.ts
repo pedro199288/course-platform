@@ -4,6 +4,7 @@ import { eq, and, isNull } from "drizzle-orm";
 import { db } from "#/db/index.ts";
 import { courses, tenants, payments, enrollments, subscriptions } from "#/db/schema/index.ts";
 import { auth } from "./auth.ts";
+import { requireMembership } from "./authorization.ts";
 import { assertCanAddStudent } from "./plans.ts";
 import { getStripe } from "./stripe.ts";
 import { tenantIdStore } from "./tenant-context.ts";
@@ -16,17 +17,10 @@ async function requireAuthenticatedUser() {
   const request = getRequest();
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) throw new Error("Unauthorized");
-  const user = session.user as { id: string; role: string };
+  const userId = session.user.id;
   const tenantId = tenantIdStore.getStore()!;
-  return { user: { ...user, tenantId }, request };
-}
-
-async function requireAdmin() {
-  const { user, request } = await requireAuthenticatedUser();
-  if (!["tenant_owner", "tenant_admin"].includes(user.role)) {
-    throw new Error("Forbidden");
-  }
-  return { user, request };
+  if (!tenantId) throw new Error("No tenant context");
+  return { userId, tenantId, request };
 }
 
 /**
@@ -36,10 +30,10 @@ async function requireAdmin() {
 export const createCheckoutSessionFn = createServerFn({ method: "POST" })
   .inputValidator((d: { courseId: string; promotionCodeId?: string }) => d)
   .handler(async ({ data }) => {
-    const { user, request } = await requireAuthenticatedUser();
+    const { userId, tenantId, request } = await requireAuthenticatedUser();
 
     // Check plan student limit before creating Stripe session
-    await assertCanAddStudent(user.tenantId);
+    await assertCanAddStudent(tenantId);
 
     // Load course (must be published and belong to user's tenant)
     const [course] = await db
@@ -48,7 +42,7 @@ export const createCheckoutSessionFn = createServerFn({ method: "POST" })
       .where(
         and(
           eq(courses.id, data.courseId),
-          eq(courses.tenantId, user.tenantId),
+          eq(courses.tenantId, tenantId),
           eq(courses.status, "published"),
         ),
       );
@@ -63,7 +57,7 @@ export const createCheckoutSessionFn = createServerFn({ method: "POST" })
       .from(enrollments)
       .where(
         and(
-          eq(enrollments.userId, user.id),
+          eq(enrollments.userId, userId),
           eq(enrollments.courseId, course.id),
           isNull(enrollments.revokedAt),
         ),
@@ -80,7 +74,7 @@ export const createCheckoutSessionFn = createServerFn({ method: "POST" })
         planId: tenants.planId,
       })
       .from(tenants)
-      .where(eq(tenants.id, user.tenantId));
+      .where(eq(tenants.id, tenantId));
     if (!tenant) throw new Error("Tenant not found");
     if (!tenant.stripeConnectAccountId) {
       throw new Error("Instructor has not connected Stripe");
@@ -134,7 +128,7 @@ export const createCheckoutSessionFn = createServerFn({ method: "POST" })
       metadata: {
         tenantId: tenant.id,
         courseId: course.id,
-        userId: user.id,
+        userId,
       },
     };
 
@@ -154,7 +148,7 @@ export const createCheckoutSessionFn = createServerFn({ method: "POST" })
 export const getCheckoutResultFn = createServerFn({ method: "GET" })
   .inputValidator((d: { sessionId: string }) => d)
   .handler(async ({ data }) => {
-    const { user } = await requireAuthenticatedUser();
+    const { userId, tenantId } = await requireAuthenticatedUser();
 
     // Find the payment record matching this session
     const [payment] = await db
@@ -169,8 +163,8 @@ export const getCheckoutResultFn = createServerFn({ method: "GET" })
       .where(
         and(
           eq(payments.stripeCheckoutSessionId, data.sessionId),
-          eq(payments.userId, user.id),
-          eq(payments.tenantId, user.tenantId),
+          eq(payments.userId, userId),
+          eq(payments.tenantId, tenantId),
         ),
       );
 
@@ -201,10 +195,10 @@ export const getCheckoutResultFn = createServerFn({ method: "GET" })
 export const createSubscriptionCheckoutFn = createServerFn({ method: "POST" })
   .inputValidator((d: { promotionCodeId?: string }) => d)
   .handler(async ({ data }) => {
-    const { user, request } = await requireAuthenticatedUser();
+    const { userId, tenantId, request } = await requireAuthenticatedUser();
 
     // Check plan student limit before creating Stripe session
-    await assertCanAddStudent(user.tenantId);
+    await assertCanAddStudent(tenantId);
 
     // Check if already has an active subscription
     const [existingSub] = await db
@@ -212,8 +206,8 @@ export const createSubscriptionCheckoutFn = createServerFn({ method: "POST" })
       .from(subscriptions)
       .where(
         and(
-          eq(subscriptions.userId, user.id),
-          eq(subscriptions.tenantId, user.tenantId),
+          eq(subscriptions.userId, userId),
+          eq(subscriptions.tenantId, tenantId),
           eq(subscriptions.status, "active"),
         ),
       );
@@ -230,7 +224,7 @@ export const createSubscriptionCheckoutFn = createServerFn({ method: "POST" })
         planId: tenants.planId,
       })
       .from(tenants)
-      .where(eq(tenants.id, user.tenantId));
+      .where(eq(tenants.id, tenantId));
     if (!tenant) throw new Error("Tenant not found");
     if (!tenant.stripeConnectAccountId) {
       throw new Error("Instructor has not connected Stripe");
@@ -282,14 +276,14 @@ export const createSubscriptionCheckoutFn = createServerFn({ method: "POST" })
         },
         metadata: {
           tenantId: tenant.id,
-          userId: user.id,
+          userId,
         },
       },
       success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}&type=subscription`,
       cancel_url: `${origin}/checkout/cancel`,
       metadata: {
         tenantId: tenant.id,
-        userId: user.id,
+        userId,
         type: "subscription",
       },
     };
@@ -308,15 +302,15 @@ export const createSubscriptionCheckoutFn = createServerFn({ method: "POST" })
  * Sets subscription to cancel at period end (graceful cancellation).
  */
 export const cancelSubscriptionFn = createServerFn({ method: "POST" }).handler(async () => {
-  const { user } = await requireAuthenticatedUser();
+  const { userId, tenantId } = await requireAuthenticatedUser();
 
   const [sub] = await db
     .select()
     .from(subscriptions)
     .where(
       and(
-        eq(subscriptions.userId, user.id),
-        eq(subscriptions.tenantId, user.tenantId),
+        eq(subscriptions.userId, userId),
+        eq(subscriptions.tenantId, tenantId),
         eq(subscriptions.status, "active"),
       ),
     );
@@ -340,7 +334,7 @@ export const cancelSubscriptionFn = createServerFn({ method: "POST" }).handler(a
  * Get the current user's subscription status for the current tenant.
  */
 export const getSubscriptionStatusFn = createServerFn({ method: "GET" }).handler(async () => {
-  const { user } = await requireAuthenticatedUser();
+  const { userId, tenantId } = await requireAuthenticatedUser();
 
   const [sub] = await db
     .select({
@@ -350,7 +344,7 @@ export const getSubscriptionStatusFn = createServerFn({ method: "GET" }).handler
       canceledAt: subscriptions.canceledAt,
     })
     .from(subscriptions)
-    .where(and(eq(subscriptions.userId, user.id), eq(subscriptions.tenantId, user.tenantId)));
+    .where(and(eq(subscriptions.userId, userId), eq(subscriptions.tenantId, tenantId)));
 
   if (!sub) return { hasSubscription: false as const };
 
@@ -368,12 +362,12 @@ export const getSubscriptionStatusFn = createServerFn({ method: "GET" }).handler
 export const setSubscriptionPriceFn = createServerFn({ method: "POST" })
   .inputValidator((d: { price: string | null }) => d)
   .handler(async ({ data }) => {
-    const { user } = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
 
     await db
       .update(tenants)
       .set({ subscriptionPrice: data.price })
-      .where(eq(tenants.id, user.tenantId));
+      .where(eq(tenants.id, tenantId));
 
     return { success: true };
   });
@@ -382,12 +376,12 @@ export const setSubscriptionPriceFn = createServerFn({ method: "POST" })
  * Get subscription pricing for the tenant (instructor only).
  */
 export const getSubscriptionPriceFn = createServerFn({ method: "GET" }).handler(async () => {
-  const { user } = await requireAdmin();
+  const { tenantId } = await requireMembership("tenant_admin");
 
   const [tenant] = await db
     .select({ subscriptionPrice: tenants.subscriptionPrice })
     .from(tenants)
-    .where(eq(tenants.id, user.tenantId));
+    .where(eq(tenants.id, tenantId));
 
   return { subscriptionPrice: tenant?.subscriptionPrice ?? null };
 });

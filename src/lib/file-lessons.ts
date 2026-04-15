@@ -4,56 +4,52 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db } from "#/db/index.ts";
 import { courses, modules, lessons } from "#/db/schema/index.ts";
 import { enrollments } from "#/db/schema/enrollments.ts";
+import { userTenants } from "#/db/schema/index.ts";
 import { auth } from "./auth.ts";
+import { requireMembership } from "./authorization.ts";
 import { createPresignedUploadUrl, createPresignedDownloadUrl } from "./storage/s3.ts";
 import type { FileContent } from "./rich-text/types.ts";
 import { tenantIdStore } from "./tenant-context.ts";
 
-type SessionUser = { id: string; role: string };
-
-async function requireInstructor(): Promise<SessionUser & { tenantId: string }> {
+/**
+ * Verify access for enrolled students or admin/owner members.
+ * Uses user_tenants membership to check role instead of global user.role.
+ */
+async function requireEnrolledStudentOrAdmin(courseId: string): Promise<void> {
   const request = getRequest();
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) throw new Error("Unauthorized");
 
-  const user = session.user as SessionUser;
-  if (!user.role || !["tenant_owner", "tenant_admin"].includes(user.role)) {
-    throw new Error("Forbidden");
-  }
-
-  const tenantId = tenantIdStore.getStore()!;
-  return { ...user, tenantId };
-}
-
-async function requireEnrolledStudent(courseId: string): Promise<SessionUser & { tenantId: string }> {
-  const request = getRequest();
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) throw new Error("Unauthorized");
-
-  const user = session.user as SessionUser;
+  const userId = session.user.id;
+  const user = session.user as { id: string; role?: string };
   const tenantId = tenantIdStore.getStore()!;
 
-  // Instructors always have access to their own courses
-  if (user.role && ["tenant_owner", "tenant_admin"].includes(user.role)) {
+  // platform_admin bypasses all checks
+  if (user.role === "platform_admin") return;
+
+  // Check membership in user_tenants
+  const membership = await db.query.userTenants.findFirst({
+    where: and(eq(userTenants.userId, userId), eq(userTenants.tenantId, tenantId)),
+  });
+
+  // Admin/owner can access any course in their tenant
+  if (membership && (membership.role === "tenant_owner" || membership.role === "tenant_admin")) {
     const course = await db.query.courses.findFirst({
       where: and(eq(courses.id, courseId), eq(courses.tenantId, tenantId)),
       columns: { id: true },
     });
-    if (course) return { ...user, tenantId };
+    if (course) return;
   }
 
   // Students must be enrolled and not revoked
   const enrollment = await db.query.enrollments.findFirst({
     where: and(
-      eq(enrollments.userId, user.id),
+      eq(enrollments.userId, userId),
       eq(enrollments.courseId, courseId),
       isNull(enrollments.revokedAt),
     ),
   });
-
   if (!enrollment) throw new Error("Forbidden: not enrolled in this course");
-
-  return { ...user, tenantId };
 }
 
 async function verifyLessonOwnership(
@@ -84,8 +80,8 @@ async function verifyLessonOwnership(
 export const getFileUploadUrlFn = createServerFn({ method: "POST" })
   .inputValidator((input: { lessonId: string; filename: string; contentType: string }) => input)
   .handler(async ({ data }) => {
-    const user = await requireInstructor();
-    const { lessonId } = await verifyLessonOwnership(data.lessonId, user.tenantId);
+    const { tenantId } = await requireMembership("tenant_admin");
+    const { lessonId } = await verifyLessonOwnership(data.lessonId, tenantId);
 
     const lesson = await db.query.lessons.findFirst({
       where: eq(lessons.id, lessonId),
@@ -95,7 +91,7 @@ export const getFileUploadUrlFn = createServerFn({ method: "POST" })
     if (lesson.type !== "file") throw new Error("Lesson is not a file lesson");
 
     // S3 key: tenants/{tenantId}/files/{lessonId}/{filename}
-    const key = `tenants/${user.tenantId}/files/${lessonId}/${data.filename}`;
+    const key = `tenants/${tenantId}/files/${lessonId}/${data.filename}`;
 
     const { url } = await createPresignedUploadUrl({
       key,
@@ -140,7 +136,7 @@ export const getFileDownloadUrlFn = createServerFn({ method: "POST" })
     if (!mod) throw new Error("Lesson not found");
 
     // This checks enrollment or instructor access
-    await requireEnrolledStudent(mod.courseId);
+    await requireEnrolledStudentOrAdmin(mod.courseId);
 
     const fileContent = lesson.content as {
       type: string;
