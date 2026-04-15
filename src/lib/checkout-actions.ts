@@ -4,10 +4,15 @@ import { eq, and, isNull } from "drizzle-orm";
 import { db } from "#/db/index.ts";
 import { courses, tenants, payments, enrollments, subscriptions } from "#/db/schema/index.ts";
 import { auth } from "./auth.ts";
+import { assertCanAddStudent } from "./plans.ts";
 import { getStripe } from "./stripe.ts";
 import { tenantIdStore } from "./tenant-context.ts";
 
-async function requireStudent() {
+/**
+ * Require an authenticated user + tenant context.
+ * No membership required — users can browse and buy without being a member yet.
+ */
+async function requireAuthenticatedUser() {
   const request = getRequest();
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) throw new Error("Unauthorized");
@@ -17,7 +22,7 @@ async function requireStudent() {
 }
 
 async function requireAdmin() {
-  const { user, request } = await requireStudent();
+  const { user, request } = await requireAuthenticatedUser();
   if (!["tenant_owner", "tenant_admin"].includes(user.role)) {
     throw new Error("Forbidden");
   }
@@ -31,7 +36,10 @@ async function requireAdmin() {
 export const createCheckoutSessionFn = createServerFn({ method: "POST" })
   .inputValidator((d: { courseId: string; promotionCodeId?: string }) => d)
   .handler(async ({ data }) => {
-    const { user, request } = await requireStudent();
+    const { user, request } = await requireAuthenticatedUser();
+
+    // Check plan student limit before creating Stripe session
+    await assertCanAddStudent(user.tenantId);
 
     // Load course (must be published and belong to user's tenant)
     const [course] = await db
@@ -146,7 +154,7 @@ export const createCheckoutSessionFn = createServerFn({ method: "POST" })
 export const getCheckoutResultFn = createServerFn({ method: "GET" })
   .inputValidator((d: { sessionId: string }) => d)
   .handler(async ({ data }) => {
-    const { user } = await requireStudent();
+    const { user } = await requireAuthenticatedUser();
 
     // Find the payment record matching this session
     const [payment] = await db
@@ -193,7 +201,10 @@ export const getCheckoutResultFn = createServerFn({ method: "GET" })
 export const createSubscriptionCheckoutFn = createServerFn({ method: "POST" })
   .inputValidator((d: { promotionCodeId?: string }) => d)
   .handler(async ({ data }) => {
-    const { user, request } = await requireStudent();
+    const { user, request } = await requireAuthenticatedUser();
+
+    // Check plan student limit before creating Stripe session
+    await assertCanAddStudent(user.tenantId);
 
     // Check if already has an active subscription
     const [existingSub] = await db
@@ -297,7 +308,7 @@ export const createSubscriptionCheckoutFn = createServerFn({ method: "POST" })
  * Sets subscription to cancel at period end (graceful cancellation).
  */
 export const cancelSubscriptionFn = createServerFn({ method: "POST" }).handler(async () => {
-  const { user } = await requireStudent();
+  const { user } = await requireAuthenticatedUser();
 
   const [sub] = await db
     .select()
@@ -329,7 +340,7 @@ export const cancelSubscriptionFn = createServerFn({ method: "POST" }).handler(a
  * Get the current user's subscription status for the current tenant.
  */
 export const getSubscriptionStatusFn = createServerFn({ method: "GET" }).handler(async () => {
-  const { user } = await requireStudent();
+  const { user } = await requireAuthenticatedUser();
 
   const [sub] = await db
     .select({

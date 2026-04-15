@@ -9,6 +9,7 @@ import {
   plans,
   users,
   accounts,
+  userTenants,
 } from "#/db/schema/index.ts";
 
 // Mock email to prevent Resend API calls
@@ -23,6 +24,13 @@ vi.mock("#/lib/job-queue.ts", () => ({
   registerHandler: vi.fn(),
   startWorkers: vi.fn(),
   getBoss: vi.fn(),
+}));
+
+// Mock Stripe — needed since webhook handler may call stripe.refunds.create
+vi.mock("#/lib/stripe.ts", () => ({
+  getStripe: () => ({
+    refunds: { create: vi.fn().mockResolvedValue({ id: "re_mock" }) },
+  }),
 }));
 
 import { processWebhookEvent, dispatchWebhookEvent } from "#/lib/webhook-actions.ts";
@@ -105,6 +113,10 @@ describe("webhook handling", () => {
     await db
       .delete(payments)
       .where(eq(payments.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(userTenants)
+      .where(eq(userTenants.tenantId, tenantId))
       .catch(() => {});
     await db
       .delete(courses)

@@ -8,7 +8,10 @@ import {
   courses,
   tenants,
   users,
+  userTenants,
 } from "#/db/schema/index.ts";
+import { assertCanAddStudent } from "./plans.ts";
+import { getStripe } from "./stripe.ts";
 import { sendJob } from "./job-queue.ts";
 import { enqueuePurchaseConfirmation, enqueueEnrollmentConfirmation } from "./email-jobs.ts";
 import { dispatchTenantWebhookEvent } from "./webhook-delivery-jobs.ts";
@@ -88,6 +91,22 @@ async function handleCheckoutSessionCompleted(data: Record<string, unknown>): Pr
     .where(eq(payments.stripeCheckoutSessionId, sessionId));
   if (existingPayment) return;
 
+  // Double-check plan student limit — if exceeded by race condition, auto-refund
+  try {
+    await assertCanAddStudent(metadata.tenantId);
+  } catch {
+    // Plan limit exceeded — refund the payment and abort
+    if (paymentIntentId) {
+      try {
+        const stripe = getStripe();
+        await stripe.refunds.create({ payment_intent: paymentIntentId });
+      } catch {
+        // Log but don't throw — we still want to avoid creating the enrollment
+      }
+    }
+    return;
+  }
+
   // Create payment record
   const amountDecimal = (amountTotal / 100).toFixed(2);
   await db.insert(payments).values({
@@ -99,6 +118,25 @@ async function handleCheckoutSessionCompleted(data: Record<string, unknown>): Pr
     stripePaymentIntentId: paymentIntentId ?? null,
     stripeCheckoutSessionId: sessionId,
   });
+
+  // Create student membership if not already a member (idempotent upsert)
+  const [existingMembership] = await db
+    .select({ userId: userTenants.userId })
+    .from(userTenants)
+    .where(
+      and(
+        eq(userTenants.userId, metadata.userId),
+        eq(userTenants.tenantId, metadata.tenantId),
+      ),
+    );
+
+  if (!existingMembership) {
+    await db.insert(userTenants).values({
+      userId: metadata.userId,
+      tenantId: metadata.tenantId,
+      role: "student",
+    });
+  }
 
   // Create enrollment (skip if already enrolled — handles re-enrollment edge case)
   const [existingEnrollment] = await db
@@ -254,6 +292,25 @@ async function handleSubscriptionCreated(data: Record<string, unknown>): Promise
     .from(subscriptions)
     .where(eq(subscriptions.stripeSubscriptionId, subscriptionId));
   if (existing) return;
+
+  // Create student membership if not already a member
+  const [existingMembership] = await db
+    .select({ userId: userTenants.userId })
+    .from(userTenants)
+    .where(
+      and(
+        eq(userTenants.userId, metadata.userId),
+        eq(userTenants.tenantId, metadata.tenantId),
+      ),
+    );
+
+  if (!existingMembership) {
+    await db.insert(userTenants).values({
+      userId: metadata.userId,
+      tenantId: metadata.tenantId,
+      role: "student",
+    });
+  }
 
   await db.insert(subscriptions).values({
     tenantId: metadata.tenantId,
