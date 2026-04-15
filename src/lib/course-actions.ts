@@ -1,43 +1,28 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getRequest } from "@tanstack/react-start/server";
 import { eq, and, asc, desc } from "drizzle-orm";
 import { db } from "#/db/index.ts";
 import { courses, modules, lessons } from "#/db/schema/index.ts";
-import { auth } from "./auth.ts";
-import { tenantIdStore } from "./tenant-context.ts";
-
-async function requireAdmin() {
-  const request = getRequest();
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) throw new Error("Unauthorized");
-
-  const user = session.user as { id: string; role: string };
-  if (!["platform_admin", "tenant_owner", "tenant_admin"].includes(user.role)) {
-    throw new Error("Forbidden");
-  }
-  const tenantId = tenantIdStore.getStore()!;
-  return { ...user, tenantId };
-}
+import { requireMembership } from "./authorization.ts";
 
 // ── Courses ──────────────────────────────────────────────────────────
 
 export const listCoursesFn = createServerFn({ method: "GET" }).handler(async () => {
-  const user = await requireAdmin();
+  const { tenantId } = await requireMembership("tenant_admin");
   return db
     .select()
     .from(courses)
-    .where(eq(courses.tenantId, user.tenantId))
+    .where(eq(courses.tenantId, tenantId))
     .orderBy(desc(courses.createdAt));
 });
 
 export const getCourseByIdFn = createServerFn({ method: "GET" })
   .inputValidator((d: { courseId: string }) => d)
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
     const [course] = await db
       .select()
       .from(courses)
-      .where(and(eq(courses.id, data.courseId), eq(courses.tenantId, user.tenantId)));
+      .where(and(eq(courses.id, data.courseId), eq(courses.tenantId, tenantId)));
     if (!course) throw new Error("Course not found");
     return course;
   });
@@ -53,11 +38,11 @@ export const createCourseFn = createServerFn({ method: "POST" })
     }) => d,
   )
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
     const [course] = await db
       .insert(courses)
       .values({
-        tenantId: user.tenantId,
+        tenantId: tenantId,
         title: data.title,
         description: data.description ?? null,
         slug: data.slug,
@@ -83,7 +68,7 @@ export const updateCourseFn = createServerFn({ method: "POST" })
     }) => d,
   )
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
     const { courseId, ...updates } = data;
 
     // Only include defined fields
@@ -100,7 +85,7 @@ export const updateCourseFn = createServerFn({ method: "POST" })
     const [course] = await db
       .update(courses)
       .set(setValues)
-      .where(and(eq(courses.id, courseId), eq(courses.tenantId, user.tenantId)))
+      .where(and(eq(courses.id, courseId), eq(courses.tenantId, tenantId)))
       .returning();
     if (!course) throw new Error("Course not found");
     return course;
@@ -109,10 +94,10 @@ export const updateCourseFn = createServerFn({ method: "POST" })
 export const deleteCourseFn = createServerFn({ method: "POST" })
   .inputValidator((d: { courseId: string }) => d)
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
     const [deleted] = await db
       .delete(courses)
-      .where(and(eq(courses.id, data.courseId), eq(courses.tenantId, user.tenantId)))
+      .where(and(eq(courses.id, data.courseId), eq(courses.tenantId, tenantId)))
       .returning({ id: courses.id });
     if (!deleted) throw new Error("Course not found");
     return { success: true };
@@ -123,12 +108,12 @@ export const deleteCourseFn = createServerFn({ method: "POST" })
 export const listModulesFn = createServerFn({ method: "GET" })
   .inputValidator((d: { courseId: string }) => d)
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
     // Verify course belongs to tenant
     const [course] = await db
       .select({ id: courses.id })
       .from(courses)
-      .where(and(eq(courses.id, data.courseId), eq(courses.tenantId, user.tenantId)));
+      .where(and(eq(courses.id, data.courseId), eq(courses.tenantId, tenantId)));
     if (!course) throw new Error("Course not found");
 
     return db
@@ -141,12 +126,12 @@ export const listModulesFn = createServerFn({ method: "GET" })
 export const createModuleFn = createServerFn({ method: "POST" })
   .inputValidator((d: { courseId: string; title: string }) => d)
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
     // Verify course belongs to tenant
     const [course] = await db
       .select({ id: courses.id })
       .from(courses)
-      .where(and(eq(courses.id, data.courseId), eq(courses.tenantId, user.tenantId)));
+      .where(and(eq(courses.id, data.courseId), eq(courses.tenantId, tenantId)));
     if (!course) throw new Error("Course not found");
 
     // Get next position
@@ -180,7 +165,7 @@ export const updateModuleFn = createServerFn({ method: "POST" })
     }) => d,
   )
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
     // Verify module's course belongs to tenant
     const [existing] = await db
       .select({ courseId: modules.courseId })
@@ -191,7 +176,7 @@ export const updateModuleFn = createServerFn({ method: "POST" })
     const [course] = await db
       .select({ id: courses.id })
       .from(courses)
-      .where(and(eq(courses.id, existing.courseId), eq(courses.tenantId, user.tenantId)));
+      .where(and(eq(courses.id, existing.courseId), eq(courses.tenantId, tenantId)));
     if (!course) throw new Error("Forbidden");
 
     const setValues: Record<string, unknown> = {};
@@ -215,7 +200,7 @@ export const updateModuleFn = createServerFn({ method: "POST" })
 export const deleteModuleFn = createServerFn({ method: "POST" })
   .inputValidator((d: { moduleId: string }) => d)
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
     const [existing] = await db
       .select({ courseId: modules.courseId })
       .from(modules)
@@ -225,7 +210,7 @@ export const deleteModuleFn = createServerFn({ method: "POST" })
     const [course] = await db
       .select({ id: courses.id })
       .from(courses)
-      .where(and(eq(courses.id, existing.courseId), eq(courses.tenantId, user.tenantId)));
+      .where(and(eq(courses.id, existing.courseId), eq(courses.tenantId, tenantId)));
     if (!course) throw new Error("Forbidden");
 
     await db.delete(modules).where(eq(modules.id, data.moduleId));
@@ -237,7 +222,7 @@ export const deleteModuleFn = createServerFn({ method: "POST" })
 export const listLessonsFn = createServerFn({ method: "GET" })
   .inputValidator((d: { moduleId: string }) => d)
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
     // Verify module's course belongs to tenant
     const [mod] = await db
       .select({ courseId: modules.courseId })
@@ -248,7 +233,7 @@ export const listLessonsFn = createServerFn({ method: "GET" })
     const [course] = await db
       .select({ id: courses.id })
       .from(courses)
-      .where(and(eq(courses.id, mod.courseId), eq(courses.tenantId, user.tenantId)));
+      .where(and(eq(courses.id, mod.courseId), eq(courses.tenantId, tenantId)));
     if (!course) throw new Error("Forbidden");
 
     return db
@@ -268,7 +253,7 @@ export const createLessonFn = createServerFn({ method: "POST" })
     }) => d,
   )
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
     const [mod] = await db
       .select({ courseId: modules.courseId })
       .from(modules)
@@ -278,7 +263,7 @@ export const createLessonFn = createServerFn({ method: "POST" })
     const [course] = await db
       .select({ id: courses.id })
       .from(courses)
-      .where(and(eq(courses.id, mod.courseId), eq(courses.tenantId, user.tenantId)));
+      .where(and(eq(courses.id, mod.courseId), eq(courses.tenantId, tenantId)));
     if (!course) throw new Error("Forbidden");
 
     // Get next position
@@ -316,7 +301,7 @@ export const updateLessonFn = createServerFn({ method: "POST" })
     }) => d,
   )
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
     const [existing] = await db
       .select({ moduleId: lessons.moduleId })
       .from(lessons)
@@ -332,7 +317,7 @@ export const updateLessonFn = createServerFn({ method: "POST" })
     const [course] = await db
       .select({ id: courses.id })
       .from(courses)
-      .where(and(eq(courses.id, mod.courseId), eq(courses.tenantId, user.tenantId)));
+      .where(and(eq(courses.id, mod.courseId), eq(courses.tenantId, tenantId)));
     if (!course) throw new Error("Forbidden");
 
     const setValues: Record<string, unknown> = {};
@@ -358,7 +343,7 @@ export const updateLessonFn = createServerFn({ method: "POST" })
 export const deleteLessonFn = createServerFn({ method: "POST" })
   .inputValidator((d: { lessonId: string }) => d)
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
     const [existing] = await db
       .select({ moduleId: lessons.moduleId })
       .from(lessons)
@@ -374,7 +359,7 @@ export const deleteLessonFn = createServerFn({ method: "POST" })
     const [course] = await db
       .select({ id: courses.id })
       .from(courses)
-      .where(and(eq(courses.id, mod.courseId), eq(courses.tenantId, user.tenantId)));
+      .where(and(eq(courses.id, mod.courseId), eq(courses.tenantId, tenantId)));
     if (!course) throw new Error("Forbidden");
 
     await db.delete(lessons).where(eq(lessons.id, data.lessonId));

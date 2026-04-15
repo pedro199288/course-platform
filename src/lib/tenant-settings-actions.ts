@@ -1,33 +1,18 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getRequest } from "@tanstack/react-start/server";
 import { eq, and, ne } from "drizzle-orm";
 import { db } from "#/db/index.ts";
 import { tenants } from "#/db/schema/index.ts";
-import { auth } from "./auth.ts";
 import type { RichTextDoc } from "#/lib/rich-text/types.ts";
 import { createPresignedUploadUrl, createPresignedDownloadUrl } from "./storage/s3.ts";
-import { tenantIdStore } from "./tenant-context.ts";
-
-async function requireAdmin() {
-  const request = getRequest();
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) throw new Error("Unauthorized");
-
-  const user = session.user as { id: string; role: string };
-  if (!["platform_admin", "tenant_owner", "tenant_admin"].includes(user.role)) {
-    throw new Error("Forbidden");
-  }
-  const tenantId = tenantIdStore.getStore()!;
-  return { ...user, tenantId };
-}
+import { requireMembership } from "./authorization.ts";
 
 /**
  * Get tenant settings (tracking IDs + about instructor).
  */
 export const getTenantSettingsFn = createServerFn({ method: "GET" }).handler(async () => {
-  const user = await requireAdmin();
+  const { tenantId } = await requireMembership("tenant_admin");
   const tenant = await db.query.tenants.findFirst({
-    where: eq(tenants.id, user.tenantId),
+    where: eq(tenants.id, tenantId),
     columns: {
       gaTrackingId: true,
       fbPixelId: true,
@@ -73,7 +58,7 @@ export const getTenantSettingsFn = createServerFn({ method: "GET" }).handler(asy
 export const updateTrackingIdsFn = createServerFn({ method: "POST" })
   .inputValidator((d: { gaTrackingId: string | null; fbPixelId: string | null }) => d)
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
 
     // Basic validation: GA tracking IDs look like G-XXXXXXX or UA-XXXXX-X
     if (data.gaTrackingId && !/^(G-[A-Z0-9]+|UA-\d+-\d+)$/.test(data.gaTrackingId)) {
@@ -91,7 +76,7 @@ export const updateTrackingIdsFn = createServerFn({ method: "POST" })
         gaTrackingId: data.gaTrackingId || null,
         fbPixelId: data.fbPixelId || null,
       })
-      .where(eq(tenants.id, user.tenantId));
+      .where(eq(tenants.id, tenantId));
 
     return { ok: true };
   });
@@ -102,14 +87,14 @@ export const updateTrackingIdsFn = createServerFn({ method: "POST" })
 export const updateAboutInstructorFn = createServerFn({ method: "POST" })
   .inputValidator((d: { aboutInstructor: RichTextDoc | null }) => d)
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
 
     await db
       .update(tenants)
       .set({
         aboutInstructor: data.aboutInstructor,
       })
-      .where(eq(tenants.id, user.tenantId));
+      .where(eq(tenants.id, tenantId));
 
     return { ok: true };
   });
@@ -122,7 +107,7 @@ export const updateBrandingFn = createServerFn({ method: "POST" })
     (d: { primaryColor: string | null; accentColor: string | null; brandName: string | null }) => d,
   )
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
 
     const hexPattern = /^#[0-9a-fA-F]{6}$/;
     if (data.primaryColor && !hexPattern.test(data.primaryColor)) {
@@ -142,7 +127,7 @@ export const updateBrandingFn = createServerFn({ method: "POST" })
         accentColor: data.accentColor || null,
         brandName: data.brandName?.trim() || null,
       })
-      .where(eq(tenants.id, user.tenantId));
+      .where(eq(tenants.id, tenantId));
 
     return { ok: true };
   });
@@ -153,7 +138,7 @@ export const updateBrandingFn = createServerFn({ method: "POST" })
 export const getBrandingUploadUrlFn = createServerFn({ method: "POST" })
   .inputValidator((d: { field: "logo" | "favicon"; contentType: string }) => d)
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
 
     const allowedTypes = ["image/png", "image/jpeg", "image/svg+xml", "image/webp", "image/x-icon"];
     if (!allowedTypes.includes(data.contentType)) {
@@ -161,7 +146,7 @@ export const getBrandingUploadUrlFn = createServerFn({ method: "POST" })
     }
 
     const ext = data.contentType.split("/").pop()?.replace("x-icon", "ico") ?? "png";
-    const key = `tenants/${user.tenantId}/branding/${data.field}.${ext}`;
+    const key = `tenants/${tenantId}/branding/${data.field}.${ext}`;
 
     const { url } = await createPresignedUploadUrl({
       key,
@@ -178,11 +163,11 @@ export const getBrandingUploadUrlFn = createServerFn({ method: "POST" })
 export const saveBrandingImageFn = createServerFn({ method: "POST" })
   .inputValidator((d: { field: "logo" | "favicon"; key: string | null }) => d)
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
 
     const setData = data.field === "logo" ? { logoUrl: data.key } : { faviconUrl: data.key };
 
-    await db.update(tenants).set(setData).where(eq(tenants.id, user.tenantId));
+    await db.update(tenants).set(setData).where(eq(tenants.id, tenantId));
 
     return { ok: true };
   });
@@ -193,7 +178,7 @@ export const saveBrandingImageFn = createServerFn({ method: "POST" })
 export const updateCustomDomainFn = createServerFn({ method: "POST" })
   .inputValidator((d: { customDomain: string | null }) => d)
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
 
     const domain = data.customDomain?.trim().toLowerCase() || null;
 
@@ -210,7 +195,7 @@ export const updateCustomDomainFn = createServerFn({ method: "POST" })
 
       // Check uniqueness (another tenant may already have this domain)
       const existing = await db.query.tenants.findFirst({
-        where: and(eq(tenants.customDomain, domain), ne(tenants.id, user.tenantId)),
+        where: and(eq(tenants.customDomain, domain), ne(tenants.id, tenantId)),
         columns: { id: true },
       });
       if (existing) {
@@ -218,7 +203,7 @@ export const updateCustomDomainFn = createServerFn({ method: "POST" })
       }
     }
 
-    await db.update(tenants).set({ customDomain: domain }).where(eq(tenants.id, user.tenantId));
+    await db.update(tenants).set({ customDomain: domain }).where(eq(tenants.id, tenantId));
 
     return { ok: true };
   });

@@ -3,24 +3,8 @@ import { getRequest } from "@tanstack/react-start/server";
 import { eq, and, asc, isNull } from "drizzle-orm";
 import { db } from "#/db/index.ts";
 import { testimonials, tenants } from "#/db/schema/index.ts";
-import { auth } from "./auth.ts";
 import { extractSubdomain } from "#/middleware/tenant.ts";
-import { tenantIdStore } from "./tenant-context.ts";
-
-// ── Admin helpers ───────────────────────────────────────────────────
-
-async function requireAdmin() {
-  const request = getRequest();
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) throw new Error("Unauthorized");
-
-  const user = session.user as { id: string; role: string };
-  if (!["platform_admin", "tenant_owner", "tenant_admin"].includes(user.role)) {
-    throw new Error("Forbidden");
-  }
-  const tenantId = tenantIdStore.getStore()!;
-  return { ...user, tenantId };
-}
+import { requireMembership } from "./authorization.ts";
 
 // ── Storefront helpers ──────────────────────────────────────────────
 
@@ -41,11 +25,11 @@ async function requireTenant() {
 // ── Admin: CRUD ─────────────────────────────────────────────────────
 
 export const listTestimonialsFn = createServerFn({ method: "GET" }).handler(async () => {
-  const user = await requireAdmin();
+  const { tenantId } = await requireMembership("tenant_admin");
   return db
     .select()
     .from(testimonials)
-    .where(eq(testimonials.tenantId, user.tenantId))
+    .where(eq(testimonials.tenantId, tenantId))
     .orderBy(asc(testimonials.position));
 });
 
@@ -54,20 +38,20 @@ export const createTestimonialFn = createServerFn({ method: "POST" })
     (d: { courseId: string | null; authorName: string; body: string; rating: number | null }) => d,
   )
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
 
     // Get current max position
     const existing = await db
       .select({ position: testimonials.position })
       .from(testimonials)
-      .where(eq(testimonials.tenantId, user.tenantId))
+      .where(eq(testimonials.tenantId, tenantId))
       .orderBy(asc(testimonials.position));
     const nextPosition = existing.length > 0 ? existing[existing.length - 1].position + 1 : 0;
 
     const [testimonial] = await db
       .insert(testimonials)
       .values({
-        tenantId: user.tenantId,
+        tenantId: tenantId,
         courseId: data.courseId,
         authorName: data.authorName,
         body: data.body,
@@ -90,7 +74,7 @@ export const updateTestimonialFn = createServerFn({ method: "POST" })
     }) => d,
   )
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
     const [updated] = await db
       .update(testimonials)
       .set({
@@ -99,7 +83,7 @@ export const updateTestimonialFn = createServerFn({ method: "POST" })
         rating: data.rating,
         courseId: data.courseId,
       })
-      .where(and(eq(testimonials.id, data.testimonialId), eq(testimonials.tenantId, user.tenantId)))
+      .where(and(eq(testimonials.id, data.testimonialId), eq(testimonials.tenantId, tenantId)))
       .returning();
     if (!updated) throw new Error("Testimonial not found");
     return updated;
@@ -108,10 +92,10 @@ export const updateTestimonialFn = createServerFn({ method: "POST" })
 export const deleteTestimonialFn = createServerFn({ method: "POST" })
   .inputValidator((d: { testimonialId: string }) => d)
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
     const [deleted] = await db
       .delete(testimonials)
-      .where(and(eq(testimonials.id, data.testimonialId), eq(testimonials.tenantId, user.tenantId)))
+      .where(and(eq(testimonials.id, data.testimonialId), eq(testimonials.tenantId, tenantId)))
       .returning();
     if (!deleted) throw new Error("Testimonial not found");
     return deleted;
@@ -120,13 +104,13 @@ export const deleteTestimonialFn = createServerFn({ method: "POST" })
 export const reorderTestimonialsFn = createServerFn({ method: "POST" })
   .inputValidator((d: { orderedIds: string[] }) => d)
   .handler(async ({ data }) => {
-    const user = await requireAdmin();
+    const { tenantId } = await requireMembership("tenant_admin");
     for (let i = 0; i < data.orderedIds.length; i++) {
       await db
         .update(testimonials)
         .set({ position: i })
         .where(
-          and(eq(testimonials.id, data.orderedIds[i]), eq(testimonials.tenantId, user.tenantId)),
+          and(eq(testimonials.id, data.orderedIds[i]), eq(testimonials.tenantId, tenantId)),
         );
     }
     return { ok: true };
