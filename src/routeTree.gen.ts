@@ -20,6 +20,7 @@ import { Route as PlatformAdminRouteRouteImport } from './routes/platform-admin/
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PlatformAdminIndexRouteImport } from './routes/platform-admin/index'
+import { Route as MyCoursesIndexRouteImport } from './routes/my-courses/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as CoursesIndexRouteImport } from './routes/courses/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
@@ -101,6 +102,11 @@ const PlatformAdminIndexRoute = PlatformAdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => PlatformAdminRouteRoute,
+} as any)
+const MyCoursesIndexRoute = MyCoursesIndexRouteImport.update({
+  id: '/my-courses/',
+  path: '/my-courses/',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardIndexRoute = DashboardIndexRouteImport.update({
   id: '/dashboard/',
@@ -263,6 +269,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/courses/': typeof CoursesIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/my-courses/': typeof MyCoursesIndexRoute
   '/platform-admin/': typeof PlatformAdminIndexRoute
   '/admin/courses/$courseId': typeof AdminCoursesCourseIdRoute
   '/admin/courses/new': typeof AdminCoursesNewRoute
@@ -300,6 +307,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/courses': typeof CoursesIndexRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/my-courses': typeof MyCoursesIndexRoute
   '/platform-admin': typeof PlatformAdminIndexRoute
   '/admin/courses/$courseId': typeof AdminCoursesCourseIdRoute
   '/admin/courses/new': typeof AdminCoursesNewRoute
@@ -340,6 +348,7 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/courses/': typeof CoursesIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/my-courses/': typeof MyCoursesIndexRoute
   '/platform-admin/': typeof PlatformAdminIndexRoute
   '/admin/courses/$courseId': typeof AdminCoursesCourseIdRoute
   '/admin/courses/new': typeof AdminCoursesNewRoute
@@ -381,6 +390,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/courses/'
     | '/dashboard/'
+    | '/my-courses/'
     | '/platform-admin/'
     | '/admin/courses/$courseId'
     | '/admin/courses/new'
@@ -418,6 +428,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/courses'
     | '/dashboard'
+    | '/my-courses'
     | '/platform-admin'
     | '/admin/courses/$courseId'
     | '/admin/courses/new'
@@ -457,6 +468,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/courses/'
     | '/dashboard/'
+    | '/my-courses/'
     | '/platform-admin/'
     | '/admin/courses/$courseId'
     | '/admin/courses/new'
@@ -490,6 +502,7 @@ export interface RootRouteChildren {
   CoursesCourseSlugRoute: typeof CoursesCourseSlugRouteWithChildren
   CoursesIndexRoute: typeof CoursesIndexRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
+  MyCoursesIndexRoute: typeof MyCoursesIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiWebhooksBunnyRoute: typeof ApiWebhooksBunnyRoute
   ApiWebhooksStripeRoute: typeof ApiWebhooksStripeRoute
@@ -573,6 +586,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/platform-admin/'
       preLoaderRoute: typeof PlatformAdminIndexRouteImport
       parentRoute: typeof PlatformAdminRouteRoute
+    }
+    '/my-courses/': {
+      id: '/my-courses/'
+      path: '/my-courses'
+      fullPath: '/my-courses/'
+      preLoaderRoute: typeof MyCoursesIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/dashboard/': {
       id: '/dashboard/'
@@ -839,6 +859,7 @@ const rootRouteChildren: RootRouteChildren = {
   CoursesCourseSlugRoute: CoursesCourseSlugRouteWithChildren,
   CoursesIndexRoute: CoursesIndexRoute,
   DashboardIndexRoute: DashboardIndexRoute,
+  MyCoursesIndexRoute: MyCoursesIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiWebhooksBunnyRoute: ApiWebhooksBunnyRoute,
   ApiWebhooksStripeRoute: ApiWebhooksStripeRoute,
