@@ -38,8 +38,8 @@ Complete the task.
 
 Before committing, run the feedback loops:
 
+- `vp check --fix` to auto-fix formatting and lint, then type-check
 - `vp test run` to run the full test suite once
-- `vp check` to run format, lint, and type checks
 
 # COMMIT
 

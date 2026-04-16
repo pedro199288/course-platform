@@ -96,12 +96,33 @@
     {
       "idx": 13,
       "version": "7",
+      "when": 1776550000000,
+      "tag": "0014_white_label",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1776580000000,
+      "tag": "0015_custom_domain",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1776600000000,
+      "tag": "0016_webhooks",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
       "when": 1776614400000,
       "tag": "0017_user_tenants",
       "breakpoints": true
     },
     {
-      "idx": 14,
+      "idx": 17,
       "version": "7",
       "when": 1776700800000,
       "tag": "0018_invitations",
