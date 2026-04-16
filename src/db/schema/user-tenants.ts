@@ -2,11 +2,7 @@ import { pgEnum, pgTable, primaryKey, timestamp, uuid } from "drizzle-orm/pg-cor
 import { users } from "./auth.ts";
 import { tenants } from "./tenants.ts";
 
-export const tenantRole = pgEnum("tenant_role", [
-  "tenant_owner",
-  "tenant_admin",
-  "student",
-]);
+export const tenantRole = pgEnum("tenant_role", ["tenant_owner", "tenant_admin", "student"]);
 
 export const userTenants = pgTable(
   "user_tenants",
@@ -20,7 +16,5 @@ export const userTenants = pgTable(
     role: tenantRole().notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (table) => [
-    primaryKey({ columns: [table.userId, table.tenantId] }),
-  ],
+  (table) => [primaryKey({ columns: [table.userId, table.tenantId] })],
 );

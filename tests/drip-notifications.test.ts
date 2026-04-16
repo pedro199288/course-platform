@@ -79,31 +79,25 @@ describe("drip content email notifications", () => {
     module2Id = mod2.id;
 
     // Lesson 1: no drip (module 1)
-    await db
-      .insert(lessons)
-      .values({ moduleId, title: "Lesson 1", type: "text", position: 0 });
+    await db.insert(lessons).values({ moduleId, title: "Lesson 1", type: "text", position: 0 });
 
     // Lesson 2: drip after 3 days (module 1)
-    await db
-      .insert(lessons)
-      .values({
-        moduleId,
-        title: "Lesson 2",
-        type: "text",
-        position: 1,
-        availableAfterDays: 3,
-      });
+    await db.insert(lessons).values({
+      moduleId,
+      title: "Lesson 2",
+      type: "text",
+      position: 1,
+      availableAfterDays: 3,
+    });
 
     // Lesson 3: fixed date drip 2026-02-01 (module 1)
-    await db
-      .insert(lessons)
-      .values({
-        moduleId,
-        title: "Lesson 3",
-        type: "text",
-        position: 2,
-        availableFromDate: new Date("2026-02-01T00:00:00Z"),
-      });
+    await db.insert(lessons).values({
+      moduleId,
+      title: "Lesson 3",
+      type: "text",
+      position: 2,
+      availableFromDate: new Date("2026-02-01T00:00:00Z"),
+    });
 
     // Lesson 4: no lesson drip, but in drip module 2
     await db
@@ -112,13 +106,34 @@ describe("drip content email notifications", () => {
   });
 
   afterAll(async () => {
-    await db.delete(enrollments).where(eq(enrollments.tenantId, tenantId)).catch(() => {});
-    await db.delete(lessons).where(eq(lessons.moduleId, moduleId)).catch(() => {});
-    await db.delete(lessons).where(eq(lessons.moduleId, module2Id)).catch(() => {});
-    await db.delete(modules).where(eq(modules.courseId, courseId)).catch(() => {});
-    await db.delete(users).where(eq(users.tenantId, tenantId)).catch(() => {});
-    await db.delete(courses).where(eq(courses.tenantId, tenantId)).catch(() => {});
-    await db.delete(tenants).where(eq(tenants.subdomain, subdomain)).catch(() => {});
+    await db
+      .delete(enrollments)
+      .where(eq(enrollments.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(lessons)
+      .where(eq(lessons.moduleId, moduleId))
+      .catch(() => {});
+    await db
+      .delete(lessons)
+      .where(eq(lessons.moduleId, module2Id))
+      .catch(() => {});
+    await db
+      .delete(modules)
+      .where(eq(modules.courseId, courseId))
+      .catch(() => {});
+    await db
+      .delete(users)
+      .where(eq(users.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(courses)
+      .where(eq(courses.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(tenants)
+      .where(eq(tenants.subdomain, subdomain))
+      .catch(() => {});
   });
 
   // Clear captured jobs before each test

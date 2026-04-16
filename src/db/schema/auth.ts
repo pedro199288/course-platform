@@ -40,9 +40,7 @@ export const users = pgTable(
       .notNull()
       .$onUpdate(() => new Date()),
   },
-  (table) => [
-    uniqueIndex("users_email_unique").on(table.email),
-  ],
+  (table) => [uniqueIndex("users_email_unique").on(table.email)],
 );
 
 export const sessions = pgTable(

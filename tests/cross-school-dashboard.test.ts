@@ -151,25 +151,70 @@ describe("cross-school dashboard", () => {
 
   afterAll(async () => {
     // Clean up in reverse dependency order
-    await db.delete(lessonProgress).where(eq(lessonProgress.tenantId, tenantAId)).catch(() => {});
-    await db.delete(lessonProgress).where(eq(lessonProgress.tenantId, tenantBId)).catch(() => {});
-    await db.delete(enrollments).where(eq(enrollments.tenantId, tenantAId)).catch(() => {});
-    await db.delete(enrollments).where(eq(enrollments.tenantId, tenantBId)).catch(() => {});
+    await db
+      .delete(lessonProgress)
+      .where(eq(lessonProgress.tenantId, tenantAId))
+      .catch(() => {});
+    await db
+      .delete(lessonProgress)
+      .where(eq(lessonProgress.tenantId, tenantBId))
+      .catch(() => {});
+    await db
+      .delete(enrollments)
+      .where(eq(enrollments.tenantId, tenantAId))
+      .catch(() => {});
+    await db
+      .delete(enrollments)
+      .where(eq(enrollments.tenantId, tenantBId))
+      .catch(() => {});
     for (const cId of [courseA1Id, courseB1Id]) {
-      const mods = await db.select({ id: modules.id }).from(modules).where(eq(modules.courseId, cId));
+      const mods = await db
+        .select({ id: modules.id })
+        .from(modules)
+        .where(eq(modules.courseId, cId));
       for (const m of mods) {
-        await db.delete(lessons).where(eq(lessons.moduleId, m.id)).catch(() => {});
+        await db
+          .delete(lessons)
+          .where(eq(lessons.moduleId, m.id))
+          .catch(() => {});
       }
-      await db.delete(modules).where(eq(modules.courseId, cId)).catch(() => {});
+      await db
+        .delete(modules)
+        .where(eq(modules.courseId, cId))
+        .catch(() => {});
     }
-    await db.delete(courses).where(eq(courses.tenantId, tenantAId)).catch(() => {});
-    await db.delete(courses).where(eq(courses.tenantId, tenantBId)).catch(() => {});
-    await db.delete(userTenants).where(eq(userTenants.tenantId, tenantAId)).catch(() => {});
-    await db.delete(userTenants).where(eq(userTenants.tenantId, tenantBId)).catch(() => {});
-    await db.delete(users).where(eq(users.id, userId)).catch(() => {});
-    await db.delete(users).where(eq(users.id, ownerUserId)).catch(() => {});
-    await db.delete(tenants).where(eq(tenants.id, tenantAId)).catch(() => {});
-    await db.delete(tenants).where(eq(tenants.id, tenantBId)).catch(() => {});
+    await db
+      .delete(courses)
+      .where(eq(courses.tenantId, tenantAId))
+      .catch(() => {});
+    await db
+      .delete(courses)
+      .where(eq(courses.tenantId, tenantBId))
+      .catch(() => {});
+    await db
+      .delete(userTenants)
+      .where(eq(userTenants.tenantId, tenantAId))
+      .catch(() => {});
+    await db
+      .delete(userTenants)
+      .where(eq(userTenants.tenantId, tenantBId))
+      .catch(() => {});
+    await db
+      .delete(users)
+      .where(eq(users.id, userId))
+      .catch(() => {});
+    await db
+      .delete(users)
+      .where(eq(users.id, ownerUserId))
+      .catch(() => {});
+    await db
+      .delete(tenants)
+      .where(eq(tenants.id, tenantAId))
+      .catch(() => {});
+    await db
+      .delete(tenants)
+      .where(eq(tenants.id, tenantBId))
+      .catch(() => {});
   });
 
   // ── Multi-school enrollment visibility ──────────────────────
@@ -263,5 +308,4 @@ describe("cross-school dashboard", () => {
 
     await db.delete(users).where(eq(users.id, loner.id));
   });
-
 });

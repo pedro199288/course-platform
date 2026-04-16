@@ -71,11 +71,7 @@ function SchoolSection({
   };
 }) {
   const roleLabel =
-    school.role === "tenant_owner"
-      ? "Owner"
-      : school.role === "tenant_admin"
-        ? "Admin"
-        : "Student";
+    school.role === "tenant_owner" ? "Owner" : school.role === "tenant_admin" ? "Admin" : "Student";
 
   return (
     <section>
@@ -108,11 +104,7 @@ function SchoolSection({
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         {school.courses.map((course) => (
-          <CrossSchoolCourseCard
-            key={course.courseId}
-            course={course}
-            schoolUrl={school.url}
-          />
+          <CrossSchoolCourseCard key={course.courseId} course={course} schoolUrl={school.url} />
         ))}
       </div>
     </section>

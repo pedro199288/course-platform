@@ -462,13 +462,7 @@ interface BulkEmail {
   createdAt: Date;
 }
 
-function BulkEmailSection({
-  courseId,
-  bulkEmails,
-}: {
-  courseId: string;
-  bulkEmails: BulkEmail[];
-}) {
+function BulkEmailSection({ courseId, bulkEmails }: { courseId: string; bulkEmails: BulkEmail[] }) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
   const [subject, setSubject] = useState("");

@@ -620,10 +620,7 @@ function TeamSection({
       setEmail("");
       setMessage({
         type: "success",
-        text:
-          result.status === "membership_created"
-            ? "User added as admin"
-            : "Invitation sent",
+        text: result.status === "membership_created" ? "User added as admin" : "Invitation sent",
       });
       void router.invalidate();
     } catch (err: any) {

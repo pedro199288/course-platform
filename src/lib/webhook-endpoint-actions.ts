@@ -89,9 +89,7 @@ export const updateWebhookEndpointFn = createServerFn({ method: "POST" })
         events: data.events,
         active: data.active,
       })
-      .where(
-        and(eq(webhookEndpoints.id, data.endpointId), eq(webhookEndpoints.tenantId, tenantId)),
-      )
+      .where(and(eq(webhookEndpoints.id, data.endpointId), eq(webhookEndpoints.tenantId, tenantId)))
       .returning();
     if (!updated) throw new Error("Endpoint not found");
     return updated;
@@ -103,9 +101,7 @@ export const deleteWebhookEndpointFn = createServerFn({ method: "POST" })
     const { tenantId } = await requireMembership("tenant_admin");
     const [deleted] = await db
       .delete(webhookEndpoints)
-      .where(
-        and(eq(webhookEndpoints.id, data.endpointId), eq(webhookEndpoints.tenantId, tenantId)),
-      )
+      .where(and(eq(webhookEndpoints.id, data.endpointId), eq(webhookEndpoints.tenantId, tenantId)))
       .returning();
     if (!deleted) throw new Error("Endpoint not found");
     return deleted;
@@ -118,9 +114,7 @@ export const toggleWebhookEndpointFn = createServerFn({ method: "POST" })
     const [updated] = await db
       .update(webhookEndpoints)
       .set({ active: data.active })
-      .where(
-        and(eq(webhookEndpoints.id, data.endpointId), eq(webhookEndpoints.tenantId, tenantId)),
-      )
+      .where(and(eq(webhookEndpoints.id, data.endpointId), eq(webhookEndpoints.tenantId, tenantId)))
       .returning();
     if (!updated) throw new Error("Endpoint not found");
     return updated;

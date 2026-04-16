@@ -1,12 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { z } from "zod";
 import { authClient } from "#/lib/auth-client.ts";
 
 export const Route = createFileRoute("/verify-email")({
+  validateSearch: z.object({ email: z.string().email() }),
   component: VerifyEmailPage,
 });
 
 function VerifyEmailPage() {
+  const { email } = Route.useSearch();
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -17,7 +20,7 @@ function VerifyEmailPage() {
     setResent(false);
 
     const result = await authClient.sendVerificationEmail({
-      email: "", // Better Auth uses the current session's email
+      email,
       callbackURL: "/",
     });
 

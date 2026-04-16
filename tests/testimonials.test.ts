@@ -135,10 +135,7 @@ describe("testimonials", () => {
 
     await db.delete(testimonials).where(eq(testimonials.id, created.id));
 
-    const remaining = await db
-      .select()
-      .from(testimonials)
-      .where(eq(testimonials.id, created.id));
+    const remaining = await db.select().from(testimonials).where(eq(testimonials.id, created.id));
     expect(remaining.length).toBe(0);
   });
 
@@ -173,10 +170,7 @@ describe("testimonials", () => {
       position: 0,
     });
 
-    const t1Rows = await db
-      .select()
-      .from(testimonials)
-      .where(eq(testimonials.tenantId, tenantId));
+    const t1Rows = await db.select().from(testimonials).where(eq(testimonials.tenantId, tenantId));
 
     const leaked = t1Rows.filter((r) => r.tenantId === tenant2Id);
     expect(leaked.length).toBe(0);

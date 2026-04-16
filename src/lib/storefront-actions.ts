@@ -56,11 +56,17 @@ async function requireTenant() {
   let resolvedFaviconUrl = tenant.faviconUrl;
   try {
     if (tenant.logoUrl) {
-      const { url } = await createPresignedDownloadUrl({ key: tenant.logoUrl, expiresInSeconds: 86400 });
+      const { url } = await createPresignedDownloadUrl({
+        key: tenant.logoUrl,
+        expiresInSeconds: 86400,
+      });
       resolvedLogoUrl = url;
     }
     if (tenant.faviconUrl) {
-      const { url } = await createPresignedDownloadUrl({ key: tenant.faviconUrl, expiresInSeconds: 86400 });
+      const { url } = await createPresignedDownloadUrl({
+        key: tenant.faviconUrl,
+        expiresInSeconds: 86400,
+      });
       resolvedFaviconUrl = url;
     }
   } catch {

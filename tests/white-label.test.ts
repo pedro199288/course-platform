@@ -47,10 +47,7 @@ describe("white-label branding", () => {
   // ── Brand name ──────────────────────────────────────────────
 
   it("sets and reads brand name", async () => {
-    await db
-      .update(tenants)
-      .set({ brandName: "Intecc Academy" })
-      .where(eq(tenants.id, tenantId));
+    await db.update(tenants).set({ brandName: "Intecc Academy" }).where(eq(tenants.id, tenantId));
 
     const tenant = await db.query.tenants.findFirst({
       where: eq(tenants.id, tenantId),
@@ -81,10 +78,7 @@ describe("white-label branding", () => {
 
   it("sets logo URL (S3 key)", async () => {
     const key = `tenants/${tenantId}/branding/logo.png`;
-    await db
-      .update(tenants)
-      .set({ logoUrl: key })
-      .where(eq(tenants.id, tenantId));
+    await db.update(tenants).set({ logoUrl: key }).where(eq(tenants.id, tenantId));
 
     const tenant = await db.query.tenants.findFirst({
       where: eq(tenants.id, tenantId),
@@ -96,10 +90,7 @@ describe("white-label branding", () => {
 
   it("sets favicon URL (S3 key)", async () => {
     const key = `tenants/${tenantId}/branding/favicon.ico`;
-    await db
-      .update(tenants)
-      .set({ faviconUrl: key })
-      .where(eq(tenants.id, tenantId));
+    await db.update(tenants).set({ faviconUrl: key }).where(eq(tenants.id, tenantId));
 
     const tenant = await db.query.tenants.findFirst({
       where: eq(tenants.id, tenantId),
@@ -177,10 +168,7 @@ describe("white-label branding", () => {
       .where(eq(tenants.id, tenantId));
 
     // Then update only branding color
-    await db
-      .update(tenants)
-      .set({ accentColor: "#aabbcc" })
-      .where(eq(tenants.id, tenantId));
+    await db.update(tenants).set({ accentColor: "#aabbcc" }).where(eq(tenants.id, tenantId));
 
     const tenant = await db.query.tenants.findFirst({
       where: eq(tenants.id, tenantId),

@@ -67,11 +67,20 @@ describe("invitation flow", () => {
   });
 
   afterAll(async () => {
-    await db.delete(invitations).where(eq(invitations.tenantId, tenantId)).catch(() => {});
+    await db
+      .delete(invitations)
+      .where(eq(invitations.tenantId, tenantId))
+      .catch(() => {});
     for (const id of [ownerUserId, adminUserId, existingUserId]) {
-      await db.delete(users).where(eq(users.id, id)).catch(() => {});
+      await db
+        .delete(users)
+        .where(eq(users.id, id))
+        .catch(() => {});
     }
-    await db.delete(tenants).where(eq(tenants.id, tenantId)).catch(() => {});
+    await db
+      .delete(tenants)
+      .where(eq(tenants.id, tenantId))
+      .catch(() => {});
   });
 
   // ── Direct invitation of existing user ────────────────────────
@@ -91,10 +100,7 @@ describe("invitation flow", () => {
 
     // Check no existing membership
     const existingMembership = await db.query.userTenants.findFirst({
-      where: and(
-        eq(userTenants.userId, existingUser!.id),
-        eq(userTenants.tenantId, tid),
-      ),
+      where: and(eq(userTenants.userId, existingUser!.id), eq(userTenants.tenantId, tid)),
     });
     expect(existingMembership).toBeFalsy();
 
@@ -118,10 +124,7 @@ describe("invitation flow", () => {
 
     // Verify
     const membership = await db.query.userTenants.findFirst({
-      where: and(
-        eq(userTenants.userId, existingUser!.id),
-        eq(userTenants.tenantId, tid),
-      ),
+      where: and(eq(userTenants.userId, existingUser!.id), eq(userTenants.tenantId, tid)),
     });
     expect(membership).toBeTruthy();
     expect(membership!.role).toBe("tenant_admin");
@@ -167,10 +170,7 @@ describe("invitation flow", () => {
 
   it("detects existing membership to reject duplicate invitation", async () => {
     const existingMembership = await db.query.userTenants.findFirst({
-      where: and(
-        eq(userTenants.userId, existingUserId),
-        eq(userTenants.tenantId, tenantId),
-      ),
+      where: and(eq(userTenants.userId, existingUserId), eq(userTenants.tenantId, tenantId)),
     });
     expect(existingMembership).toBeTruthy();
   });
@@ -198,10 +198,7 @@ describe("invitation flow", () => {
 
       // Verify membership was created
       const membership = await db.query.userTenants.findFirst({
-        where: and(
-          eq(userTenants.userId, newUser.id),
-          eq(userTenants.tenantId, tenantId),
-        ),
+        where: and(eq(userTenants.userId, newUser.id), eq(userTenants.tenantId, tenantId)),
       });
       expect(membership).toBeTruthy();
       expect(membership!.role).toBe("tenant_admin");
@@ -217,10 +214,14 @@ describe("invitation flow", () => {
       expect(invitation).toBeTruthy();
       expect(invitation!.acceptedAt).toBeTruthy();
     } finally {
-      await db.delete(userTenants).where(
-        and(eq(userTenants.userId, newUser.id), eq(userTenants.tenantId, tenantId)),
-      ).catch(() => {});
-      await db.delete(users).where(eq(users.id, newUser.id)).catch(() => {});
+      await db
+        .delete(userTenants)
+        .where(and(eq(userTenants.userId, newUser.id), eq(userTenants.tenantId, tenantId)))
+        .catch(() => {});
+      await db
+        .delete(users)
+        .where(eq(users.id, newUser.id))
+        .catch(() => {});
     }
   });
 
@@ -248,23 +249,20 @@ describe("invitation flow", () => {
 
       // No membership should be created
       const membership = await db.query.userTenants.findFirst({
-        where: and(
-          eq(userTenants.userId, newUser.id),
-          eq(userTenants.tenantId, tenantId),
-        ),
+        where: and(eq(userTenants.userId, newUser.id), eq(userTenants.tenantId, tenantId)),
       });
       expect(membership).toBeFalsy();
 
       // Invitation should be marked expired
       const invitation = await db.query.invitations.findFirst({
-        where: and(
-          eq(invitations.email, email),
-          eq(invitations.tenantId, tenantId),
-        ),
+        where: and(eq(invitations.email, email), eq(invitations.tenantId, tenantId)),
       });
       expect(invitation!.status).toBe("expired");
     } finally {
-      await db.delete(users).where(eq(users.id, newUser.id)).catch(() => {});
+      await db
+        .delete(users)
+        .where(eq(users.id, newUser.id))
+        .catch(() => {});
     }
   });
 
@@ -285,10 +283,7 @@ describe("invitation flow", () => {
       .returning();
 
     // Revoke
-    await db
-      .update(invitations)
-      .set({ status: "expired" })
-      .where(eq(invitations.id, inv.id));
+    await db.update(invitations).set({ status: "expired" }).where(eq(invitations.id, inv.id));
 
     const updated = await db.query.invitations.findFirst({
       where: eq(invitations.id, inv.id),
@@ -301,35 +296,23 @@ describe("invitation flow", () => {
   it("removing a tenant_admin deletes their membership", async () => {
     // existingUserId has tenant_admin membership from earlier test
     const membershipBefore = await db.query.userTenants.findFirst({
-      where: and(
-        eq(userTenants.userId, existingUserId),
-        eq(userTenants.tenantId, tenantId),
-      ),
+      where: and(eq(userTenants.userId, existingUserId), eq(userTenants.tenantId, tenantId)),
     });
     expect(membershipBefore).toBeTruthy();
 
-    await db.delete(userTenants).where(
-      and(
-        eq(userTenants.userId, existingUserId),
-        eq(userTenants.tenantId, tenantId),
-      ),
-    );
+    await db
+      .delete(userTenants)
+      .where(and(eq(userTenants.userId, existingUserId), eq(userTenants.tenantId, tenantId)));
 
     const membershipAfter = await db.query.userTenants.findFirst({
-      where: and(
-        eq(userTenants.userId, existingUserId),
-        eq(userTenants.tenantId, tenantId),
-      ),
+      where: and(eq(userTenants.userId, existingUserId), eq(userTenants.tenantId, tenantId)),
     });
     expect(membershipAfter).toBeFalsy();
   });
 
   it("tenant_owner membership cannot be deleted by role check", async () => {
     const membership = await db.query.userTenants.findFirst({
-      where: and(
-        eq(userTenants.userId, ownerUserId),
-        eq(userTenants.tenantId, tenantId),
-      ),
+      where: and(eq(userTenants.userId, ownerUserId), eq(userTenants.tenantId, tenantId)),
     });
     expect(membership).toBeTruthy();
     expect(membership!.role).toBe("tenant_owner");

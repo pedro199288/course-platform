@@ -32,10 +32,7 @@ export const inviteTenantAdminFn = createServerFn({ method: "POST" })
 
     if (existingUser) {
       const existingMembership = await db.query.userTenants.findFirst({
-        where: and(
-          eq(userTenants.userId, existingUser.id),
-          eq(userTenants.tenantId, tenantId),
-        ),
+        where: and(eq(userTenants.userId, existingUser.id), eq(userTenants.tenantId, tenantId)),
       });
       if (existingMembership) {
         throw new Error("This user is already a member of this school");
@@ -147,9 +144,7 @@ export const listTeamMembersFn = createServerFn({ method: "GET" }).handler(async
       expiresAt: invitations.expiresAt,
     })
     .from(invitations)
-    .where(
-      and(eq(invitations.tenantId, tenantId), eq(invitations.status, "pending")),
-    );
+    .where(and(eq(invitations.tenantId, tenantId), eq(invitations.status, "pending")));
 
   return { members, pendingInvitations };
 });
@@ -192,10 +187,7 @@ export const removeTeamMemberFn = createServerFn({ method: "POST" })
     const { tenantId } = await requireMembership("tenant_owner");
 
     const membership = await db.query.userTenants.findFirst({
-      where: and(
-        eq(userTenants.userId, data.memberUserId),
-        eq(userTenants.tenantId, tenantId),
-      ),
+      where: and(eq(userTenants.userId, data.memberUserId), eq(userTenants.tenantId, tenantId)),
     });
 
     if (!membership) {
@@ -208,12 +200,7 @@ export const removeTeamMemberFn = createServerFn({ method: "POST" })
 
     await db
       .delete(userTenants)
-      .where(
-        and(
-          eq(userTenants.userId, data.memberUserId),
-          eq(userTenants.tenantId, tenantId),
-        ),
-      );
+      .where(and(eq(userTenants.userId, data.memberUserId), eq(userTenants.tenantId, tenantId)));
 
     return { ok: true };
   });
@@ -226,12 +213,7 @@ export async function claimPendingInvitations(userEmail: string, userId: string)
   const pending = await db
     .select()
     .from(invitations)
-    .where(
-      and(
-        eq(invitations.email, userEmail.toLowerCase()),
-        eq(invitations.status, "pending"),
-      ),
-    );
+    .where(and(eq(invitations.email, userEmail.toLowerCase()), eq(invitations.status, "pending")));
 
   for (const invitation of pending) {
     if (invitation.expiresAt < new Date()) {
@@ -245,10 +227,7 @@ export async function claimPendingInvitations(userEmail: string, userId: string)
 
     // Check if membership already exists (shouldn't, but be safe)
     const existing = await db.query.userTenants.findFirst({
-      where: and(
-        eq(userTenants.userId, userId),
-        eq(userTenants.tenantId, invitation.tenantId),
-      ),
+      where: and(eq(userTenants.userId, userId), eq(userTenants.tenantId, invitation.tenantId)),
     });
 
     if (!existing) {

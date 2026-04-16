@@ -223,7 +223,10 @@ describe("plans: configuration, enforcement, and metrics", () => {
       });
       await db.delete(userTenants).where(eq(userTenants.tenantId, tenantId));
       for (const m of memberships) {
-        await db.delete(users).where(eq(users.id, m.userId)).catch(() => {});
+        await db
+          .delete(users)
+          .where(eq(users.id, m.userId))
+          .catch(() => {});
       }
     }
 
@@ -242,10 +245,20 @@ describe("plans: configuration, enforcement, and metrics", () => {
     });
 
     it("only counts student role memberships toward the cap", async () => {
-      const [ownerUser] = await db.insert(users).values({ name: "Owner", email: `owner-${ts}@test.com` }).returning();
-      const [adminUser] = await db.insert(users).values({ name: "Admin", email: `admin-${ts}@test.com` }).returning();
-      await db.insert(userTenants).values({ userId: ownerUser.id, tenantId: tenantSmallId, role: "tenant_owner" });
-      await db.insert(userTenants).values({ userId: adminUser.id, tenantId: tenantSmallId, role: "tenant_admin" });
+      const [ownerUser] = await db
+        .insert(users)
+        .values({ name: "Owner", email: `owner-${ts}@test.com` })
+        .returning();
+      const [adminUser] = await db
+        .insert(users)
+        .values({ name: "Admin", email: `admin-${ts}@test.com` })
+        .returning();
+      await db
+        .insert(userTenants)
+        .values({ userId: ownerUser.id, tenantId: tenantSmallId, role: "tenant_owner" });
+      await db
+        .insert(userTenants)
+        .values({ userId: adminUser.id, tenantId: tenantSmallId, role: "tenant_admin" });
 
       // Two non-student memberships shouldn't consume student slots
       await expect(assertCanAddStudent(tenantSmallId)).resolves.toBeUndefined();

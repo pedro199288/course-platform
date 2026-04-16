@@ -41,9 +41,7 @@ export const listAnnouncementsFn = createServerFn({ method: "GET" })
     return db
       .select()
       .from(announcements)
-      .where(
-        and(eq(announcements.courseId, data.courseId), eq(announcements.tenantId, tenantId)),
-      )
+      .where(and(eq(announcements.courseId, data.courseId), eq(announcements.tenantId, tenantId)))
       .orderBy(desc(announcements.createdAt));
   });
 
@@ -114,9 +112,7 @@ export const deleteAnnouncementFn = createServerFn({ method: "POST" })
     const { tenantId } = await requireMembership("tenant_admin");
     const [deleted] = await db
       .delete(announcements)
-      .where(
-        and(eq(announcements.id, data.announcementId), eq(announcements.tenantId, tenantId)),
-      )
+      .where(and(eq(announcements.id, data.announcementId), eq(announcements.tenantId, tenantId)))
       .returning();
     if (!deleted) throw new Error("Announcement not found");
     return deleted;

@@ -46,10 +46,7 @@ export async function requireMembership(minRole: TenantRole): Promise<{
 
   // Look up membership in user_tenants
   const membership = await db.query.userTenants.findFirst({
-    where: and(
-      eq(userTenants.userId, user.id),
-      eq(userTenants.tenantId, tenantId),
-    ),
+    where: and(eq(userTenants.userId, user.id), eq(userTenants.tenantId, tenantId)),
   });
 
   if (!membership) {

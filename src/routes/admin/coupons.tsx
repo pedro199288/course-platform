@@ -112,16 +112,16 @@ function CouponsPage() {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      {c.type === "percent" ? `${c.value}% off` : `$${(c.value / 100).toFixed(2)} off`}
+                      {c.type === "percent"
+                        ? `${c.value}% off`
+                        : `$${(c.value / 100).toFixed(2)} off`}
                     </td>
                     <td className="px-4 py-3 tabular-nums">
                       {c.timesRedeemed}
                       {c.maxRedemptions ? ` / ${c.maxRedemptions}` : ""}
                     </td>
                     <td className="px-4 py-3 text-neutral-500 dark:text-neutral-400">
-                      {c.expiresAt
-                        ? new Date(c.expiresAt).toLocaleDateString()
-                        : "Never"}
+                      {c.expiresAt ? new Date(c.expiresAt).toLocaleDateString() : "Never"}
                     </td>
                     <td className="px-4 py-3">
                       <span
@@ -176,10 +176,7 @@ function CouponForm({
     setSaving(true);
     setError(null);
     try {
-      const numValue =
-        type === "percent"
-          ? parseFloat(value)
-          : Math.round(parseFloat(value) * 100); // Convert dollars to cents for fixed
+      const numValue = type === "percent" ? parseFloat(value) : Math.round(parseFloat(value) * 100); // Convert dollars to cents for fixed
       await createCouponFn({
         data: {
           code: code.trim(),

@@ -51,8 +51,14 @@ describe("configurable webhooks", () => {
       .delete(webhookEndpoints)
       .where(eq(webhookEndpoints.tenantId, tenant2Id))
       .catch(() => {});
-    await db.delete(tenants).where(eq(tenants.subdomain, subdomain)).catch(() => {});
-    await db.delete(tenants).where(eq(tenants.subdomain, subdomain2)).catch(() => {});
+    await db
+      .delete(tenants)
+      .where(eq(tenants.subdomain, subdomain))
+      .catch(() => {});
+    await db
+      .delete(tenants)
+      .where(eq(tenants.subdomain, subdomain2))
+      .catch(() => {});
   });
 
   // ── CRUD ──────────────────────────────────────────────────────

@@ -44,10 +44,7 @@ describe("tenant settings (tracking + about)", () => {
   // ── Tracking IDs ─────────────────────────────────────────────
 
   it("sets Google Analytics tracking ID", async () => {
-    await db
-      .update(tenants)
-      .set({ gaTrackingId: "G-ABC123DEF" })
-      .where(eq(tenants.id, tenantId));
+    await db.update(tenants).set({ gaTrackingId: "G-ABC123DEF" }).where(eq(tenants.id, tenantId));
 
     const tenant = await db.query.tenants.findFirst({
       where: eq(tenants.id, tenantId),
@@ -58,10 +55,7 @@ describe("tenant settings (tracking + about)", () => {
   });
 
   it("sets Facebook Pixel ID", async () => {
-    await db
-      .update(tenants)
-      .set({ fbPixelId: "1234567890" })
-      .where(eq(tenants.id, tenantId));
+    await db.update(tenants).set({ fbPixelId: "1234567890" }).where(eq(tenants.id, tenantId));
 
     const tenant = await db.query.tenants.findFirst({
       where: eq(tenants.id, tenantId),
@@ -99,10 +93,7 @@ describe("tenant settings (tracking + about)", () => {
       ],
     };
 
-    await db
-      .update(tenants)
-      .set({ aboutInstructor: richText })
-      .where(eq(tenants.id, tenantId));
+    await db.update(tenants).set({ aboutInstructor: richText }).where(eq(tenants.id, tenantId));
 
     const tenant = await db.query.tenants.findFirst({
       where: eq(tenants.id, tenantId),
@@ -155,10 +146,7 @@ describe("tenant settings (tracking + about)", () => {
       ],
     };
 
-    await db
-      .update(tenants)
-      .set({ aboutInstructor: richText })
-      .where(eq(tenants.id, tenantId));
+    await db.update(tenants).set({ aboutInstructor: richText }).where(eq(tenants.id, tenantId));
 
     const tenant = await db.query.tenants.findFirst({
       where: eq(tenants.id, tenantId),
@@ -169,10 +157,7 @@ describe("tenant settings (tracking + about)", () => {
   });
 
   it("clears about instructor by setting to null", async () => {
-    await db
-      .update(tenants)
-      .set({ aboutInstructor: null })
-      .where(eq(tenants.id, tenantId));
+    await db.update(tenants).set({ aboutInstructor: null }).where(eq(tenants.id, tenantId));
 
     const tenant = await db.query.tenants.findFirst({
       where: eq(tenants.id, tenantId),
@@ -185,10 +170,7 @@ describe("tenant settings (tracking + about)", () => {
   // ── Both fields together ──────────────────────────────────────
 
   it("updates tracking IDs and about section independently", async () => {
-    await db
-      .update(tenants)
-      .set({ gaTrackingId: "G-TRACK123" })
-      .where(eq(tenants.id, tenantId));
+    await db.update(tenants).set({ gaTrackingId: "G-TRACK123" }).where(eq(tenants.id, tenantId));
 
     const aboutContent: RichTextDoc = {
       type: "doc",
@@ -200,10 +182,7 @@ describe("tenant settings (tracking + about)", () => {
       ],
     };
 
-    await db
-      .update(tenants)
-      .set({ aboutInstructor: aboutContent })
-      .where(eq(tenants.id, tenantId));
+    await db.update(tenants).set({ aboutInstructor: aboutContent }).where(eq(tenants.id, tenantId));
 
     const tenant = await db.query.tenants.findFirst({
       where: eq(tenants.id, tenantId),

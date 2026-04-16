@@ -109,9 +109,7 @@ export const reorderTestimonialsFn = createServerFn({ method: "POST" })
       await db
         .update(testimonials)
         .set({ position: i })
-        .where(
-          and(eq(testimonials.id, data.orderedIds[i]), eq(testimonials.tenantId, tenantId)),
-        );
+        .where(and(eq(testimonials.id, data.orderedIds[i]), eq(testimonials.tenantId, tenantId)));
     }
     return { ok: true };
   });

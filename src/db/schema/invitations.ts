@@ -3,11 +3,7 @@ import { users } from "./auth.ts";
 import { tenants } from "./tenants.ts";
 import { tenantRole } from "./user-tenants.ts";
 
-export const invitationStatus = pgEnum("invitation_status", [
-  "pending",
-  "accepted",
-  "expired",
-]);
+export const invitationStatus = pgEnum("invitation_status", ["pending", "accepted", "expired"]);
 
 export const invitations = pgTable("invitations", {
   id: uuid().primaryKey().defaultRandom(),

@@ -27,7 +27,7 @@ function RegisterPage() {
       return;
     }
 
-    void navigate({ to: "/verify-email" });
+    void navigate({ to: "/verify-email", search: { email } });
   }
 
   return (

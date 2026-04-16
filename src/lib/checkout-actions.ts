@@ -364,10 +364,7 @@ export const setSubscriptionPriceFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { tenantId } = await requireMembership("tenant_admin");
 
-    await db
-      .update(tenants)
-      .set({ subscriptionPrice: data.price })
-      .where(eq(tenants.id, tenantId));
+    await db.update(tenants).set({ subscriptionPrice: data.price }).where(eq(tenants.id, tenantId));
 
     return { success: true };
   });

@@ -13,7 +13,10 @@ describe("school creation (integration)", () => {
   afterAll(async () => {
     // Clean up user_tenants, sessions, accounts, then users
     for (const userId of createdUserIds) {
-      await db.delete(userTenants).where(eq(userTenants.userId, userId)).catch(() => {});
+      await db
+        .delete(userTenants)
+        .where(eq(userTenants.userId, userId))
+        .catch(() => {});
       await db.delete(sessions).where(eq(sessions.userId, userId));
       await db.delete(accounts).where(eq(accounts.userId, userId));
     }

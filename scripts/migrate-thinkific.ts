@@ -209,17 +209,14 @@ async function uploadVideoToBunny(videoId: string, videoUrl: string): Promise<vo
 
   // Upload to Bunny via PUT
   log(`    Uploading to Bunny Stream (video ID: ${videoId})...`);
-  const uploadRes = await fetch(
-    `${BUNNY_API_BASE}/library/${BUNNY_LIBRARY_ID}/videos/${videoId}`,
-    {
-      method: "PUT",
-      headers: {
-        AccessKey: BUNNY_API_KEY,
-        "Content-Type": "application/octet-stream",
-      },
-      body: videoBuffer,
+  const uploadRes = await fetch(`${BUNNY_API_BASE}/library/${BUNNY_LIBRARY_ID}/videos/${videoId}`, {
+    method: "PUT",
+    headers: {
+      AccessKey: BUNNY_API_KEY,
+      "Content-Type": "application/octet-stream",
     },
-  );
+    body: videoBuffer,
+  });
 
   if (!uploadRes.ok) {
     const body = await uploadRes.text();
@@ -359,9 +356,7 @@ async function migrateChaptersAndLessons(state: MigrationState): Promise<void> {
           continue;
         }
 
-        const tkContent = await thinkificGet<ThinkificContent>(
-          `/course_contents/${contentId}`,
-        );
+        const tkContent = await thinkificGet<ThinkificContent>(`/course_contents/${contentId}`);
 
         if (DRY_RUN) {
           log(`    [DRY RUN] Would create lesson: ${tkContent.name}`);
@@ -464,9 +459,7 @@ async function migrateUsers(state: MigrationState): Promise<void> {
     const existing = await db
       .select({ id: schema.users.id })
       .from(schema.users)
-      .where(
-        and(eq(schema.users.tenantId, TENANT_ID), eq(schema.users.email, tkUser.email)),
-      )
+      .where(and(eq(schema.users.tenantId, TENANT_ID), eq(schema.users.email, tkUser.email)))
       .limit(1);
 
     if (existing.length > 0) {
@@ -516,7 +509,9 @@ async function migrateEnrollments(state: MigrationState): Promise<void> {
     }
 
     if (DRY_RUN) {
-      log(`  [DRY RUN] Would create enrollment for user ${tkEnr.user_id} in course ${tkEnr.course_id}`);
+      log(
+        `  [DRY RUN] Would create enrollment for user ${tkEnr.user_id} in course ${tkEnr.course_id}`,
+      );
       continue;
     }
 
@@ -524,12 +519,7 @@ async function migrateEnrollments(state: MigrationState): Promise<void> {
     const existing = await db
       .select({ id: schema.enrollments.id })
       .from(schema.enrollments)
-      .where(
-        and(
-          eq(schema.enrollments.userId, userId),
-          eq(schema.enrollments.courseId, courseId),
-        ),
-      )
+      .where(and(eq(schema.enrollments.userId, userId), eq(schema.enrollments.courseId, courseId)))
       .limit(1);
 
     if (existing.length > 0) {
@@ -610,9 +600,7 @@ async function migrateProgress(state: MigrationState): Promise<void> {
         .where(eq(schema.modules.courseId, courseId))
         .orderBy(schema.modules.position, schema.lessons.position);
 
-      const completedCount = Math.round(
-        (tkEnr.percentage_completed / 100) * courseLessons.length,
-      );
+      const completedCount = Math.round((tkEnr.percentage_completed / 100) * courseLessons.length);
 
       for (let i = 0; i < completedCount && i < courseLessons.length; i++) {
         if (DRY_RUN) continue;

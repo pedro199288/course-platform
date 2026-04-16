@@ -104,24 +104,57 @@ describe("checkout: student membership on purchase", () => {
   });
 
   afterAll(async () => {
-    await db.delete(enrollments).where(eq(enrollments.tenantId, tenantId)).catch(() => {});
-    await db.delete(payments).where(eq(payments.tenantId, tenantId)).catch(() => {});
-    await db.delete(userTenants).where(eq(userTenants.tenantId, tenantId)).catch(() => {});
-    await db.delete(courses).where(eq(courses.tenantId, tenantId)).catch(() => {});
-    await db.delete(accounts).where(eq(accounts.userId, userId)).catch(() => {});
+    await db
+      .delete(enrollments)
+      .where(eq(enrollments.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(payments)
+      .where(eq(payments.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(userTenants)
+      .where(eq(userTenants.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(courses)
+      .where(eq(courses.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(accounts)
+      .where(eq(accounts.userId, userId))
+      .catch(() => {});
     // Clean up extra users created in tests
     const extraEmails = [`buyer2-${ts}@test.com`, `buyer3-${ts}@test.com`];
     for (const email of extraEmails) {
       const u = await db.query.users.findFirst({ where: eq(users.email, email) });
       if (u) {
-        await db.delete(accounts).where(eq(accounts.userId, u.id)).catch(() => {});
-        await db.delete(userTenants).where(eq(userTenants.userId, u.id)).catch(() => {});
-        await db.delete(users).where(eq(users.id, u.id)).catch(() => {});
+        await db
+          .delete(accounts)
+          .where(eq(accounts.userId, u.id))
+          .catch(() => {});
+        await db
+          .delete(userTenants)
+          .where(eq(userTenants.userId, u.id))
+          .catch(() => {});
+        await db
+          .delete(users)
+          .where(eq(users.id, u.id))
+          .catch(() => {});
       }
     }
-    await db.delete(users).where(eq(users.id, userId)).catch(() => {});
-    await db.delete(tenants).where(eq(tenants.id, tenantId)).catch(() => {});
-    await db.delete(plans).where(eq(plans.id, planId)).catch(() => {});
+    await db
+      .delete(users)
+      .where(eq(users.id, userId))
+      .catch(() => {});
+    await db
+      .delete(tenants)
+      .where(eq(tenants.id, tenantId))
+      .catch(() => {});
+    await db
+      .delete(plans)
+      .where(eq(plans.id, planId))
+      .catch(() => {});
   });
 
   // ── Student membership created on purchase ────────────────

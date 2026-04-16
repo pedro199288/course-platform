@@ -124,10 +124,7 @@ async function handleCheckoutSessionCompleted(data: Record<string, unknown>): Pr
     .select({ userId: userTenants.userId })
     .from(userTenants)
     .where(
-      and(
-        eq(userTenants.userId, metadata.userId),
-        eq(userTenants.tenantId, metadata.tenantId),
-      ),
+      and(eq(userTenants.userId, metadata.userId), eq(userTenants.tenantId, metadata.tenantId)),
     );
 
   if (!existingMembership) {
@@ -298,10 +295,7 @@ async function handleSubscriptionCreated(data: Record<string, unknown>): Promise
     .select({ userId: userTenants.userId })
     .from(userTenants)
     .where(
-      and(
-        eq(userTenants.userId, metadata.userId),
-        eq(userTenants.tenantId, metadata.tenantId),
-      ),
+      and(eq(userTenants.userId, metadata.userId), eq(userTenants.tenantId, metadata.tenantId)),
     );
 
   if (!existingMembership) {

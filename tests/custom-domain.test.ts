@@ -37,10 +37,7 @@ describe("custom domain", () => {
   });
 
   it("sets and reads custom domain", async () => {
-    await db
-      .update(tenants)
-      .set({ customDomain })
-      .where(eq(tenants.id, tenantId));
+    await db.update(tenants).set({ customDomain }).where(eq(tenants.id, tenantId));
 
     const tenant = await db.query.tenants.findFirst({
       where: eq(tenants.id, tenantId),
@@ -66,10 +63,7 @@ describe("custom domain", () => {
     await db.insert(tenants).values({ name: "Other School", subdomain: otherSubdomain });
 
     await expect(
-      db
-        .update(tenants)
-        .set({ customDomain })
-        .where(eq(tenants.subdomain, otherSubdomain)),
+      db.update(tenants).set({ customDomain }).where(eq(tenants.subdomain, otherSubdomain)),
     ).rejects.toThrow();
 
     // Cleanup
@@ -104,10 +98,7 @@ describe("custom domain", () => {
   });
 
   it("clears custom domain by setting to null", async () => {
-    await db
-      .update(tenants)
-      .set({ customDomain: null })
-      .where(eq(tenants.id, tenantId));
+    await db.update(tenants).set({ customDomain: null }).where(eq(tenants.id, tenantId));
 
     const tenant = await db.query.tenants.findFirst({
       where: eq(tenants.id, tenantId),
@@ -133,10 +124,7 @@ describe("custom domain", () => {
 
   it("custom domain coexists with subdomain", async () => {
     const newDomain = `coexist-${Date.now()}.example.com`;
-    await db
-      .update(tenants)
-      .set({ customDomain: newDomain })
-      .where(eq(tenants.id, tenantId));
+    await db.update(tenants).set({ customDomain: newDomain }).where(eq(tenants.id, tenantId));
 
     // Resolvable by subdomain
     const bySubdomain = await db.query.tenants.findFirst({

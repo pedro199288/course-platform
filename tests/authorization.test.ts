@@ -78,7 +78,11 @@ describe("requireMembership", () => {
 
     const [platformAdmin] = await db
       .insert(users)
-      .values({ name: "PlatformAdmin", email: `auth-padmin-${suffix}@test.com`, role: "platform_admin" })
+      .values({
+        name: "PlatformAdmin",
+        email: `auth-padmin-${suffix}@test.com`,
+        role: "platform_admin",
+      })
       .returning();
     platformAdminUserId = platformAdmin.id;
 
@@ -92,21 +96,34 @@ describe("requireMembership", () => {
 
   afterAll(async () => {
     // Clean up in correct order (memberships cascade from user/tenant deletes)
-    const userIds = [ownerUserId, adminUserId, studentUserId, noMembershipUserId, platformAdminUserId];
+    const userIds = [
+      ownerUserId,
+      adminUserId,
+      studentUserId,
+      noMembershipUserId,
+      platformAdminUserId,
+    ];
     for (const id of userIds) {
-      await db.delete(users).where(eq(users.id, id)).catch(() => {});
+      await db
+        .delete(users)
+        .where(eq(users.id, id))
+        .catch(() => {});
     }
-    await db.delete(tenants).where(eq(tenants.id, tenantAId)).catch(() => {});
-    await db.delete(tenants).where(eq(tenants.id, tenantBId)).catch(() => {});
+    await db
+      .delete(tenants)
+      .where(eq(tenants.id, tenantAId))
+      .catch(() => {});
+    await db
+      .delete(tenants)
+      .where(eq(tenants.id, tenantBId))
+      .catch(() => {});
   });
 
   // ── Role hierarchy tests ──────────────────────────────────────────
 
   it("tenant_owner passes tenant_owner check", async () => {
     mockSession = { user: { id: ownerUserId, role: "user" } };
-    const result = await tenantIdStore.run(tenantAId, () =>
-      requireMembership("tenant_owner"),
-    );
+    const result = await tenantIdStore.run(tenantAId, () => requireMembership("tenant_owner"));
     expect(result.role).toBe("tenant_owner");
     expect(result.tenantId).toBe(tenantAId);
     expect(result.userId).toBe(ownerUserId);
@@ -114,33 +131,25 @@ describe("requireMembership", () => {
 
   it("tenant_owner passes tenant_admin check", async () => {
     mockSession = { user: { id: ownerUserId, role: "user" } };
-    const result = await tenantIdStore.run(tenantAId, () =>
-      requireMembership("tenant_admin"),
-    );
+    const result = await tenantIdStore.run(tenantAId, () => requireMembership("tenant_admin"));
     expect(result.role).toBe("tenant_owner");
   });
 
   it("tenant_owner passes student check", async () => {
     mockSession = { user: { id: ownerUserId, role: "user" } };
-    const result = await tenantIdStore.run(tenantAId, () =>
-      requireMembership("student"),
-    );
+    const result = await tenantIdStore.run(tenantAId, () => requireMembership("student"));
     expect(result.role).toBe("tenant_owner");
   });
 
   it("tenant_admin passes tenant_admin check", async () => {
     mockSession = { user: { id: adminUserId, role: "user" } };
-    const result = await tenantIdStore.run(tenantAId, () =>
-      requireMembership("tenant_admin"),
-    );
+    const result = await tenantIdStore.run(tenantAId, () => requireMembership("tenant_admin"));
     expect(result.role).toBe("tenant_admin");
   });
 
   it("tenant_admin passes student check", async () => {
     mockSession = { user: { id: adminUserId, role: "user" } };
-    const result = await tenantIdStore.run(tenantAId, () =>
-      requireMembership("student"),
-    );
+    const result = await tenantIdStore.run(tenantAId, () => requireMembership("student"));
     expect(result.role).toBe("tenant_admin");
   });
 
@@ -153,9 +162,7 @@ describe("requireMembership", () => {
 
   it("student passes student check", async () => {
     mockSession = { user: { id: studentUserId, role: "user" } };
-    const result = await tenantIdStore.run(tenantAId, () =>
-      requireMembership("student"),
-    );
+    const result = await tenantIdStore.run(tenantAId, () => requireMembership("student"));
     expect(result.role).toBe("student");
   });
 
@@ -170,18 +177,18 @@ describe("requireMembership", () => {
 
   it("rejects user with no membership in tenant", async () => {
     mockSession = { user: { id: noMembershipUserId, role: "user" } };
-    await expect(
-      tenantIdStore.run(tenantAId, () => requireMembership("student")),
-    ).rejects.toThrow("Forbidden: no membership");
+    await expect(tenantIdStore.run(tenantAId, () => requireMembership("student"))).rejects.toThrow(
+      "Forbidden: no membership",
+    );
   });
 
   // ── No session ────────────────────────────────────────────────────
 
   it("rejects unauthenticated request", async () => {
     mockSession = null;
-    await expect(
-      tenantIdStore.run(tenantAId, () => requireMembership("student")),
-    ).rejects.toThrow("Unauthorized");
+    await expect(tenantIdStore.run(tenantAId, () => requireMembership("student"))).rejects.toThrow(
+      "Unauthorized",
+    );
   });
 
   // ── No tenant context ─────────────────────────────────────────────
@@ -197,16 +204,12 @@ describe("requireMembership", () => {
     mockSession = { user: { id: platformAdminUserId, role: "platform_admin" } };
 
     // Passes tenant_owner check in tenant A (no membership row needed)
-    const resultA = await tenantIdStore.run(tenantAId, () =>
-      requireMembership("tenant_owner"),
-    );
+    const resultA = await tenantIdStore.run(tenantAId, () => requireMembership("tenant_owner"));
     expect(resultA.role).toBe("platform_admin");
     expect(resultA.tenantId).toBe(tenantAId);
 
     // Passes in tenant B too (no membership there either)
-    const resultB = await tenantIdStore.run(tenantBId, () =>
-      requireMembership("tenant_owner"),
-    );
+    const resultB = await tenantIdStore.run(tenantBId, () => requireMembership("tenant_owner"));
     expect(resultB.role).toBe("platform_admin");
     expect(resultB.tenantId).toBe(tenantBId);
   });
@@ -216,8 +219,8 @@ describe("requireMembership", () => {
   it("membership in tenant A does not grant access to tenant B", async () => {
     mockSession = { user: { id: ownerUserId, role: "user" } };
     // Owner of tenant A has no membership in tenant B
-    await expect(
-      tenantIdStore.run(tenantBId, () => requireMembership("student")),
-    ).rejects.toThrow("Forbidden: no membership");
+    await expect(tenantIdStore.run(tenantBId, () => requireMembership("student"))).rejects.toThrow(
+      "Forbidden: no membership",
+    );
   });
 });

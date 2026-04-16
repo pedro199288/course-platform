@@ -100,10 +100,22 @@ describe("coupons", () => {
   });
 
   afterAll(async () => {
-    await db.delete(users).where(eq(users.tenantId, tenantId)).catch(() => {});
-    await db.delete(courses).where(eq(courses.tenantId, tenantId)).catch(() => {});
-    await db.delete(tenants).where(eq(tenants.subdomain, subdomain)).catch(() => {});
-    await db.delete(plans).where(eq(plans.id, planId)).catch(() => {});
+    await db
+      .delete(users)
+      .where(eq(users.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(courses)
+      .where(eq(courses.tenantId, tenantId))
+      .catch(() => {});
+    await db
+      .delete(tenants)
+      .where(eq(tenants.subdomain, subdomain))
+      .catch(() => {});
+    await db
+      .delete(plans)
+      .where(eq(plans.id, planId))
+      .catch(() => {});
   });
 
   // ── Coupon creation via Stripe API ──────────────────────────

@@ -85,10 +85,7 @@ export const createSchoolFn = createServerFn({ method: "POST" })
 
     // Check if user already owns a school via user_tenants membership
     const existingOwnership = await db.query.userTenants.findFirst({
-      where: and(
-        eq(userTenants.userId, session.user.id),
-        eq(userTenants.role, "tenant_owner"),
-      ),
+      where: and(eq(userTenants.userId, session.user.id), eq(userTenants.role, "tenant_owner")),
     });
 
     if (existingOwnership) {

@@ -1,4 +1,13 @@
-import { Body, Container, Head, Heading, Html, Preview, Text, render } from "@react-email/components";
+import {
+  Body,
+  Container,
+  Head,
+  Heading,
+  Html,
+  Preview,
+  Text,
+  render,
+} from "@react-email/components";
 
 interface BulkEmailProps {
   studentName: string;

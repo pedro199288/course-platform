@@ -31,9 +31,7 @@ function DripContentUnlockedTemplate({
   return (
     <Html>
       <Head />
-      <Preview>
-        New content available in {courseName}
-      </Preview>
+      <Preview>New content available in {courseName}</Preview>
       <Body style={body}>
         <Container style={container}>
           <Heading style={heading}>New Content Unlocked!</Heading>

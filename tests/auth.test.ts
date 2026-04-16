@@ -1,7 +1,15 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vite-plus/test";
 import { eq, and, like } from "drizzle-orm";
 import { db } from "#/db/index.ts";
-import { tenants, users, accounts, sessions, verifications, rateLimit, userTenants } from "#/db/schema/index.ts";
+import {
+  tenants,
+  users,
+  accounts,
+  sessions,
+  verifications,
+  rateLimit,
+  userTenants,
+} from "#/db/schema/index.ts";
 import { auth } from "#/lib/auth.ts";
 import { tenantIdStore } from "#/lib/tenant-context.ts";
 import { auditLogs } from "#/db/schema/audit-logs.ts";
@@ -13,10 +21,7 @@ vi.mock("#/lib/email.ts", () => ({
 
 /** Helper: mark a user's email as verified directly in the DB */
 async function verifyUserEmail(email: string) {
-  await db
-    .update(users)
-    .set({ emailVerified: true })
-    .where(eq(users.email, email));
+  await db.update(users).set({ emailVerified: true }).where(eq(users.email, email));
 }
 
 describe("auth: global registration and login", () => {
@@ -27,12 +32,18 @@ describe("auth: global registration and login", () => {
       where: eq(users.email, testEmail),
     });
     if (user) {
-      await db.delete(auditLogs).where(eq(auditLogs.actorId, user.id)).catch(() => {});
+      await db
+        .delete(auditLogs)
+        .where(eq(auditLogs.actorId, user.id))
+        .catch(() => {});
       await db.delete(sessions).where(eq(sessions.userId, user.id));
       await db.delete(accounts).where(eq(accounts.userId, user.id));
       await db.delete(users).where(eq(users.id, user.id));
     }
-    await db.delete(verifications).where(eq(verifications.identifier, testEmail)).catch(() => {});
+    await db
+      .delete(verifications)
+      .where(eq(verifications.identifier, testEmail))
+      .catch(() => {});
   });
 
   it("registers a user on bare domain (no tenant context)", async () => {
@@ -61,7 +72,10 @@ describe("auth: global registration and login", () => {
 
   it("registers a user from subdomain (no membership created)", async () => {
     const tenantSubdomain = `auth-sub-${Date.now()}`;
-    const [tenant] = await db.insert(tenants).values({ name: "Sub School", subdomain: tenantSubdomain }).returning();
+    const [tenant] = await db
+      .insert(tenants)
+      .values({ name: "Sub School", subdomain: tenantSubdomain })
+      .returning();
     const subEmail = `auth-sub-${Date.now()}@example.com`;
 
     try {
@@ -88,22 +102,25 @@ describe("auth: global registration and login", () => {
 
       // No user_tenants record
       const membership = await db.query.userTenants.findFirst({
-        where: and(
-          eq(userTenants.userId, dbUser!.id),
-          eq(userTenants.tenantId, tenant.id),
-        ),
+        where: and(eq(userTenants.userId, dbUser!.id), eq(userTenants.tenantId, tenant.id)),
       });
       expect(membership).toBeUndefined();
     } finally {
       // Cleanup
       const user = await db.query.users.findFirst({ where: eq(users.email, subEmail) });
       if (user) {
-        await db.delete(auditLogs).where(eq(auditLogs.actorId, user.id)).catch(() => {});
+        await db
+          .delete(auditLogs)
+          .where(eq(auditLogs.actorId, user.id))
+          .catch(() => {});
         await db.delete(sessions).where(eq(sessions.userId, user.id));
         await db.delete(accounts).where(eq(accounts.userId, user.id));
         await db.delete(users).where(eq(users.id, user.id));
       }
-      await db.delete(verifications).where(eq(verifications.identifier, subEmail)).catch(() => {});
+      await db
+        .delete(verifications)
+        .where(eq(verifications.identifier, subEmail))
+        .catch(() => {});
       await db.delete(tenants).where(eq(tenants.id, tenant.id));
     }
   });
@@ -140,7 +157,10 @@ describe("auth: global registration and login", () => {
 
   it("signs in with global email from any subdomain context", async () => {
     const tenantSubdomain = `auth-cross-${Date.now()}`;
-    const [tenant] = await db.insert(tenants).values({ name: "Cross School", subdomain: tenantSubdomain }).returning();
+    const [tenant] = await db
+      .insert(tenants)
+      .values({ name: "Cross School", subdomain: tenantSubdomain })
+      .returning();
 
     try {
       // Sign in within a tenant context — should work because email is global
@@ -157,7 +177,10 @@ describe("auth: global registration and login", () => {
       expect(result.token).toBeDefined();
     } finally {
       // Clean up audit logs that reference this tenant before deleting it
-      await db.delete(auditLogs).where(eq(auditLogs.tenantId, tenant.id)).catch(() => {});
+      await db
+        .delete(auditLogs)
+        .where(eq(auditLogs.tenantId, tenant.id))
+        .catch(() => {});
       await db.delete(tenants).where(eq(tenants.id, tenant.id));
     }
   });
@@ -183,17 +206,35 @@ describe("user_tenants schema constraints", () => {
   let userId: string;
 
   beforeAll(async () => {
-    const [tenant] = await db.insert(tenants).values({ name: "UT Schema School", subdomain: tenantSubdomain }).returning();
+    const [tenant] = await db
+      .insert(tenants)
+      .values({ name: "UT Schema School", subdomain: tenantSubdomain })
+      .returning();
     tenantId = tenant.id;
-    const [user] = await db.insert(users).values({ name: "UT User", email: `ut-schema-${Date.now()}@test.com` }).returning();
+    const [user] = await db
+      .insert(users)
+      .values({ name: "UT User", email: `ut-schema-${Date.now()}@test.com` })
+      .returning();
     userId = user.id;
   });
 
   afterAll(async () => {
-    await db.delete(userTenants).where(eq(userTenants.userId, userId)).catch(() => {});
-    await db.delete(auditLogs).where(eq(auditLogs.actorId, userId)).catch(() => {});
-    await db.delete(sessions).where(eq(sessions.userId, userId)).catch(() => {});
-    await db.delete(accounts).where(eq(accounts.userId, userId)).catch(() => {});
+    await db
+      .delete(userTenants)
+      .where(eq(userTenants.userId, userId))
+      .catch(() => {});
+    await db
+      .delete(auditLogs)
+      .where(eq(auditLogs.actorId, userId))
+      .catch(() => {});
+    await db
+      .delete(sessions)
+      .where(eq(sessions.userId, userId))
+      .catch(() => {});
+    await db
+      .delete(accounts)
+      .where(eq(accounts.userId, userId))
+      .catch(() => {});
     await db.delete(users).where(eq(users.id, userId));
     await db.delete(tenants).where(eq(tenants.id, tenantId));
   });
@@ -216,7 +257,9 @@ describe("user_tenants schema constraints", () => {
 
   it("supports all tenant_role enum values", async () => {
     // Clean up existing membership
-    await db.delete(userTenants).where(and(eq(userTenants.userId, userId), eq(userTenants.tenantId, tenantId)));
+    await db
+      .delete(userTenants)
+      .where(and(eq(userTenants.userId, userId), eq(userTenants.tenantId, tenantId)));
 
     for (const role of ["tenant_owner", "tenant_admin", "student"] as const) {
       await db.insert(userTenants).values({ userId, tenantId, role });
@@ -224,13 +267,18 @@ describe("user_tenants schema constraints", () => {
         where: and(eq(userTenants.userId, userId), eq(userTenants.tenantId, tenantId)),
       });
       expect(m!.role).toBe(role);
-      await db.delete(userTenants).where(and(eq(userTenants.userId, userId), eq(userTenants.tenantId, tenantId)));
+      await db
+        .delete(userTenants)
+        .where(and(eq(userTenants.userId, userId), eq(userTenants.tenantId, tenantId)));
     }
   });
 
   it("cascades delete when user is deleted", async () => {
     // Create a temporary user with membership
-    const [tempUser] = await db.insert(users).values({ name: "Temp", email: `cascade-user-${Date.now()}@test.com` }).returning();
+    const [tempUser] = await db
+      .insert(users)
+      .values({ name: "Temp", email: `cascade-user-${Date.now()}@test.com` })
+      .returning();
     await db.insert(userTenants).values({ userId: tempUser.id, tenantId, role: "student" });
 
     // Delete user — membership should cascade
@@ -244,7 +292,10 @@ describe("user_tenants schema constraints", () => {
 
   it("cascades delete when tenant is deleted", async () => {
     // Create a temporary tenant with membership
-    const [tempTenant] = await db.insert(tenants).values({ name: "Temp Tenant", subdomain: `cascade-tenant-${Date.now()}` }).returning();
+    const [tempTenant] = await db
+      .insert(tenants)
+      .values({ name: "Temp Tenant", subdomain: `cascade-tenant-${Date.now()}` })
+      .returning();
     await db.insert(userTenants).values({ userId, tenantId: tempTenant.id, role: "student" });
 
     // Delete tenant — membership should cascade
@@ -266,9 +317,7 @@ describe("global email uniqueness", () => {
 
     const [user1] = await db.insert(users).values({ name: "User 1", email }).returning();
 
-    await expect(
-      db.insert(users).values({ name: "User 2", email }),
-    ).rejects.toThrow();
+    await expect(db.insert(users).values({ name: "User 2", email })).rejects.toThrow();
 
     // Cleanup
     await db.delete(users).where(eq(users.id, user1.id));
@@ -286,12 +335,18 @@ describe("email verification flow", () => {
       where: eq(users.email, testEmail),
     });
     if (user) {
-      await db.delete(auditLogs).where(eq(auditLogs.actorId, user.id)).catch(() => {});
+      await db
+        .delete(auditLogs)
+        .where(eq(auditLogs.actorId, user.id))
+        .catch(() => {});
       await db.delete(sessions).where(eq(sessions.userId, user.id));
       await db.delete(accounts).where(eq(accounts.userId, user.id));
       await db.delete(users).where(eq(users.id, user.id));
     }
-    await db.delete(verifications).where(eq(verifications.identifier, testEmail)).catch(() => {});
+    await db
+      .delete(verifications)
+      .where(eq(verifications.identifier, testEmail))
+      .catch(() => {});
   });
 
   it("registers user with emailVerified: false", async () => {
@@ -373,16 +428,25 @@ describe("password reset flow", () => {
       where: eq(users.email, testEmail),
     });
     if (user) {
-      await db.delete(auditLogs).where(eq(auditLogs.actorId, user.id)).catch(() => {});
+      await db
+        .delete(auditLogs)
+        .where(eq(auditLogs.actorId, user.id))
+        .catch(() => {});
       await db.delete(sessions).where(eq(sessions.userId, user.id));
       await db.delete(accounts).where(eq(accounts.userId, user.id));
       await db.delete(users).where(eq(users.id, user.id));
     }
-    await db.delete(verifications).where(like(verifications.identifier, "reset-password:%")).catch(() => {});
+    await db
+      .delete(verifications)
+      .where(like(verifications.identifier, "reset-password:%"))
+      .catch(() => {});
   });
 
   it("sends reset email with token on forgetPassword request", async () => {
-    await db.delete(verifications).where(like(verifications.identifier, "reset-password:%")).catch(() => {});
+    await db
+      .delete(verifications)
+      .where(like(verifications.identifier, "reset-password:%"))
+      .catch(() => {});
 
     const { sendEmail } = await import("#/lib/email.ts");
     const mockSendEmail = sendEmail as ReturnType<typeof vi.fn>;
@@ -483,12 +547,18 @@ describe("rate limiting", () => {
       where: eq(users.email, testEmail),
     });
     if (user) {
-      await db.delete(auditLogs).where(eq(auditLogs.actorId, user.id)).catch(() => {});
+      await db
+        .delete(auditLogs)
+        .where(eq(auditLogs.actorId, user.id))
+        .catch(() => {});
       await db.delete(sessions).where(eq(sessions.userId, user.id));
       await db.delete(accounts).where(eq(accounts.userId, user.id));
       await db.delete(users).where(eq(users.id, user.id));
     }
-    await db.delete(verifications).where(eq(verifications.identifier, testEmail)).catch(() => {});
+    await db
+      .delete(verifications)
+      .where(eq(verifications.identifier, testEmail))
+      .catch(() => {});
   });
 
   it("returns 429 when sign-in rate limit is exceeded", async () => {

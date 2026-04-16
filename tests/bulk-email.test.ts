@@ -1,14 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vite-plus/test";
 import { eq, and, isNull } from "drizzle-orm";
 import { db } from "#/db/index.ts";
-import {
-  tenants,
-  courses,
-  modules,
-  lessons,
-  enrollments,
-  bulkEmails,
-} from "#/db/schema/index.ts";
+import { tenants, courses, modules, lessons, enrollments, bulkEmails } from "#/db/schema/index.ts";
 import { users } from "#/db/schema/auth.ts";
 
 // Track sendJob calls so we can assert email enqueuing
@@ -215,10 +208,7 @@ describe("bulk email", () => {
       totalRecipients: 0,
     });
 
-    const t1Rows = await db
-      .select()
-      .from(bulkEmails)
-      .where(eq(bulkEmails.tenantId, tenantId));
+    const t1Rows = await db.select().from(bulkEmails).where(eq(bulkEmails.tenantId, tenantId));
 
     const t2InT1 = t1Rows.filter((r) => r.tenantId === tenant2Id);
     expect(t2InT1.length).toBe(0);
