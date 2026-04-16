@@ -1,4 +1,4 @@
-import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
+import { HeadContent, Link, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import Footer from "../components/Footer";
@@ -9,6 +9,8 @@ import appCss from "../styles.css?url";
 const THEME_INIT_SCRIPT = `(function(){try{var stored=window.localStorage.getItem('theme');var mode=(stored==='light'||stored==='dark'||stored==='auto')?stored:'auto';var prefersDark=window.matchMedia('(prefers-color-scheme: dark)').matches;var resolved=mode==='auto'?(prefersDark?'dark':'light'):mode;var root=document.documentElement;root.classList.remove('light','dark');root.classList.add(resolved);if(mode==='auto'){root.removeAttribute('data-theme')}else{root.setAttribute('data-theme',mode)}root.style.colorScheme=resolved;}catch(e){}})();`;
 
 export const Route = createRootRoute({
+  component: () => <Outlet />,
+  notFoundComponent: NotFound,
   head: () => ({
     meta: [
       {
@@ -31,6 +33,18 @@ export const Route = createRootRoute({
   }),
   shellComponent: RootDocument,
 });
+
+function NotFound() {
+  return (
+    <main className="flex flex-1 flex-col items-center justify-center px-4 py-24 text-center">
+      <h1 className="text-6xl font-bold">404</h1>
+      <p className="mt-4 text-lg text-muted-foreground">Page not found</p>
+      <Link to="/" className="mt-6 text-primary underline underline-offset-4 hover:no-underline">
+        Go home
+      </Link>
+    </main>
+  );
+}
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
