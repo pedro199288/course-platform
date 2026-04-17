@@ -15,7 +15,6 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as CreateSchoolRouteImport } from './routes/create-school'
-import { Route as AboutRouteImport } from './routes/about'
 import { Route as PlatformAdminRouteRouteImport } from './routes/platform-admin/route'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -76,11 +75,6 @@ const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
 const CreateSchoolRoute = CreateSchoolRouteImport.update({
   id: '/create-school',
   path: '/create-school',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AboutRoute = AboutRouteImport.update({
-  id: '/about',
-  path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PlatformAdminRouteRoute = PlatformAdminRouteRouteImport.update({
@@ -248,7 +242,6 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteRouteWithChildren
   '/platform-admin': typeof PlatformAdminRouteRouteWithChildren
-  '/about': typeof AboutRoute
   '/create-school': typeof CreateSchoolRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
@@ -286,7 +279,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
   '/create-school': typeof CreateSchoolRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
@@ -327,7 +319,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteRouteWithChildren
   '/platform-admin': typeof PlatformAdminRouteRouteWithChildren
-  '/about': typeof AboutRoute
   '/create-school': typeof CreateSchoolRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
@@ -369,7 +360,6 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/platform-admin'
-    | '/about'
     | '/create-school'
     | '/forgot-password'
     | '/login'
@@ -407,7 +397,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/about'
     | '/create-school'
     | '/forgot-password'
     | '/login'
@@ -447,7 +436,6 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/platform-admin'
-    | '/about'
     | '/create-school'
     | '/forgot-password'
     | '/login'
@@ -488,7 +476,6 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRouteRoute: typeof AdminRouteRouteWithChildren
   PlatformAdminRouteRoute: typeof PlatformAdminRouteRouteWithChildren
-  AboutRoute: typeof AboutRoute
   CreateSchoolRoute: typeof CreateSchoolRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
@@ -550,13 +537,6 @@ declare module '@tanstack/react-router' {
       path: '/create-school'
       fullPath: '/create-school'
       preLoaderRoute: typeof CreateSchoolRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/about': {
-      id: '/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/platform-admin': {
@@ -845,7 +825,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRouteRoute: AdminRouteRouteWithChildren,
   PlatformAdminRouteRoute: PlatformAdminRouteRouteWithChildren,
-  AboutRoute: AboutRoute,
   CreateSchoolRoute: CreateSchoolRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
